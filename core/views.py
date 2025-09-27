@@ -87,6 +87,31 @@ class PlanViewSet(viewsets.ModelViewSet):
         send_mass_mail(messages, fail_silently=False)
         return Response({'sent': len(messages)}, status=200)
 
+    @action(detail=True, methods=['post'])
+    def bulk_clear(self, request, pk=None):
+        plan = self.get_object()
+        cells = request.data.get('cells', [])
+        if not isinstance(cells, list) or not cells:
+            return Response({'detail': 'cells obbligatorio'}, status=status.HTTP_400_BAD_REQUEST)
+
+        deleted = 0
+        for c in cells:
+            try:
+                prof_id = int(c['profession_id'])
+                day = dt.date.fromisoformat(c['date'])  # forza tipo date, niente ambiguità
+            except Exception:
+                return Response({'detail': f"Formato cella non valido: {c}"}, status=status.HTTP_400_BAD_REQUEST)
+
+            n, _ = Assignment.objects.filter(
+                plan=plan,
+                profession_id=prof_id,
+                date=day,
+            ).delete()
+            deleted += n
+
+        return Response({'deleted': deleted}, status=status.HTTP_200_OK)
+
+
 @login_required
 def home(request):
     plans = Plan.objects.order_by('-year','-month')[:12]
