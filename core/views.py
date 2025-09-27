@@ -5,6 +5,8 @@ from django.core.mail import send_mass_mail
 from django.db import transaction
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import logout
+from django.shortcuts import redirect
 from .models import Company, Profession, Employee, ShiftType, Plan, Assignment
 from .serializers import *
 import calendar, datetime as dt
@@ -97,3 +99,7 @@ def monthly_plan(request, pk: int):
     employees = Employee.objects.order_by('last_name','first_name').all()
     shifts = ShiftType.objects.order_by('code').all()
     return render(request, 'monthly_plan.html', {'plan': plan, 'professions': professions, 'employees': employees, 'shifts': shifts})
+
+def logout_view(request):
+    logout(request)
+    return redirect('login')

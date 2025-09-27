@@ -13,7 +13,7 @@ router.register(r'api/plans', core_views.PlanViewSet, basename='plans')
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('login/', auth_views.LoginView.as_view(template_name='login.html'), name='login'),
-    path('logout/', auth_views.LogoutView.as_view(), name='logout'),
+    path('logout/', core_views.logout_view, name='logout'),
     path('', core_views.home, name='home'),
     path('plan/<int:pk>/', core_views.monthly_plan, name='monthly_plan'),
     path('', include(router.urls)),
