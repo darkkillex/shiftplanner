@@ -51,9 +51,17 @@
       const days = data.days;
 
       const head = document.getElementById('grid-head');
+      const month = {{ plan.month }} - 1;   // JS usa 0=Gennaio
+      const year = {{ plan.year }};
+
+      // Intl.DateTimeFormat con locale italiana
+      const weekdayFmt = new Intl.DateTimeFormat('it-IT', { weekday: 'short' });
+
       for (let i = 1; i <= days; i++) {
         const th = document.createElement('th');
-        th.textContent = i;
+        const date = new Date(year, month, i);
+        const wd = weekdayFmt.format(date); // es. "lun", "mar", ...
+        th.innerHTML = `<div>${i}</div><div style="font-size:11px;opacity:0.7">${wd}</div>`;
         head.appendChild(th);
       }
 
