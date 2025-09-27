@@ -1,1 +1,10 @@
+Creare azione/bottone "Rimuovi da celle selezionate" ⌛
+Aggiungere sulla barra in alto l'utente loggato ⌛
+Aggiungere colorazione nella griglia in base al turno ricoperto dal lavoratore ⌛
+Testare effettiva funzionalità dell'invio notifiche ⌛
+
+
+
+
+
 Azione logout non funzionante ✔
