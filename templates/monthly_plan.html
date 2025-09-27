@@ -57,11 +57,30 @@
       // Intl.DateTimeFormat con locale italiana
       const weekdayFmt = new Intl.DateTimeFormat('it-IT', { weekday: 'short' });
 
+      const fixedHolidays = [
+        '01-01', // Capodanno
+        '06-01', // Epifania
+        '25-04', // Liberazione
+        '01-05', // Lavoro
+        '02-06', // Repubblica
+        '15-08', // Ferragosto
+        '01-11', // Ognissanti
+        '08-12', // Immacolata
+        '25-12', // Natale
+        '26-12'  // Santo Stefano
+      ];
+
       for (let i = 1; i <= days; i++) {
         const th = document.createElement('th');
         const date = new Date(year, month, i);
         const wd = weekdayFmt.format(date); // es. "lun", "mar", ...
-        th.innerHTML = `<div>${i}</div><div style="font-size:11px;opacity:0.7">${wd}</div>`;
+
+        th.innerHTML = `<div>${i}</div><div class="day-label">${wd}</div>`;
+        const ddmm = `${String(i).padStart(2,'0')}-${String(month+1).padStart(2,'0')}`;
+        //date.getDay() === 0 -> Domenica
+        if (date.getDay() === 0 || fixedHolidays.includes(ddmm)) {
+          th.classList.add('holiday');
+        }
         head.appendChild(th);
       }
 
