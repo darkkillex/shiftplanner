@@ -8,6 +8,7 @@ docker exec -it shiftplanner_web python manage.py seed_demo
 ```
 
 Apri: http://localhost:8000
+Pannello Admin: http://localhost:8000/admin/
 
 ## Login
 - Crea un superuser da `/admin/` oppure esegui il seed (`admin` / `admin`).
