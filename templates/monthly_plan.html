@@ -1,0 +1,158 @@
+{% extends 'layout.html' %}
+{% load static %}
+{% block content %}
+<h2>Piano mensile — {{ plan.month }}/{{ plan.year }}</h2>
+
+<div class="toolbar">
+  <label>
+    Lavoratore
+    <select id="employee">
+      <option value="">—</option>
+      {% for e in employees %}
+        <option value="{{ e.id }}">{{ e.full_name }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>
+    Turno
+    <select id="shift">
+      <option value="">—</option>
+      {% for s in shifts %}
+        <option value="{{ s.id }}">{{ s.code }} — {{ s.label }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <button id="apply" class="secondary">Applica a celle selezionate</button>
+  <button id="notify">Invia notifiche</button>
+</div>
+
+<div class="grid">
+  <table id="grid" role="grid">
+    <thead>
+      <tr id="grid-head"><th>Professione</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<script>
+(async function() {
+  const planId = {{ plan.id }};
+  const res = await fetch(`/api/plans/${planId}/grid/`, { credentials: 'same-origin' });
+  if (!res.ok) {
+    const t = await res.text();
+    alert('Errore caricamento griglia: ' + t);
+    return;
+  }
+  const data = await res.json();
+  const days = data.days;
+
+  const head = document.getElementById('grid-head');
+  for (let i = 1; i <= days; i++) {
+    const th = document.createElement('th');
+    th.textContent = i;
+    head.appendChild(th);
+  }
+
+  const gridBody = document.querySelector('#grid tbody');
+  data.rows.forEach(row => {
+    const tr = document.createElement('tr');
+
+    const th = document.createElement('th');
+    th.style.textAlign = 'left';
+    th.textContent = row.profession;
+    tr.appendChild(th);
+
+    for (let i = 1; i <= days; i++) {
+      const cellData = row[String(i)] || {};
+      const td = document.createElement('td');
+      td.className = 'cell';
+      td.dataset.professionId = row.profession_id;
+      td.dataset.day = i;
+
+      const name = cellData.employee_name || '';
+      const shift = cellData.shift_code ? ` (${cellData.shift_code})` : '';
+      td.textContent = name ? (name + shift) : '';
+
+      tr.appendChild(td);
+    }
+    gridBody.appendChild(tr);
+  });
+
+  let isMouseDown = false;
+  let selected = new Set();
+  function key(p, d) { return `${p}#${d}`; }
+  function mark(td, on) { td.classList.toggle('selected', !!on); }
+
+  document.addEventListener('mousedown', e => {
+    if (e.target.classList.contains('cell')) isMouseDown = true;
+  });
+  document.addEventListener('mouseup', () => { isMouseDown = false; });
+
+  document.querySelectorAll('td.cell').forEach(td => {
+    td.addEventListener('mousedown', e => {
+      selected.clear();
+      document.querySelectorAll('td.cell.selected').forEach(x => x.classList.remove('selected'));
+      selected.add(key(td.dataset.professionId, td.dataset.day));
+      mark(td, true);
+      e.preventDefault();
+    });
+    td.addEventListener('mouseenter', () => {
+      if (!isMouseDown) return;
+      selected.add(key(td.dataset.professionId, td.dataset.day));
+      mark(td, true);
+    });
+  });
+
+  function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+  }
+  const csrftoken = getCookie('csrftoken');
+
+  document.getElementById('apply').addEventListener('click', async () => {
+    const employeeId = document.getElementById('employee').value;
+    if (!employeeId) return alert('Seleziona un lavoratore');
+    const shiftId = document.getElementById('shift').value || null;
+
+    const y = {{ plan.year }};
+    const m = {{ plan.month }};
+    const cells = Array.from(selected).map(k => {
+      const [p, d] = k.split('#');
+      const dd = String(Number(d)).padStart(2, '0');
+      const mm = String(m).padStart(2, '0');
+      const iso = `${y}-${mm}-${dd}`;
+      return { profession_id: Number(p), date: iso };
+    });
+    if (!cells.length) return alert('Seleziona almeno una cella');
+
+    const resp = await fetch(`/api/plans/${planId}/bulk_assign/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(csrftoken ? {'X-CSRFToken': csrftoken} : {})
+      },
+      credentials: 'same-origin',
+      body: JSON.stringify({ employee_id: Number(employeeId), shift_type_id: shiftId ? Number(shiftId) : null, cells })
+    });
+    if (!resp.ok) {
+      const t = await resp.text();
+      return alert('Errore: ' + t);
+    }
+    location.reload();
+  });
+
+  document.getElementById('notify').addEventListener('click', async () => {
+    if (!confirm('Inviare email a TUTTI i dipendenti con assegnazioni in questo piano?')) return;
+    const resp = await fetch(`/api/plans/${planId}/notify/`, {
+      method: 'POST',
+      headers: csrftoken ? {'X-CSRFToken': csrftoken} : {},
+      credentials: 'same-origin'
+    });
+    const js = await resp.json();
+    alert(`Email inviate: ${js.sent || 0}`);
+  });
+})();
+</script>
+{% endblock %}

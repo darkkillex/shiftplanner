@@ -1,0 +1,12 @@
+{% extends 'layout.html' %}
+{% block content %}
+<h2>Piani disponibili</h2>
+<ul>
+  {% for p in plans %}
+    <li><a href="{% url 'monthly_plan' p.id %}">{{ p.name }} — {{ p.month }}/{{ p.year }} ({{ p.status }})</a></li>
+  {% empty %}
+    <li>Nessun piano</li>
+  {% endfor %}
+</ul>
+<p><a href="/admin/core/plan/add/">+ Crea nuovo Piano</a></p>
+{% endblock %}
