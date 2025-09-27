@@ -118,6 +118,13 @@ def home(request):
     return render(request, 'home.html', {'plans': plans})
 
 @login_required
+def profile(request):
+    user = request.user
+    return render(request, 'profile.html', {
+        'user_obj': user,
+    })
+
+@login_required
 def monthly_plan(request, pk: int):
     plan = get_object_or_404(Plan, pk=pk)
     professions = Profession.objects.order_by('name').all()

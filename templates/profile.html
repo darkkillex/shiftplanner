@@ -1,0 +1,20 @@
+{% extends 'layout.html' %}
+{% block content %}
+<h2>Profilo utente</h2>
+
+<article>
+  <header>
+    <strong>{{ user_obj.get_full_name|default:user_obj.username }}</strong>
+    {% if user_obj.is_superuser %}<span class="badge">Superuser</span>{% elif user_obj.is_staff %}<span class="badge">Staff</span>{% endif %}
+  </header>
+  <ul>
+    <li><strong>Username:</strong> {{ user_obj.username }}</li>
+    <li><strong>Email:</strong> {{ user_obj.email|default:"—" }}</li>
+    <li><strong>Ultimo accesso:</strong> {{ user_obj.last_login|date:"d/m/Y H:i" }}</li>
+    <li><strong>Membro dal:</strong> {{ user_obj.date_joined|date:"d/m/Y H:i" }}</li>
+  </ul>
+  <p>
+    <a role="button" href="{% url 'password_change' %}">Cambia password</a>
+  </p>
+</article>
+{% endblock %}

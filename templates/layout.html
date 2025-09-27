@@ -1,32 +1,40 @@
 <!doctype html>
 <html lang="it">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Shift Planner</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-  <style>
-   .grid { overflow:auto; }
-   table { font-size: 13px; white-space: nowrap; }
-   th, td { text-align:center; }
-   td.cell { cursor: pointer; }
-   td.cell.selected { outline: 2px solid black; }
-   .toolbar { display:flex; gap: .5rem; align-items: end; flex-wrap: wrap; }
-  </style>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Shift Planner</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <style>
+        .grid { overflow:auto; }
+        table { font-size: 13px; white-space: nowrap; }
+        th, td { text-align:center; }
+        td.cell { cursor: pointer; }
+        td.cell.selected { outline: 2px solid black; }
+        .toolbar { display:flex; gap: .5rem; align-items: end; flex-wrap: wrap; }
+    </style>
 </head>
 <body>
-  <nav class="container-fluid">
+<nav class="container-fluid">
     <ul>
-      <li><strong>Shift Planner</strong></li>
+        <li><strong>Shift Planner</strong></li>
     </ul>
     <ul>
-      <li><a href="/">Piani</a></li>
-      <li><a href="/admin/">Admin</a></li>
-      <li><a href="/logout/">Logout</a></li>
+        <li><a href="/">Piani</a></li>
+        <li><a href="/admin/">Admin</a></li>
+
+        {% if request.user.is_authenticated %}
+        <li style="opacity:.8;">👤 {{ request.user.get_full_name|default:request.user.username }}</li>
+        <li><a href="{% url 'profile' %}">Profilo</a></li>
+        <li><a href="/logout/">Logout</a></li>
+        {% else %}
+        <li><a href="/login/">Login</a></li>
+        {% endif %}
     </ul>
-  </nav>
-  <main class="container">
+</nav>
+
+<main class="container">
     {% block content %}{% endblock %}
-  </main>
+</main>
 </body>
 </html>
