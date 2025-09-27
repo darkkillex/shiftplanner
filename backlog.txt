@@ -1,4 +1,10 @@
 
+v0.1.2
+Nella griglia, riportare oltre al numero del giorno, anche le iniziali (Es. Lun, mar, mer etc.)
+Nella griglia, colorare le intestazioni delle date festive in rosso
+Aggiunto material design alla UI
+Aggiunta responsività tabella
+Aggiunta barra per scorrimento in orizzontale per ovviare al problema di navigazione derivante da grossa quantità di dati (Professioni)
 
 v0.1.1
 Aggiungere sulla barra in alto l'utente loggato
@@ -18,10 +24,9 @@ Creare azione/bottone "Rimuovi da celle selezionate" ✔
 
 IN SVILUPPO
 
-Aggiungere colorazione nella griglia in base al turno ricoperto dal lavoratore ⌛
-Riposizionare i tasti azione ⌛
-Testare effettiva funzionalità dell'invio notifiche ⌛
-Nella griglia, riportare oltre al numero del giorno, anche le iniziali (Es. Lun, mar, mer etc.) ⌛
-Nella griglia, colorare le intestazioni delle date festive in rosso ⌛
-Nella griglia, suddividere le varie celle con dei bordi per una più immediata lettura e navigazione ⌛
-Reformat degli script JS in sorgenti dedicati ⌛
+Aggiungere colorazione nella griglia in base al turno ricoperto dal lavoratore
+Riposizionare i tasti azione
+
+Aggiungere bottone e azione per estrazione del piano mensile in .csv/.xlsx
+Testare effettiva funzionalità dell'invio notifiche
+Reformat degli script JS in sorgenti dedicati
