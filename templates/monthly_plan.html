@@ -1,220 +1,234 @@
 {% extends 'layout.html' %}
 {% load static %}
+{% block title %}Piano {{ plan.month }}/{{ plan.year }} — Shift Planner{% endblock %}
+
 {% block content %}
-<h2>Piano mensile — {{ plan.month }}/{{ plan.year }}</h2>
 
-<div class="toolbar">
-    <label>
-        Lavoratore
-        <select id="employee">
-            <option value="">—</option>
-            {% for e in employees %}
-            <option value="{{ e.id }}">{{ e.full_name }}</option>
-            {% endfor %}
-        </select>
-    </label>
-    <label>
-        Turno
-        <select id="shift">
-            <option value="">—</option>
-            {% for s in shifts %}
-            <option value="{{ s.id }}">{{ s.code }} — {{ s.label }}</option>
-            {% endfor %}
-        </select>
-    </label>
-    <button id="apply" class="secondary">Applica a celle selezionate</button>
-    <button id="clear" class="contrast">Rimuovi da celle selezionate</button>
-    <button id="notify">Invia notifiche</button>
+<div class="row">
+  <div class="col s12">
+    <h5 style="margin-top:0;">Piano mensile — {{ plan.month }}/{{ plan.year }}</h5>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="input-field col s12 m4">
+    <select id="employee">
+      <option value="" disabled selected>Seleziona lavoratore</option>
+      {% for e in employees %}
+        <option value="{{ e.id }}">{{ e.full_name }}</option>
+      {% endfor %}
+    </select>
+    <label>Lavoratore</label>
+  </div>
+
+  <div class="input-field col s12 m3">
+    <select id="shift">
+      <option value="" selected>Nessun turno</option>
+      {% for s in shifts %}
+        <option value="{{ s.id }}">{{ s.code }} — {{ s.label }}</option>
+      {% endfor %}
+    </select>
+    <label>Turno</label>
+  </div>
+
+  <div class="col s12 m5" style="margin-top:22px;">
+    <a id="apply" class="btn waves-effect waves-light"><i class="material-icons left">done_all</i>Applica</a>
+    <a id="clear" class="btn-flat red-text text-darken-2 waves-effect"><i class="material-icons left">backspace</i>Rimuovi</a>
+    <a id="notify" class="btn grey darken-1 waves-effect waves-light"><i class="material-icons left">send</i>Invia notifiche</a>
+  </div>
 </div>
 
-<div class="grid">
-    <table id="grid" role="grid">
-        <thead>
-        <tr id="grid-head">
-            <th>Professione</th>
-        </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
+<div class="spacer-8"></div>
+
+<!-- Scrollbar superiore -->
+<div id="grid-scroll-top" class="grid-scroll-top">
+  <div id="grid-scroll-inner" class="grid-scroll-inner"></div>
 </div>
 
+<!-- Griglia -->
+<div class="grid-wrapper z-depth-1">
+  <table id="grid">
+    <thead>
+      <tr id="grid-head"><th>Professione</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+{% endblock %}
+
+{% block extra_body %}
 <script>
-    (async function() {
-      const planId = {{ plan.id }};
-      const res = await fetch(`/api/plans/${planId}/grid/`, { credentials: 'same-origin' });
-      if (!res.ok) {
-        const t = await res.text();
-        alert('Errore caricamento griglia: ' + t);
-        return;
-      }
-      const data = await res.json();
-      const days = data.days;
+  document.addEventListener('DOMContentLoaded', () => {
+    const elems = document.querySelectorAll('select');
+    M.FormSelect.init(elems);
+  });
 
-      const head = document.getElementById('grid-head');
-      const month = {{ plan.month }} - 1;   // JS usa 0=Gennaio
-      const year = {{ plan.year }};
+  (async function() {
+    const planId = {{ plan.id }};
+    const res = await fetch(`/api/plans/${planId}/grid/`, { credentials: 'same-origin' });
+    if (!res.ok) {
+      M.toast({html: 'Errore caricamento griglia', classes: 'red'});
+      return;
+    }
+    const data = await res.json();
+    const days = data.days;
 
-      // Intl.DateTimeFormat con locale italiana
-      const weekdayFmt = new Intl.DateTimeFormat('it-IT', { weekday: 'short' });
+    // Header
+    const head = document.getElementById('grid-head');
+    const month = {{ plan.month }} - 1;
+    const year  = {{ plan.year }};
+    const weekdayFmt = new Intl.DateTimeFormat('it-IT', { weekday: 'short' });
+    for (let i = 1; i <= days; i++) {
+      const th = document.createElement('th');
+      const date = new Date(year, month, i);
+      const wd = weekdayFmt.format(date);
+      th.innerHTML = `<div>${i}</div><div class="day-label">${wd}</div>`;
+      if (date.getDay() === 0) th.classList.add('holiday');
+      head.appendChild(th);
+    }
 
-      const fixedHolidays = [
-        '01-01', // Capodanno
-        '06-01', // Epifania
-        '25-04', // Liberazione
-        '01-05', // Lavoro
-        '02-06', // Repubblica
-        '15-08', // Ferragosto
-        '01-11', // Ognissanti
-        '08-12', // Immacolata
-        '25-12', // Natale
-        '26-12'  // Santo Stefano
-      ];
+    // Corpo
+    const gridBody = document.querySelector('#grid tbody');
+    data.rows.forEach(row => {
+      const tr = document.createElement('tr');
+      const th = document.createElement('th');
+      th.textContent = row.profession;
+      tr.appendChild(th);
 
       for (let i = 1; i <= days; i++) {
-        const th = document.createElement('th');
-        const date = new Date(year, month, i);
-        const wd = weekdayFmt.format(date); // es. "lun", "mar", ...
+        const cellData = row[String(i)] || {};
+        const td = document.createElement('td');
+        td.className = 'cell';
+        td.dataset.professionId = row.profession_id;
+        td.dataset.day = i;
 
-        th.innerHTML = `<div>${i}</div><div class="day-label">${wd}</div>`;
-        const ddmm = `${String(i).padStart(2,'0')}-${String(month+1).padStart(2,'0')}`;
-        //date.getDay() === 0 -> Domenica
-        if (date.getDay() === 0 || fixedHolidays.includes(ddmm)) {
-          th.classList.add('holiday');
-        }
-        head.appendChild(th);
+        const name = cellData.employee_name || '';
+        const shift = cellData.shift_code ? ` (${cellData.shift_code})` : '';
+        td.textContent = name ? (name + shift) : '';
+        tr.appendChild(td);
       }
+      gridBody.appendChild(tr);
+    });
 
-      const gridBody = document.querySelector('#grid tbody');
-      data.rows.forEach(row => {
-        const tr = document.createElement('tr');
+    // --- Scrollbar superiore sincronizzata ---
+    const topScroll = document.getElementById('grid-scroll-top');
+    const topInner  = document.getElementById('grid-scroll-inner');
+    const wrapper   = document.querySelector('.grid-wrapper');
+    const table     = document.getElementById('grid');
 
-        const th = document.createElement('th');
-        th.style.textAlign = 'left';
-        th.textContent = row.profession;
-        tr.appendChild(th);
+    function syncTopWidth() {
+      requestAnimationFrame(() => {
+        topInner.style.width = table.scrollWidth + 'px';
+      });
+    }
+    syncTopWidth();
+    window.addEventListener('resize', syncTopWidth);
 
-        for (let i = 1; i <= days; i++) {
-          const cellData = row[String(i)] || {};
-          const td = document.createElement('td');
-          td.className = 'cell';
-          td.dataset.professionId = row.profession_id;
-          td.dataset.day = i;
+    topScroll.addEventListener('scroll', () => {
+      wrapper.scrollLeft = topScroll.scrollLeft;
+    });
+    wrapper.addEventListener('scroll', () => {
+      topScroll.scrollLeft = wrapper.scrollLeft;
+    });
 
-          const name = cellData.employee_name || '';
-          const shift = cellData.shift_code ? ` (${cellData.shift_code})` : '';
-          td.textContent = name ? (name + shift) : '';
+    // --- Selezione celle ---
+    let isMouseDown = false;
+    let selected = new Set();
+    function key(p, d) { return `${p}#${d}`; }
+    function mark(td, on) { td.classList.toggle('selected', !!on); }
 
-          tr.appendChild(td);
-        }
-        gridBody.appendChild(tr);
+    document.addEventListener('mousedown', e => {
+      if (e.target.classList.contains('cell')) isMouseDown = true;
+    });
+    document.addEventListener('mouseup', () => { isMouseDown = false; });
+
+    document.querySelectorAll('td.cell').forEach(td => {
+      td.addEventListener('mousedown', e => {
+        selected.clear();
+        document.querySelectorAll('td.cell.selected').forEach(x => x.classList.remove('selected'));
+        selected.add(key(td.dataset.professionId, td.dataset.day));
+        mark(td, true);
+        e.preventDefault();
+      });
+      td.addEventListener('mouseenter', () => {
+        if (!isMouseDown) return;
+        selected.add(key(td.dataset.professionId, td.dataset.day));
+        mark(td, true);
+      });
+    });
+
+    // CSRF helper
+    function getCookie(name) {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+    const csrftoken = getCookie('csrftoken');
+
+    // APPLY
+    document.getElementById('apply').addEventListener('click', async () => {
+      const employeeId = document.getElementById('employee').value;
+      if (!employeeId) return M.toast({html: 'Seleziona un lavoratore', classes:'orange'});
+      const shiftId = document.getElementById('shift').value || null;
+
+      const y = {{ plan.year }};
+      const m = {{ plan.month }};
+      const cells = Array.from(selected).map(k => {
+        const [p, d] = k.split('#');
+        const dd = String(Number(d)).padStart(2, '0');
+        const mm = String(m).padStart(2, '0');
+        const iso = `${y}-${mm}-${dd}`;
+        return { profession_id: Number(p), date: iso };
+      });
+      if (!cells.length) return M.toast({html: 'Seleziona almeno una cella', classes:'orange'});
+
+      const resp = await fetch(`/api/plans/${planId}/bulk_assign/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(csrftoken ? {'X-CSRFToken': csrftoken} : {}) },
+        credentials: 'same-origin',
+        body: JSON.stringify({ employee_id: Number(employeeId), shift_type_id: shiftId ? Number(shiftId) : null, cells })
+      });
+      if (!resp.ok) return M.toast({html:'Errore applicazione', classes:'red'});
+      location.reload();
+    });
+
+    // CLEAR
+    document.getElementById('clear').addEventListener('click', async () => {
+      if (!selected.size) return M.toast({html:'Seleziona almeno una cella', classes:'orange'});
+      if (!confirm('Rimuovere le assegnazioni dalle celle selezionate?')) return;
+
+      const y = {{ plan.year }};
+      const m = {{ plan.month }};
+      const cells = Array.from(selected).map(k => {
+        const [p, d] = k.split('#');
+        const dd = String(Number(d)).padStart(2, '0');
+        const mm = String(m).padStart(2, '0');
+        const iso = `${y}-${mm}-${dd}`;
+        return { profession_id: Number(p), date: iso };
       });
 
-      let isMouseDown = false;
-      let selected = new Set();
-      function key(p, d) { return `${p}#${d}`; }
-      function mark(td, on) { td.classList.toggle('selected', !!on); }
-
-      document.addEventListener('mousedown', e => {
-        if (e.target.classList.contains('cell')) isMouseDown = true;
+      const resp = await fetch(`/api/plans/${planId}/bulk_clear/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(csrftoken ? {'X-CSRFToken': csrftoken} : {}) },
+        credentials: 'same-origin',
+        body: JSON.stringify({ cells })
       });
-      document.addEventListener('mouseup', () => { isMouseDown = false; });
+      if (!resp.ok) return M.toast({html:'Errore rimozione', classes:'red'});
+      location.reload();
+    });
 
-      document.querySelectorAll('td.cell').forEach(td => {
-        td.addEventListener('mousedown', e => {
-          selected.clear();
-          document.querySelectorAll('td.cell.selected').forEach(x => x.classList.remove('selected'));
-          selected.add(key(td.dataset.professionId, td.dataset.day));
-          mark(td, true);
-          e.preventDefault();
-        });
-        td.addEventListener('mouseenter', () => {
-          if (!isMouseDown) return;
-          selected.add(key(td.dataset.professionId, td.dataset.day));
-          mark(td, true);
-        });
+    // NOTIFY
+    document.getElementById('notify').addEventListener('click', async () => {
+      if (!confirm('Inviare email a TUTTI i dipendenti con assegnazioni in questo piano?')) return;
+      const resp = await fetch(`/api/plans/${planId}/notify/`, {
+        method: 'POST',
+        headers: csrftoken ? {'X-CSRFToken': csrftoken} : {},
+        credentials: 'same-origin'
       });
-
-      function getCookie(name) {
-        const value = `; ${document.cookie}`;
-        const parts = value.split(`; ${name}=`);
-        if (parts.length === 2) return parts.pop().split(';').shift();
-      }
-      const csrftoken = getCookie('csrftoken');
-
-      document.getElementById('apply').addEventListener('click', async () => {
-        const employeeId = document.getElementById('employee').value;
-        if (!employeeId) return alert('Seleziona un lavoratore');
-        const shiftId = document.getElementById('shift').value || null;
-
-        const y = {{ plan.year }};
-        const m = {{ plan.month }};
-        const cells = Array.from(selected).map(k => {
-          const [p, d] = k.split('#');
-          const dd = String(Number(d)).padStart(2, '0');
-          const mm = String(m).padStart(2, '0');
-          const iso = `${y}-${mm}-${dd}`;
-          return { profession_id: Number(p), date: iso };
-        });
-
-        if (!cells.length) return alert('Seleziona almeno una cella');
-
-        const resp = await fetch(`/api/plans/${planId}/bulk_assign/`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(csrftoken ? {'X-CSRFToken': csrftoken} : {})
-          },
-          credentials: 'same-origin',
-          body: JSON.stringify({ employee_id: Number(employeeId), shift_type_id: shiftId ? Number(shiftId) : null, cells })
-        });
-        if (!resp.ok) {
-          const t = await resp.text();
-          return alert('Errore: ' + t);
-        }
-        location.reload();
-      });
-
-      // rimozione assegnazioni dalle celle selezionate (con conferma)
-      document.getElementById('clear').addEventListener('click', async () => {
-        if (!selected.size) return alert('Seleziona almeno una cella');
-        if (!confirm('Rimuovere le assegnazioni dalle celle selezionate? Questa operazione non può essere annullata.')) return;
-
-        const y = {{ plan.year }};
-        const m = {{ plan.month }};
-        const cells = Array.from(selected).map(k => {
-          const [p, d] = k.split('#');
-          const dd = String(Number(d)).padStart(2, '0');
-          const mm = String(m).padStart(2, '0');
-          const iso = `${y}-${mm}-${dd}`;
-          return { profession_id: Number(p), date: iso };
-        });
-
-        const resp = await fetch(`/api/plans/${planId}/bulk_clear/`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(csrftoken ? {'X-CSRFToken': csrftoken} : {})
-          },
-          credentials: 'same-origin',
-          body: JSON.stringify({ cells })
-        });
-        if (!resp.ok) {
-          const t = await resp.text();
-          return alert('Errore: ' + t);
-        }
-        location.reload();
-      });
-
-      document.getElementById('notify').addEventListener('click', async () => {
-        if (!confirm('Inviare email a TUTTI i dipendenti con assegnazioni in questo piano?')) return;
-        const resp = await fetch(`/api/plans/${planId}/notify/`, {
-          method: 'POST',
-          headers: csrftoken ? {'X-CSRFToken': csrftoken} : {},
-          credentials: 'same-origin'
-        });
-        const js = await resp.json();
-        alert(`Email inviate: ${js.sent || 0}`);
-      });
-    })();
+      if (!resp.ok) return M.toast({html:'Errore invio notifiche', classes:'red'});
+      const js = await resp.json();
+      M.toast({html: `Email inviate: ${js.sent ?? js.prepared ?? 0}`});
+    });
+  })();
 </script>
 {% endblock %}
