@@ -9,7 +9,7 @@
     <h5 style="margin-top:0;">Piano mensile — {{ plan.month }}/{{ plan.year }}</h5>
   </div>
 
-  <!-- Toolbar -->
+  <!-- Toolbar comandi -->
   <div class="input-field col s12 m4">
     <select id="employee">
       <option value="" disabled selected>Seleziona lavoratore</option>
@@ -35,11 +35,22 @@
     <a id="clear" class="btn-flat red-text text-darken-2 waves-effect"><i class="material-icons left">backspace</i>Rimuovi</a>
     <a id="notify" class="btn grey darken-1 waves-effect waves-light"><i class="material-icons left">send</i>Invia notifiche</a>
   </div>
+
+  <!-- Filtro professioni (prima colonna) -->
+  <div class="input-field col s12 m7">
+    <i class="material-icons prefix">search</i>
+    <input id="filter-prof" type="text" placeholder="Filtra professioni…">
+    <label for="filter-prof">Filtro Professioni</label>
+    <span id="filter-count" class="helper-text">Mostrate: tutte</span>
+    <a id="filter-clear" class="btn-flat waves-effect" style="margin-left:8px;">
+      <i class="material-icons left">close</i>Pulisci
+    </a>
+  </div>
 </div>
 
 <div class="spacer-8"></div>
 
-<!-- Scrollbar superiore -->
+<!-- Scrollbar superiore sincronizzata -->
 <div id="grid-scroll-top" class="grid-scroll-top">
   <div id="grid-scroll-inner" class="grid-scroll-inner"></div>
 </div>
@@ -58,6 +69,7 @@
 
 {% block extra_body %}
 <script>
+  // Inizializza select Materialize
   document.addEventListener('DOMContentLoaded', () => {
     const elems = document.querySelectorAll('select');
     M.FormSelect.init(elems);
@@ -73,24 +85,26 @@
     const data = await res.json();
     const days = data.days;
 
-    // Header
+    // Header: numero + abbreviazione; domeniche rosse
     const head = document.getElementById('grid-head');
-    const month = {{ plan.month }} - 1;
+    const month = {{ plan.month }} - 1;   // 0-based
     const year  = {{ plan.year }};
     const weekdayFmt = new Intl.DateTimeFormat('it-IT', { weekday: 'short' });
+
     for (let i = 1; i <= days; i++) {
       const th = document.createElement('th');
       const date = new Date(year, month, i);
       const wd = weekdayFmt.format(date);
       th.innerHTML = `<div>${i}</div><div class="day-label">${wd}</div>`;
-      if (date.getDay() === 0) th.classList.add('holiday');
+      if (date.getDay() === 0) th.classList.add('holiday'); // domenica
       head.appendChild(th);
     }
 
-    // Corpo
+    // Corpo tabella
     const gridBody = document.querySelector('#grid tbody');
     data.rows.forEach(row => {
       const tr = document.createElement('tr');
+
       const th = document.createElement('th');
       th.textContent = row.profession;
       tr.appendChild(th);
@@ -110,7 +124,7 @@
       gridBody.appendChild(tr);
     });
 
-    // --- Scrollbar superiore sincronizzata ---
+    // Scrollbar superiore sincronizzata
     const topScroll = document.getElementById('grid-scroll-top');
     const topInner  = document.getElementById('grid-scroll-inner');
     const wrapper   = document.querySelector('.grid-wrapper');
@@ -131,7 +145,7 @@
       topScroll.scrollLeft = wrapper.scrollLeft;
     });
 
-    // --- Selezione celle ---
+    // Selezione celle (click & drag)
     let isMouseDown = false;
     let selected = new Set();
     function key(p, d) { return `${p}#${d}`; }
@@ -177,7 +191,7 @@
         const [p, d] = k.split('#');
         const dd = String(Number(d)).padStart(2, '0');
         const mm = String(m).padStart(2, '0');
-        const iso = `${y}-${mm}-${dd}`;
+        const iso = `${y}-${mm}-${dd}`;  // no UTC shift
         return { profession_id: Number(p), date: iso };
       });
       if (!cells.length) return M.toast({html: 'Seleziona almeno una cella', classes:'orange'});
@@ -229,6 +243,65 @@
       const js = await resp.json();
       M.toast({html: `Email inviate: ${js.sent ?? js.prepared ?? 0}`});
     });
+
+    // --- FILTRO PROFESSIONI (live, robusto) ---
+    (function initProfessionFilterLive() {
+      const input   = document.getElementById('filter-prof');
+      const clearBtn= document.getElementById('filter-clear');
+      const countEl = document.getElementById('filter-count');
+      const tbody   = document.querySelector('#grid tbody');
+
+      if (!input || !tbody) return;
+
+      function normalize(s) {
+        return (s || '')
+          .toLowerCase()
+          .normalize('NFD')                 // separa accenti
+          .replace(/[\u0300-\u036f]/g, '')  // rimuove accenti
+          .trim();
+      }
+
+      function applyFilter() {
+        const qRaw = input.value;
+        const q    = normalize(qRaw);
+        const rows = tbody.rows;            // HTMLCollection live
+        let shown  = 0;
+
+        if (!q) {
+          for (let i = 0; i < rows.length; i++) rows[i].style.display = '';
+          if (countEl) countEl.textContent = 'Mostrate: tutte';
+          return;
+        }
+
+        for (let i = 0; i < rows.length; i++) {
+          const tr = rows[i];
+          const firstCell = tr.cells[0];    // prima colonna (TH professione)
+          const text = firstCell ? firstCell.textContent : '';
+          const ok = normalize(text).includes(q);
+          tr.style.display = ok ? '' : 'none';
+          if (ok) shown++;
+        }
+        if (countEl) countEl.textContent = `Mostrate: ${shown}/${rows.length}`;
+      }
+
+      // live typing (debounce)
+      let t;
+      input.addEventListener('input', () => {
+        clearTimeout(t);
+        t = setTimeout(applyFilter, 120);
+      });
+
+      if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+          input.value = '';
+          applyFilter();
+          input.focus();
+        });
+      }
+
+      // stato iniziale
+      applyFilter();
+    })();
   })();
 </script>
 {% endblock %}
