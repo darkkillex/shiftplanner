@@ -4,9 +4,15 @@
 
 <article>
   <header>
-    <strong>{{ user_obj.get_full_name|default:user_obj.username }}</strong>
-    {% if user_obj.is_superuser %}<span class="badge">Superuser</span>{% elif user_obj.is_staff %}<span class="badge">Staff</span>{% endif %}
+    <div style="margin-top:4px;">
+      {% if user_obj.is_superuser %}
+        <span class="new badge red" data-badge-caption="" style="float:none; margin-left:0;">Superuser</span>
+      {% elif user_obj.is_staff %}
+        <span class="new badge blue" data-badge-caption="" style="float:none; margin-left:0;">Staff</span>
+      {% endif %}
+    </div>
   </header>
+
   <ul>
     <li><strong>Username:</strong> {{ user_obj.username }}</li>
     <li><strong>Nome:</strong> {{ user_obj.first_name|default:"-" }}</li>

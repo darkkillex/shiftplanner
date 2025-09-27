@@ -1,157 +1,174 @@
 <!doctype html>
 <html lang="it">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
 
-  <title>{% block title %}Shift Planner{% endblock %}</title>
+    <title>{% block title %}Shift Planner{% endblock %}</title>
 
-  <!-- Materialize + Icons -->
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/materialize-css@1.0.0/dist/css/materialize.min.css">
-  <script defer src="https://cdn.jsdelivr.net/npm/materialize-css@1.0.0/dist/js/materialize.min.js"></script>
+    <!-- Materialize + Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/materialize-css@1.0.0/dist/css/materialize.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/materialize-css@1.0.0/dist/js/materialize.min.js"></script>
 
-  <style>
-    /* --- GRIGLIA: larghezza a contenuto + sticky header + prima colonna sticky --- */
+    <style>
+        /* --- GRIGLIA: larghezza a contenuto + sticky header + prima colonna sticky --- */
 
-    .grid-wrapper {
-      overflow: auto;
-      -webkit-overflow-scrolling: touch;
-      border-radius: 6px;
-      border: 1px solid #e0e0e0;
-      background: #fff;
-      max-height: 75vh;            /* barra orizzontale sempre visibile */
-    }
+        .grid-wrapper {
+          overflow: auto;
+          -webkit-overflow-scrolling: touch;
+          border-radius: 6px;
+          border: 1px solid #e0e0e0;
+          background: #fff;
+          max-height: 75vh;            /* barra orizzontale sempre visibile */
+        }
 
-    #grid {
-      border-collapse: collapse;
-      width: 100%;
-      table-layout: auto;
-    }
+        #grid {
+          border-collapse: collapse;
+          width: 100%;
+          table-layout: auto;
+        }
 
-    #grid th, #grid td {
-      border: 1px solid #e0e0e0;
-      padding: 6px 8px;
-      text-align: center;
-      white-space: nowrap;         /* no wrap, colonna si allarga */
-    }
+        #grid th, #grid td {
+          border: 1px solid #e0e0e0;
+          padding: 6px 8px;
+          text-align: center;
+          white-space: nowrap;         /* no wrap, colonna si allarga */
+        }
 
-    /* Header sticky */
-    #grid thead th {
-      position: sticky;
-      top: 0;
-      z-index: 2;
-      background: #fafafa;
-    }
+        /* Header sticky */
+        #grid thead th {
+          position: sticky;
+          top: 0;
+          z-index: 2;
+          background: #fafafa;
+        }
 
-    /* Prima colonna sticky */
-    #grid thead th:first-child,
-    #grid tbody th:first-child,
-    #grid tbody td:first-child {
-      position: sticky;
-      left: 0;
-      z-index: 3;
-      background: #fff;
-      text-align: left;
-      font-weight: 600;
-      box-shadow: 2px 0 0 #e0e0e0;
-      transform: translateZ(0);
-    }
+        /* Prima colonna sticky */
+        #grid thead th:first-child,
+        #grid tbody th:first-child,
+        #grid tbody td:first-child {
+          position: sticky;
+          left: 0;
+          z-index: 3;
+          background: #fff;
+          text-align: left;
+          font-weight: 600;
+          box-shadow: 2px 0 0 #e0e0e0;
+          transform: translateZ(0);
+        }
 
-    /* Angolo (prima colonna + header) sopra a tutto */
-    #grid thead th:first-child {
-      z-index: 4;
-      background: #fafafa;
-      box-shadow: 2px 0 0 #e0e0e0, 0 2px 0 #e0e0e0;
-    }
+        /* Angolo (prima colonna + header) sopra a tutto */
+        #grid thead th:first-child {
+          z-index: 4;
+          background: #fafafa;
+          box-shadow: 2px 0 0 #e0e0e0, 0 2px 0 #e0e0e0;
+        }
 
-    /* Domeniche in rosso */
-    #grid thead th.holiday { color: #d32f2f; }
+        /* Domeniche in rosso */
+        #grid thead th.holiday { color: #d32f2f; }
 
-    /* Etichetta weekday */
-    #grid thead .day-label {
-      font-size: 11px;
-      opacity: .75;
-      line-height: 1;
-    }
+        /* Etichetta weekday */
+        #grid thead .day-label {
+          font-size: 11px;
+          opacity: .75;
+          line-height: 1;
+        }
 
-    /* Celle di lavoro */
-    #grid td.cell {
-      cursor: pointer;
-      height: 34px;
-      vertical-align: middle;
-      font-size: 13px;
-    }
+        /* Celle di lavoro */
+        #grid td.cell {
+          cursor: pointer;
+          height: 34px;
+          vertical-align: middle;
+          font-size: 13px;
+        }
 
-    /* Selezione */
-    #grid td.cell.selected {
-      outline: 2px solid #000;
-      outline-offset: -2px;
-    }
+        /* Selezione */
+        #grid td.cell.selected {
+          outline: 2px solid #000;
+          outline-offset: -2px;
+        }
 
-    /* Zebra + hover */
-    #grid tbody tr:nth-child(odd)  { background-color: #fafafa; }
-    #grid tbody tr:nth-child(even) { background-color: #ffffff; }
-    #grid tbody tr:hover { background-color: #f0f8ff; }
+        /* Zebra + hover */
+        #grid tbody tr:nth-child(odd)  { background-color: #fafafa; }
+        #grid tbody tr:nth-child(even) { background-color: #ffffff; }
+        #grid tbody tr:hover { background-color: #f0f8ff; }
 
-    /* Scrollbar orizzontale superiore */
-    .grid-scroll-top {
-      height: 16px;
-      overflow-x: auto;
-      overflow-y: hidden;
-      border: 1px solid #e0e0e0;
-      border-radius: 6px;
-      background: #fafafa;
-      margin-bottom: 8px;
-    }
-    .grid-scroll-inner {
-      height: 1px;
-    }
+        /* Scrollbar orizzontale superiore */
+        .grid-scroll-top {
+          height: 16px;
+          overflow-x: auto;
+          overflow-y: hidden;
+          border: 1px solid #e0e0e0;
+          border-radius: 6px;
+          background: #fafafa;
+          margin-bottom: 8px;
+        }
+        .grid-scroll-inner {
+          height: 1px;
+        }
 
-    .spacer-8 { height: 8px; }
+        .spacer-8 { height: 8px; }
 
-    @media (max-width: 600px) {
-      #grid th, #grid td { padding: 4px 6px; font-size: 12px; }
-      #grid td.cell { height: 30px; }
-    }
-  </style>
+        @media (max-width: 600px) {
+          #grid th, #grid td { padding: 4px 6px; font-size: 12px; }
+          #grid td.cell { height: 30px; }
+        }
+    </style>
 
-  {% block extra_head %}{% endblock %}
+    {% block extra_head %}{% endblock %}
 </head>
 <body class="grey lighten-4">
 
-  <!-- NAVBAR -->
-  <nav class="blue">
-    <div class="nav-wrapper container">
-      <a href="/" class="brand-logo">Shift Planner</a>
-      <ul id="nav-mobile" class="right hide-on-med-and-down">
-        <li><a href="/">Piani</a></li>
-        <li><a href="/admin/">Admin</a></li>
-        {% if request.user.is_authenticated %}
-          <li>
-            <a href="{% url 'profile' %}">
-              <i class="material-icons left">account_circle</i>
-              {{ request.user.get_full_name|default:request.user.username }}
-            </a>
-          </li>
-          <li>
-            <a href="/logout/">
-              <i class="material-icons left">exit_to_app</i>Logout
-            </a>
-          </li>
-        {% else %}
-          <li><a href="/login/"><i class="material-icons left">login</i>Login</a></li>
-        {% endif %}
-      </ul>
+<!-- NAVBAR -->
+<nav class="blue">
+    <div class="nav-wrapper container" style="display:flex; align-items:center; justify-content:space-between;">
+
+        <!-- Sinistra: Brand + Divider + Link amministrazione/home -->
+        <div class="nav-left" style="display:flex; align-items:center; gap:12px;">
+            <a href="/" class="brand-logo" style="position:static; transform:none;">Shift Planner</a>
+
+            <!-- Divisore verticale -->
+            <span class="nav-divider"
+                  style="display:inline-block; width:1px; height:28px; background:rgba(255,255,255,.5); margin:0 8px;"></span>
+
+            <!-- Link “di struttura” -->
+            <ul style="display:flex; gap:8px; margin:0;">
+                <li><a href="/admin/" style="padding:0 10px;">Area Amministratore</a></li>
+                <li><a href="/" style="padding:0 10px;">Home Page</a></li>
+            </ul>
+            <!-- Divisore verticale -->
+            <span class="nav-divider"
+                  style="display:inline-block; width:1px; height:28px; background:rgba(255,255,255,.5); margin:0 8px;"></span>
+        </div>
+
+        <!-- Destra: utente -->
+        <ul id="nav-mobile" class="right" style="margin:0;">
+            {% if request.user.is_authenticated %}
+            <li>
+                <a href="{% url 'profile' %}">
+                    <i class="material-icons left">account_circle</i>
+                    {{ request.user.get_full_name|default:request.user.username }}
+                </a>
+            </li>
+            <li>
+                <a href="/logout/">
+                    <i class="material-icons left">exit_to_app</i>Logout
+                </a>
+            </li>
+            {% else %}
+            <li><a href="/login/"><i class="material-icons left">login</i>Login</a></li>
+            {% endif %}
+        </ul>
     </div>
-  </nav>
+</nav>
 
 
-  <!-- CONTENUTO -->
-  <main class="container-fluid" style="margin:12px 16px;">
+<!-- CONTENUTO -->
+<main class="container-fluid" style="margin:12px 16px;">
     {% block content %}{% endblock %}
-  </main>
+</main>
 
-  {% block extra_body %}{% endblock %}
+{% block extra_body %}{% endblock %}
 </body>
 </html>
