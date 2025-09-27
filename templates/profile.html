@@ -9,6 +9,8 @@
   </header>
   <ul>
     <li><strong>Username:</strong> {{ user_obj.username }}</li>
+    <li><strong>Nome:</strong> {{ user_obj.first_name|default:"-" }}</li>
+    <li><strong>Cognome:</strong> {{ user_obj.last_name|default:"-" }}</li>
     <li><strong>Email:</strong> {{ user_obj.email|default:"—" }}</li>
     <li><strong>Ultimo accesso:</strong> {{ user_obj.last_login|date:"d/m/Y H:i" }}</li>
     <li><strong>Membro dal:</strong> {{ user_obj.date_joined|date:"d/m/Y H:i" }}</li>
