@@ -44,7 +44,9 @@ class PlanViewSet(viewsets.ModelViewSet):
                     'employee_id': a.employee_id if a else None,
                     'employee_name': a.employee.full_name() if a else '',
                     'shift_code': a.shift_type.code if (a and a.shift_type) else '',
-                    'shift_label': a.shift_type.label if (a and a.shift_type) else ''
+                    'shift_label': a.shift_type.label if (a and a.shift_type) else '',
+                    'notes': a.notes if a and a.notes else '',
+                    'has_note': bool(a and a.notes)
                 }
             rows.append(row)
         return Response({'year': plan.year, 'month': plan.month, 'days': days, 'rows': rows})
@@ -55,16 +57,21 @@ class PlanViewSet(viewsets.ModelViewSet):
         employee_id = request.data.get('employee_id')
         shift_id = request.data.get('shift_type_id')
         cells = request.data.get('cells', [])
+        note = (request.data.get('note') or '').strip()
         if not employee_id or not cells:
             return Response({'detail':'employee_id e cells obbligatori'}, status=400)
         with transaction.atomic():
             for c in cells:
-                Assignment.objects.update_or_create(
+                obj, _ = Assignment.objects.update_or_create(
                     plan=plan,
                     profession_id=c['profession_id'],
                     date=c['date'],
                     defaults={'employee_id': employee_id, 'shift_type_id': shift_id}
                 )
+                # aggiorna/impone la nota (anche quando la riassegni)
+                obj.notes = note
+                obj.save(update_fields=['notes'])
+
         return Response({'updated': len(cells)}, status=200)
 
     @action(detail=True, methods=['post'])
@@ -112,6 +119,31 @@ class PlanViewSet(viewsets.ModelViewSet):
 
         return Response({'deleted': deleted}, status=status.HTTP_200_OK)
 
+    @action(detail=True, methods=['post'])
+    def set_note(self, request, pk=None):
+        """
+        Imposta/aggiorna/azzera la nota su una cella (deve esistere un Assignment).
+        Body: { profession_id: int, date: 'YYYY-MM-DD', note: '...' }
+        """
+        plan = self.get_object()
+        try:
+            prof_id = int(request.data.get('profession_id'))
+            day = dt.date.fromisoformat(request.data.get('date'))
+        except Exception:
+            return Response({'detail': 'profession_id/date non validi'}, status=status.HTTP_400_BAD_REQUEST)
+
+        note = (request.data.get('note') or '').strip()
+
+        try:
+            a = Assignment.objects.get(plan=plan, profession_id=prof_id, date=day)
+        except Assignment.DoesNotExist:
+            return Response({'detail': 'Nessuna assegnazione su questa cella. Assegna un lavoratore prima di aggiungere una nota.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        a.notes = note  # può essere stringa vuota per rimuovere la nota
+        a.save(update_fields=['notes'])
+
+        return Response({'ok': True, 'notes': a.notes, 'has_note': bool(a.notes)}, status=status.HTTP_200_OK)
 
 @login_required
 def home(request):
@@ -132,6 +164,8 @@ def monthly_plan(request, pk: int):
     employees = Employee.objects.order_by('last_name','first_name').all()
     shifts = ShiftType.objects.order_by('code').all()
     return render(request, 'monthly_plan.html', {'plan': plan, 'professions': professions, 'employees': employees, 'shifts': shifts})
+
+
 
 def logout_view(request):
     logout(request)

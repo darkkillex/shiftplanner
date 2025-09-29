@@ -30,6 +30,13 @@
     <label>Turno</label>
   </div>
 
+  <div class="input-field col s12 m5">
+    <i class="material-icons prefix">sticky_note_2</i>
+    <input id="note" type="text" maxlength="255" placeholder="Nota (opzionale)">
+    <label for="note">Nota</label>
+  </div>
+
+
   <div class="col s12 m5" style="margin-top:22px;">
     <a id="apply" class="btn waves-effect waves-light"><i class="material-icons left">done_all</i>Applica</a>
     <a id="clear" class="btn-flat red-text text-darken-2 waves-effect"><i class="material-icons left">backspace</i>Rimuovi</a>
@@ -64,6 +71,22 @@
     <tbody></tbody>
   </table>
 </div>
+
+<!-- Modal modifica nota -->
+<div id="noteModal" class="modal">
+  <div class="modal-content">
+    <h6>Nota cella — <span id="noteCellLabel"></span></h6>
+    <div class="input-field">
+      <textarea id="noteInput" class="materialize-textarea" maxlength="255" placeholder="Nota (max 255)"></textarea>
+      <label for="noteInput" class="active">Nota</label>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <a href="#!" class="modal-close btn-flat">Annulla</a>
+    <a href="#!" id="noteSaveBtn" class="btn">Salva</a>
+  </div>
+</div>
+
 
 {% endblock %}
 
@@ -116,13 +139,33 @@
         td.dataset.professionId = row.profession_id;
         td.dataset.day = i;
 
-        const name = cellData.employee_name || '';
+        const name  = cellData.employee_name || '';
         const shift = cellData.shift_label ? ` (${cellData.shift_label})` : '';
-        td.textContent = name ? (name + shift) : '';
+        const text  = name ? (name + shift) : '';
+
+        td.dataset.employeeId = cellData.employee_id || '';
+        td.dataset.notes      = cellData.notes || '';
+        td.dataset.name       = name;
+        td.dataset.shiftLabel = cellData.shift_label || '';
+
+        if (cellData.has_note) {
+          const tooltipText = (cellData.notes || '').replace(/"/g, '&quot;');
+          td.innerHTML = `
+            <span>${text}</span>
+            <i class="material-icons tiny tooltipped"
+               data-position="bottom"
+               data-tooltip="${tooltipText}">sticky_note_2</i>
+          `;
+        } else {
+          td.textContent = text;
+        }
+
         tr.appendChild(td);
       }
       gridBody.appendChild(tr);
     });
+
+    M.Tooltip.init(document.querySelectorAll('.tooltipped'));
 
     // Scrollbar superiore sincronizzata
     const topScroll = document.getElementById('grid-scroll-top');
@@ -184,6 +227,7 @@
       const employeeId = document.getElementById('employee').value;
       if (!employeeId) return M.toast({html: 'Seleziona un lavoratore', classes:'orange'});
       const shiftId = document.getElementById('shift').value || null;
+      const note = (document.getElementById('note').value || '').trim();
 
       const y = {{ plan.year }};
       const m = {{ plan.month }};
@@ -200,11 +244,94 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(csrftoken ? {'X-CSRFToken': csrftoken} : {}) },
         credentials: 'same-origin',
-        body: JSON.stringify({ employee_id: Number(employeeId), shift_type_id: shiftId ? Number(shiftId) : null, cells })
+        body: JSON.stringify({ employee_id: Number(employeeId), shift_type_id: shiftId ? Number(shiftId) : null, cells, note, })
       });
       if (!resp.ok) return M.toast({html:'Errore applicazione', classes:'red'});
       location.reload();
     });
+
+
+      // --- Modal nota (Materialize) ---
+      const modalElem      = document.getElementById('noteModal');
+      const modal          = M.Modal.init(modalElem, { dismissible: true });
+      const noteInput      = document.getElementById('noteInput');
+      const noteCellLabel  = document.getElementById('noteCellLabel');
+      const noteSaveBtn    = document.getElementById('noteSaveBtn');
+
+      let currentCell = null; // td in editing
+
+      // helper: renderizza la cella in base ai dataset
+      function renderCell(td) {
+        const name       = td.dataset.name || '';
+        const shiftLabel = td.dataset.shiftLabel || '';
+        const text       = name ? (name + (shiftLabel ? ` (${shiftLabel})` : '')) : '';
+        const notes      = td.dataset.notes || '';
+
+        if (notes) {
+          const tooltipText = notes.replace(/"/g, '&quot;');
+          td.innerHTML = `
+            <span>${text}</span>
+            <i class="material-icons tiny tooltipped"
+               data-position="bottom"
+               data-tooltip="${tooltipText}">sticky_note_2</i>
+          `;
+          const icon = td.querySelector('.tooltipped');
+          if (icon) M.Tooltip.init(icon);
+        } else {
+          td.textContent = text;
+        }
+      }
+
+      // doppio click: apri editor nota (solo se c’è un assegnato)
+      document.querySelectorAll('td.cell').forEach(td => {
+        td.addEventListener('dblclick', () => {
+          if (!td.dataset.employeeId) {
+            return M.toast({html: 'Nessuna assegnazione in questa cella. Assegna un lavoratore prima di aggiungere una nota.', classes: 'orange'});
+          }
+          currentCell = td;
+          noteInput.value = td.dataset.notes || '';
+          // forza label attiva
+          const lbl = document.querySelector("label[for='noteInput']");
+          if (lbl) lbl.classList.add('active');
+          // Etichetta contesto: professione + giorno
+          const profName = td.parentElement.querySelector('th')?.textContent || '';
+          const day = td.dataset.day;
+          noteCellLabel.textContent = `${profName} — Giorno ${day}`;
+          modal.open();
+        });
+      });
+
+      // salva nota → POST /api/plans/<id>/set_note/
+      noteSaveBtn.addEventListener('click', async () => {
+        if (!currentCell) return;
+        const note = (noteInput.value || '').trim();
+
+        const y = {{ plan.year }};
+        const m = {{ plan.month }};
+        const body = {
+          profession_id: Number(currentCell.dataset.professionId),
+          date: `${y}-${String(m).padStart(2,'0')}-${String(currentCell.dataset.day).padStart(2,'0')}`,
+          note
+        };
+
+        const resp = await fetch(`/api/plans/${planId}/set_note/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(csrftoken ? {'X-CSRFToken': csrftoken} : {}) },
+          credentials: 'same-origin',
+          body: JSON.stringify(body)
+        });
+
+        if (!resp.ok) {
+          return M.toast({html: 'Errore salvataggio nota', classes: 'red'});
+        }
+
+        const js = await resp.json();
+        currentCell.dataset.notes = js.notes || '';
+        renderCell(currentCell);
+
+        modal.close();
+        M.toast({html: js.notes ? 'Nota salvata' : 'Nota rimossa'});
+      });
 
     // CLEAR
     document.getElementById('clear').addEventListener('click', async () => {

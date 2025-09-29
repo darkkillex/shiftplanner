@@ -24,6 +24,13 @@ class AssignmentSerializer(serializers.ModelSerializer):
     profession_name = serializers.CharField(source='profession.name', read_only=True)
     shift_code = serializers.CharField(source='shift_type.code', read_only=True)
     shift_label = serializers.CharField(source='shift_type.label', read_only=True)
+    notes = serializers.CharField(read_only=True, allow_blank=True)
+    has_note = serializers.SerializerMethodField()
     class Meta:
         model = Assignment
-        fields = ['id','plan','profession','date','employee','shift_type','employee_name','profession_name','shift_code','shift_label']
+        fields = ['id','plan','profession','date','employee','shift_type',
+                  'employee_name','profession_name','shift_code','shift_label',
+                  'notes','has_note']
+
+    def get_has_note(self, obj):
+        return bool(obj.notes)
