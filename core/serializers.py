@@ -23,6 +23,7 @@ class AssignmentSerializer(serializers.ModelSerializer):
     employee_name = serializers.CharField(source='employee.full_name', read_only=True)
     profession_name = serializers.CharField(source='profession.name', read_only=True)
     shift_code = serializers.CharField(source='shift_type.code', read_only=True)
+    shift_label = serializers.CharField(source='shift_type.label', read_only=True)
     class Meta:
         model = Assignment
-        fields = ['id','plan','profession','date','employee','shift_type','employee_name','profession_name','shift_code']
+        fields = ['id','plan','profession','date','employee','shift_type','employee_name','profession_name','shift_code','shift_label']

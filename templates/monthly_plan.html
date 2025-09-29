@@ -117,7 +117,7 @@
         td.dataset.day = i;
 
         const name = cellData.employee_name || '';
-        const shift = cellData.shift_code ? ` (${cellData.shift_code})` : '';
+        const shift = cellData.shift_label ? ` (${cellData.shift_label})` : '';
         td.textContent = name ? (name + shift) : '';
         tr.appendChild(td);
       }

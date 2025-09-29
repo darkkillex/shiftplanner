@@ -43,7 +43,8 @@ class PlanViewSet(viewsets.ModelViewSet):
                 row[str(d)] = {
                     'employee_id': a.employee_id if a else None,
                     'employee_name': a.employee.full_name() if a else '',
-                    'shift_code': a.shift_type.code if (a and a.shift_type) else ''
+                    'shift_code': a.shift_type.code if (a and a.shift_type) else '',
+                    'shift_label': a.shift_type.label if (a and a.shift_type) else ''
                 }
             rows.append(row)
         return Response({'year': plan.year, 'month': plan.month, 'days': days, 'rows': rows})
