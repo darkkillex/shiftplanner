@@ -1,3 +1,13 @@
+DONE
+
+v0.2.0
+Celle - rimuovere cod. Turno e inserire la Label
+Aggiungere Campo Note (opzionale) da poter inserire all'atto dell'applicazione del turno (prevedere qualcosa che faccia capire che sulla cella c'è una nota)
+Modifica/rimozione/aggiunta nota su cella, dopo doppio click su cella
+Refactoring degli script JS in sorgenti dedicati
+Bug fixing non corretta inizializzazione e visualizzazione allo scorrere del mouse, delle note presenti
+
+
 v0.1.3
 Applicare filtri tabella su Professioni (filtro live)
 Mostrare Nome e Cognome dell'utente connesso nella sezione Profilo
@@ -22,16 +32,28 @@ Creare azione/bottone "Rimuovi da celle selezionate" ✔
 
 
 
+########################################################################################################################
 
 
-IN SVILUPPO
+TO-DO
+
+TIER-1
+
+
+Refactoring segli style su sorgenti dedicati
+Se lavoratore è presente su altre professioni lo stesso giorno, blocca inserimento
+
+
+
+TIER-2
 
 Aggiungere bottone e azione per estrazione del piano mensile in .csv/.xlsx
 Scorrere la tabella se l'utente seleziona tenendo il click del mouse premuto per scorrere e selezionare più giorni (non visibili)
 
+
+TIER-3
+
 Aggiungere colorazione nella griglia in base al turno ricoperto dal lavoratore
-Riposizionare i tasti azione
-
-
 Testare effettiva funzionalità dell'invio notifiche
-Reformat degli script JS in sorgenti dedicati
+Riposizionare i tasti azione
+Inibire lato Area Amministrazione a utenti Staff
