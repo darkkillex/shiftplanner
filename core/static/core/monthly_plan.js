@@ -28,6 +28,20 @@
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
+
+// Inizializza i tooltip quando M.Tooltip è pronto
+  function initTooltipsLazy(maxMs = 3000) {
+  const start = Date.now();
+  (function tick() {
+    if (window.M && M.Tooltip) {
+      try { M.Tooltip.init(document.querySelectorAll('.tooltipped')); } catch (_) {}
+      return;
+    }
+    if (Date.now() - start > maxMs) return; // smetti di riprovare
+    setTimeout(tick, 80);
+  })();
+}
+
     // Helper CSRF
   function getCookie(name) {
     const value = `; ${document.cookie}`;
@@ -161,8 +175,8 @@
       gridBody.appendChild(tr);
     });
 
-    // init tooltip per eventuali note
-    M.Tooltip.init($$(".tooltipped"));
+    // init tooltip per eventuali note "latenti" nella comparsa
+    initTooltipsLazy();
   }
 
   // -------------------------------
