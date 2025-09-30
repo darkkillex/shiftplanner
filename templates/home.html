@@ -2,11 +2,19 @@
 {% block content %}
 <h2>Lista Piani turno creati</h2>
 <ul>
-  {% for p in plans %}
-    <li><a href="{% url 'monthly_plan' p.id %}">{{ p.name }} — {{ p.month }}/{{ p.year }} ({{ p.status }})</a></li>
-  {% empty %}
+    {% for p in plans %}
+    <li>
+        <a href="{% url 'monthly_plan' p.id %}">{{ p.name }} — {{ p.month }}/{{ p.year }} ({{ p.status }})</a>
+        <!-- dentro il loop dei plans -->
+        <a href="/api/plans/{{ p.id }}/export_xlsx/"
+           class="btn-small btn-compact teal waves-effect"
+           title="Esporta XLSX">
+          <i class="material-icons tiny left">file_download</i> XLSX
+        </a>
+    </li>
+    {% empty %}
     <li>Nessun piano</li>
-  {% endfor %}
+    {% endfor %}
 </ul>
 <p><a href="/admin/core/plan/add/">+ Crea nuovo Piano</a></p>
 {% endblock %}

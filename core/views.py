@@ -1,14 +1,27 @@
+import openpyxl
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+
 from django.core.mail import send_mass_mail
 from django.db import transaction
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
 from django.shortcuts import redirect
+from django.http import HttpResponse
+
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment, PatternFill
+from openpyxl.comments import Comment
+from openpyxl.utils import get_column_letter
+
+
+from io import BytesIO
+
 from .models import Company, Profession, Employee, ShiftType, Plan, Assignment
 from .serializers import *
+
 import calendar, datetime as dt
 
 class EmployeeViewSet(viewsets.ModelViewSet):
@@ -188,6 +201,104 @@ class PlanViewSet(viewsets.ModelViewSet):
         a.save(update_fields=['notes'])
 
         return Response({'ok': True, 'notes': a.notes, 'has_note': bool(a.notes)}, status=status.HTTP_200_OK)
+
+
+    @action(detail=True, methods=['get'])
+    def export_xlsx(self, request, pk=None):
+        plan = self.get_object()
+        days = calendar.monthrange(plan.year, plan.month)[1]
+
+        # Prepara workbook/worksheet
+        wb = Workbook()
+        ws = wb.active
+        ws.title = f"{plan.month:02d}-{plan.year}"
+
+        # Stili base
+        bold = Font(bold=True)
+        center = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        wrap = Alignment(wrap_text=True)
+        sunday_fill = PatternFill("solid", fgColor="FFEBEE")     # rosato leggero per domeniche
+        header_fill = PatternFill("solid", fgColor="E3F2FD")     # azzurrino header
+
+        # Header: A1 "Professione", poi 1..N con giorno + abbreviazione
+        ws.cell(row=1, column=1, value="Professione").font = bold
+        ws.cell(row=1, column=1).alignment = center
+        ws.cell(row=1, column=1).fill = header_fill
+
+        # mappa indice colonna -> (giorno, data)
+        col_for_day = {}
+
+        it_weekdays = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
+        for d in range(1, days+1):
+            col = d + 1  # colonna 2..N
+            the_date = dt.date(plan.year, plan.month, d)
+            wd = it_weekdays[the_date.weekday()]
+            ws.cell(row=1, column=col, value=f"{d}\n{wd}").font = bold
+            ws.cell(row=1, column=col).alignment = center
+            ws.cell(row=1, column=col).fill = header_fill
+            if the_date.weekday() == 6:   # domenica
+                ws.cell(row=1, column=col).fill = sunday_fill
+            col_for_day[col] = the_date
+
+        # Riga 2..: professioni
+        professions = Profession.objects.order_by('name').all()
+        # (se hai introdotto un campo `order`, sostituisci con .order_by('order','id'))
+
+        # Precarica assignments
+        ass = (Assignment.objects
+               .filter(plan=plan)
+               .select_related('employee', 'shift_type', 'profession'))
+        idx = {(a.profession_id, a.date): a for a in ass}
+
+        row = 2
+        for p in professions:
+            # Colonna A: nome professione
+            ws.cell(row=row, column=1, value=p.name)
+
+            for d in range(1, days+1):
+                col = d + 1
+                day = col_for_day[col]
+                a = idx.get((p.id, day))
+                if not a:
+                    continue
+
+                name = a.employee.full_name()
+                shift = f" ({a.shift_type.label})" if a.shift_type else ""
+                val = f"{name}{shift}"
+
+                cell = ws.cell(row=row, column=col, value=val)
+                cell.alignment = wrap
+
+                # Note: inserite note come Comment nativo
+                if a.notes:
+                    try:
+                        cell.comment = Comment(a.notes, "ShiftPlanner")
+                    except Exception:
+                        pass
+                # # Domeniche con fill
+                # if day.weekday() == 6:
+                #     cell.fill = sunday_fill
+            row += 1
+
+        # layout
+        ws.freeze_panes = "B2"
+        ws.column_dimensions["A"].width = 40
+        # larghezza base per giorni
+        for col in range(2, days+2):
+            ws.column_dimensions[get_column_letter(col)].width = 22
+
+        # Output
+        buf = BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+
+        fname = f"plan_{plan.year}_{plan.month:02d}.xlsx"
+        resp = HttpResponse(
+            buf.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        resp['Content-Disposition'] = f'attachment; filename="{fname}"'
+        return resp
 
 @login_required
 def home(request):
