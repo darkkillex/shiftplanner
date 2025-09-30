@@ -3,6 +3,8 @@ from django.urls import path, include
 from django.contrib.auth import views as auth_views
 from rest_framework.routers import DefaultRouter
 from core import views as core_views, views
+from django.contrib.admin import AdminSite
+from django.contrib import admin as django_admin
 
 router = DefaultRouter()
 router.register(r'api/employees', core_views.EmployeeViewSet)
@@ -10,8 +12,23 @@ router.register(r'api/professions', core_views.ProfessionViewSet)
 router.register(r'api/shift-types', core_views.ShiftTypeViewSet)
 router.register(r'api/plans', core_views.PlanViewSet, basename='plans')
 
+
+class SuperuserOnlyAdmin(AdminSite):
+    site_header = "Shift Planner — Admin"
+    site_title = "Shift Planner — Admin"
+    index_title = "Dashboard"
+    def has_permission(self, request):
+        return request.user.is_active and request.user.is_superuser
+
+superadmin = SuperuserOnlyAdmin(name='superadmin')
+
+# registra tutti i ModelAdmin già registrati sul default admin
+for model, model_admin in list(django_admin.site._registry.items()):
+    superadmin._registry[model] = model_admin
+
+
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('admin/', superadmin.urls),
     path('login/', auth_views.LoginView.as_view(template_name='login.html'), name='login'),
     path('logout/', core_views.logout_view, name='logout'),
     path('', core_views.home, name='home'),

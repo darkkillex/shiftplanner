@@ -157,7 +157,13 @@
 
             <!-- Link “di struttura” -->
             <ul style="display:flex; gap:8px; margin:0;">
-                <li><a href="/admin/" style="padding:0 10px;">Area Amministratore</a></li>
+                {% if request.user.is_superuser%}
+                  <li>
+                    <a href="{% url 'admin:index' %}">
+                      <i class="material-icons left">settings</i>Area Amministratore
+                    </a>
+                  </li>
+                {% endif %}
                 <li><a href="/" style="padding:0 10px;">Home Page</a></li>
             </ul>
             <!-- Divisore verticale -->
