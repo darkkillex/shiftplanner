@@ -98,6 +98,7 @@
       .then(() => {
         initScrollSync(state);
         initSelection(state);
+        initAutoScroll(state);
         initFilter(state);
         initEmployeeFilterLive();
         initApply(state);
@@ -231,6 +232,80 @@
       });
     });
   }
+
+    // -------------------------------
+    // Contenitore scrollabile(click & drag)
+    // -------------------------------
+
+  function initAutoScroll(state) {
+    const wrapper = state.grid.closest('.grid-wrapper'); //
+    if (!wrapper) return;
+
+    const EDGE = 40;               // px dal bordo che attiva lo scroll
+    const MAX_SPEED = 28;          // px per frame (~60fps)
+    let rafId = null;
+    let mouseX = 0, mouseY = 0;
+    let active = false;
+
+    function onMouseMove(e) {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+    }
+
+    function step() {
+      if (!active) { rafId = null; return; }
+
+      const rect = wrapper.getBoundingClientRect();
+      let dx = 0, dy = 0;
+
+      // Orizzontale
+      if (mouseX < rect.left + EDGE) {
+        dx = -Math.min(MAX_SPEED, (rect.left + EDGE - mouseX));
+      } else if (mouseX > rect.right - EDGE) {
+        dx =  Math.min(MAX_SPEED, (mouseX - (rect.right - EDGE)));
+      }
+      // Verticale
+      if (mouseY < rect.top + EDGE) {
+        dy = -Math.min(MAX_SPEED, (rect.top + EDGE - mouseY));
+      } else if (mouseY > rect.bottom - EDGE) {
+        dy =  Math.min(MAX_SPEED, (mouseY - (rect.bottom - EDGE)));
+      }
+
+      if (dx !== 0 || dy !== 0) {
+        wrapper.scrollLeft += dx;
+        wrapper.scrollTop  += dy;
+
+        // Se hai la scrollbar superiore sincronizzata, allineala
+        const topScroll = document.getElementById('grid-scroll-top');
+        if (topScroll) topScroll.scrollLeft = wrapper.scrollLeft;
+      }
+
+      rafId = requestAnimationFrame(step);
+    }
+
+    // Attiva solo quando stai selezionando (mouse premuto)
+    wrapper.addEventListener('mousedown', (e) => {
+      if (e.target && e.target.classList.contains('cell')) {
+        active = true;
+        document.addEventListener('mousemove', onMouseMove);
+        if (!rafId) rafId = requestAnimationFrame(step);
+      }
+    });
+
+    // Ferma quando rilasci o esci dalla finestra
+    function stop() {
+      active = false;
+      document.removeEventListener('mousemove', onMouseMove);
+      if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    }
+    document.addEventListener('mouseup', stop);
+    window.addEventListener('blur', stop);
+    wrapper.addEventListener('mouseleave', () => {
+      // non fermiamo subito: potresti voler uscire di poco mentre scorri
+      // lasciamo step proseguire se active === true
+    });
+  }
+
 
   // -------------------------------
   // Filtro professioni (colonna 0)
