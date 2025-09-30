@@ -5,98 +5,153 @@
 {% block content %}
 
 <div class="row">
+
   <div class="col s12">
     <h5 style="margin-top:0;">Piano mensile — {{ plan.month }}/{{ plan.year }}</h5>
   </div>
 
-  <!-- Toolbar comandi -->
-  <div class="input-field col s12 m4">
-    <select id="employee">
-      <option value="" disabled selected>Seleziona lavoratore</option>
-      {% for e in employees %}
-        <option value="{{ e.id }}">{{ e.full_name }}</option>
-      {% endfor %}
-    </select>
-    <label>Lavoratore</label>
+  <style>
+    .planner-panel .col .input-field { margin-bottom: 24px !important; }
+    .planner-gap { height: 32px; } /* spazio visibile prima della griglia */
+    .grid-actions {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 12px; padding: 20px 4px 0;
+    }
+    /* Pulsanti affiancati nella stessa colonna */
+    .stack-actions-row { display:flex; gap:10px; flex-wrap:wrap; }
+    .stack-actions-row .btn,
+    .stack-actions-row .btn-flat { /* opzionale: stessa altezza */
+      display:inline-flex; align-items:center;
+    }
+    /* Scrollbar superiore sincronizzata */
+    .grid-scroll-top {
+      overflow-x: auto; overflow-y: hidden;
+      height: 16px; margin-bottom: 6px;
+    }
+    .grid-scroll-inner { height: 1px; }
+  </style>
+
+  <!-- PANNELLO DUE COLONNE -->
+  <div class="planner-panel">
+    <div class="row">
+      <!-- COLONNA SINISTRA -->
+      <div class="col s12 m6">
+        <div class="input-field">
+          <label class="active" for="employee">Lavoratore</label>
+          <select id="employee">
+            <option value="" disabled selected>Seleziona lavoratore</option>
+            {% for e in employees %}
+              <option value="{{ e.id }}">{{ e.full_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="input-field">
+          <label class="active" for="shift">Turno</label>
+          <select id="shift">
+            <option value="" selected>Nessun turno</option>
+            {% for s in shifts %}
+              <option value="{{ s.id }}">{{ s.code }} — {{ s.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="input-field">
+          <i class="material-icons prefix">sticky_note_2</i>
+          <input id="note" type="text" maxlength="255" placeholder="Nota (opzionale)">
+          <label class="active" for="note">Nota</label>
+        </div>
+
+        <!-- Pulsanti affiancati -->
+        <div class="stack-actions-row" style="margin-top:8px;">
+          <a id="apply" class="btn waves-effect waves-light">
+            <i class="material-icons left">done_all</i>Applica scelta
+          </a>
+          <a id="clear" class="btn-flat red-text text-darken-2 waves-effect">
+            <i class="material-icons left">backspace</i>Rimuovi scelta
+          </a>
+        </div>
+      </div>
+
+      <!-- COLONNA DESTRA -->
+      <div class="col s12 m6">
+        <div class="input-field">
+          <i class="material-icons prefix">search</i>
+          <input id="filter-prof" type="text" placeholder="Filtra professioni…">
+          <label class="active" for="filter-prof">Filtro Professioni</label>
+          <div class="valign-wrapper" style="gap:8px;">
+            <span id="filter-count" class="helper-text" style="margin-left:3rem;">Mostrate: tutte</span>
+            <a id="filter-clear" class="btn-flat waves-effect">
+              <i class="material-icons left">close</i>Pulisci
+            </a>
+          </div>
+        </div>
+
+        <div class="input-field">
+          <i class="material-icons prefix">person_search</i>
+          <input id="filter-emp" type="text" placeholder="Filtra per dipendente…">
+          <label class="active" for="filter-emp">Filtro Dipendenti</label>
+          <div class="valign-wrapper" style="gap:8px;">
+            <span id="filter-emp-count" class="helper-text" style="margin-left:3rem;">Mostrate: tutte</span>
+            <a id="filter-emp-clear" class="btn-flat waves-effect">
+              <i class="material-icons left">close</i>Pulisci
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div><!-- /planner-panel -->
+
+  <div class="planner-gap"></div>
+
+  <!-- Scrollbar superiore sincronizzata (ripristinata) -->
+  <div id="grid-scroll-top" class="grid-scroll-top">
+    <div id="grid-scroll-inner" class="grid-scroll-inner"></div>
   </div>
 
-  <div class="input-field col s12 m3">
-    <select id="shift">
-      <option value="" selected>Nessun turno</option>
-      {% for s in shifts %}
-        <option value="{{ s.id }}">{{ s.code }} — {{ s.label }}</option>
-      {% endfor %}
-    </select>
-    <label>Turno</label>
+  <!-- Griglia -->
+  <div class="grid-wrapper z-depth-1"
+       data-plan-id="{{ plan.id }}"
+       data-year="{{ plan.year }}"
+       data-month="{{ plan.month }}">
+    <table id="grid">
+      <thead>
+        <tr id="grid-head"><th>Professione</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
   </div>
 
-  <div class="input-field col s12 m5">
-    <i class="material-icons prefix">sticky_note_2</i>
-    <input id="note" type="text" maxlength="255" placeholder="Nota (opzionale)">
-    <label for="note">Nota</label>
-  </div>
-
-
-  <div class="col s12 m5" style="margin-top:22px;">
-    <a id="apply" class="btn waves-effect waves-light"><i class="material-icons left">done_all</i>Applica</a>
-    <a id="clear" class="btn-flat red-text text-darken-2 waves-effect"><i class="material-icons left">backspace</i>Rimuovi</a>
-    <a id="notify" class="btn grey darken-1 waves-effect waves-light"><i class="material-icons left">send</i>Invia notifiche</a>
+  <!-- Barra azioni fondo griglia -->
+  <div class="grid-actions">
     <a href="/api/plans/{{ plan.id }}/export_xlsx/" class="btn teal waves-effect">
       <i class="material-icons left">file_download</i>Esporta XLSX
     </a>
-  </div>
 
-  <!-- Filtro professioni (prima colonna) -->
-  <div class="input-field col s12 m7">
-    <i class="material-icons prefix">search</i>
-    <input id="filter-prof" type="text" placeholder="Filtra professioni…">
-    <label for="filter-prof">Filtro Professioni</label>
-    <span id="filter-count" class="helper-text">Mostrate: tutte</span>
-    <a id="filter-clear" class="btn-flat waves-effect" style="margin-left:8px;">
-      <i class="material-icons left">close</i>Pulisci
+    <a id="notify" class="btn grey darken-1 waves-effect waves-light">
+      <i class="material-icons left">send</i>Invia notifiche
     </a>
   </div>
-</div>
 
-<div class="spacer-8"></div>
+  <!-- Modal modifica nota -->
+  <div id="noteModal" class="modal">
+    <div class="modal-content">
+      <h6>Nota cella — <span id="noteCellLabel"></span></h6>
+      <div class="input-field">
+        <textarea id="noteInput" class="materialize-textarea" maxlength="255" placeholder="Nota (max 255)"></textarea>
+        <label for="noteInput" class="active">Nota</label>
+      </div>
+    </div>
 
-<!-- Scrollbar superiore sincronizzata -->
-<div id="grid-scroll-top" class="grid-scroll-top">
-  <div id="grid-scroll-inner" class="grid-scroll-inner"></div>
-</div>
-
-<!-- Griglia -->
-<div class="grid-wrapper z-depth-1"
-     data-plan-id="{{ plan.id }}"
-     data-year="{{ plan.year }}"
-     data-month="{{ plan.month }}">
-  <table id="grid">
-    <thead>
-      <tr id="grid-head"><th>Professione</th></tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-</div>
-
-<!-- Modal modifica nota -->
-<div id="noteModal" class="modal">
-  <div class="modal-content">
-    <h6>Nota cella — <span id="noteCellLabel"></span></h6>
-    <div class="input-field">
-      <textarea id="noteInput" class="materialize-textarea" maxlength="255" placeholder="Nota (max 255)"></textarea>
-      <label for="noteInput" class="active">Nota</label>
+    <div class="modal-footer">
+      <a href="#!" class="modal-close btn-flat">Annulla</a>
+      <a href="#!" id="noteSaveBtn" class="btn">Salva</a>
     </div>
   </div>
 
-  <div class="modal-footer">
-    <a href="#!" class="modal-close btn-flat">Annulla</a>
-    <a href="#!" id="noteSaveBtn" class="btn">Salva</a>
-  </div>
-</div>
+</div><!-- /row principale -->
 {% endblock %}
 
 {% block extra_body %}
-
-  <!-- tuo JS esterno -->
   <script src="{% static 'core/monthly_plan.js' %}"></script>
 {% endblock %}

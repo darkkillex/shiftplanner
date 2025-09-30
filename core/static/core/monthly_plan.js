@@ -99,6 +99,7 @@
         initScrollSync(state);
         initSelection(state);
         initFilter(state);
+        initEmployeeFilterLive();
         initApply(state);
         initClear(state);
         initNotify(state);
@@ -285,6 +286,71 @@
     }
     applyFilter();
   }
+
+  // --- FILTRO DIPENDENTI (live) ---
+  function initEmployeeFilterLive() {
+    const input   = document.getElementById('filter-emp');
+    const clearBtn= document.getElementById('filter-emp-clear');
+    const countEl = document.getElementById('filter-emp-count');
+    const tbody   = document.querySelector('#grid tbody');
+    if (!input || !tbody) return;
+
+    const normalize = (s) =>
+      (s || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim();
+
+    function applyFilter() {
+      const q = normalize(input.value);
+      const rows = tbody.rows;
+      let shown = 0;
+
+      if (!q) {
+        for (let i = 0; i < rows.length; i++) rows[i].style.display = '';
+        if (countEl) countEl.textContent = 'Mostrate: tutte';
+        return;
+      }
+
+      for (let i = 0; i < rows.length; i++) {
+        const tr = rows[i];
+        let match = false;
+
+          // scorri TUTTE le celle dati (salta la 1a che è la professione)
+        for (let c = 1; c < tr.cells.length; c++) {
+          const td = tr.cells[c];
+          // usiamo il dataset.name messo a render, più robusto del textContent
+          const empName = (td && td.dataset && td.dataset.name) ? td.dataset.name : td.textContent;
+          if (normalize(empName).includes(q)) {
+            match = true;
+            break;
+          }
+        }
+
+        tr.style.display = match ? '' : 'none';
+        if (match) shown++;
+      }
+
+      if (countEl) countEl.textContent = `Mostrate: ${shown}/${rows.length}`;
+    }
+
+    let t;
+    input.addEventListener('input', () => {
+      clearTimeout(t);
+      t = setTimeout(applyFilter, 120);
+    });
+
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        input.value = '';
+        applyFilter();
+        input.focus();
+      });
+    }
+    applyFilter();
+  }
+
 
   // -------------------------------
   // APPLY (assegnazione)
