@@ -60,6 +60,50 @@ class PlanViewSet(viewsets.ModelViewSet):
         note = (request.data.get('note') or '').strip()
         if not employee_id or not cells:
             return Response({'detail':'employee_id e cells obbligatori'}, status=400)
+
+        # --- Check conflitti: stesso plan, stesse date, stesso employee ma su ALTRE professioni
+        # Costruiamo mappa date -> set di profession_id target (per escludere i casi in cui sta già nella stessa cella)
+        targets_by_date = {}
+        for c in cells:
+            try:
+                pid = int(c['profession_id'])
+                d = str(c['date'])
+            except Exception:
+                return Response({'detail': f'Formato cella non valido: {c}'}, status=status.HTTP_400_BAD_REQUEST)
+            targets_by_date.setdefault(d, set()).add(pid)
+
+        dates = list(targets_by_date.keys())
+        # tutto ciò che è già assegnato a questo employee nelle stesse date
+        conflicts_qs = (
+            Assignment.objects
+            .filter(plan=plan, date__in=dates, employee_id=employee_id)
+            .select_related('profession', 'shift_type')
+        )
+
+        # escludi i casi in cui è nella STESSA cella (stessa professione)
+        conflicts = []
+        for a in conflicts_qs:
+            d_iso = a.date.isoformat()
+            if a.profession_id in targets_by_date.get(d_iso, set()):
+                continue  # stessa cella: ok
+            conflicts.append({
+                'date': d_iso,
+                'profession_id': a.profession_id,
+                'profession': a.profession.name,
+                'shift_code': a.shift_type.code if a.shift_type else '',
+                'shift_label': a.shift_type.label if a.shift_type else '',
+            })
+
+        if conflicts:
+            return Response(
+                {
+                    'detail': 'Il lavoratore risulta già assegnato in altre posizioni nelle date selezionate.',
+                    'conflicts': conflicts
+                },
+                status=status.HTTP_409_CONFLICT
+            )
+
+        # --- Nessun conflitto: procedi in transazione (all-or-nothing)
         with transaction.atomic():
             for c in cells:
                 obj, _ = Assignment.objects.update_or_create(

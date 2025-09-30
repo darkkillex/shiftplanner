@@ -308,17 +308,45 @@
       if (!cells.length) return M.toast({ html: "Seleziona almeno una cella", classes: "orange" });
 
       const resp = await fetch(`/api/plans/${planId}/bulk_assign/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...(csrftoken ? { "X-CSRFToken": csrftoken } : {}) },
-        credentials: "same-origin",
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(csrftoken ? {'X-CSRFToken': csrftoken} : {}) },
+        credentials: 'same-origin',
         body: JSON.stringify({
           employee_id: Number(employeeId),
           shift_type_id: shiftId ? Number(shiftId) : null,
           cells,
           note,
-        }),
+        })
       });
-      if (!resp.ok) return M.toast({ html: "Errore applicazione", classes: "red" });
+
+      if (resp.status === 409) {
+      const js = await resp.json().catch(() => ({}));
+      const conflicts = js.conflicts || [];
+
+          if (conflicts.length) {
+            // prendiamo il nome del lavoratore selezionato dalla tendina
+            const employeeName = $("#employee")?.selectedOptions?.[0]?.textContent || "Lavoratore";
+
+            // formatter per data in italiano (es. 5 ottobre 2025)
+            const dateFmt = new Intl.DateTimeFormat("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" });
+
+            let html = `<br>Conflitti:</br>${employeeName}<br>`;
+            conflicts.forEach(c => {
+              const d = new Date(c.date); // c.date è ISO
+              const dStr = dateFmt.format(d);
+              const shift = c.shift_label ? `${c.shift_label}` : "(nessun turno indicato)";
+              html += `${c.profession}<br>${shift}<br>${dStr}<br><br>`;
+            });
+
+            return M.toast({ html, classes: "red", displayLength: 8000 });
+          }
+
+        return M.toast({ html: "Conflitto su date selezionate.", classes: "red" });
+      }
+
+      if (!resp.ok) {
+        return M.toast({ html: "Errore applicazione", classes: "red" });
+      }
       location.reload();
     });
   }
