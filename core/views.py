@@ -1,28 +1,30 @@
-import openpyxl
+import calendar, datetime as dt
+
+from io import BytesIO
+
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from django.core.mail import send_mass_mail
 from django.db import transaction
-from django.shortcuts import render, get_object_or_404
-from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import logout
-from django.shortcuts import redirect
+from django.contrib import messages
 from django.http import HttpResponse
+
 
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill
 from openpyxl.comments import Comment
 from openpyxl.utils import get_column_letter
 
+from .forms import PlanCreateForm
+from .models import Plan
 
-from io import BytesIO
-
-from .models import Company, Profession, Employee, ShiftType, Plan, Assignment
 from .serializers import *
 
-import calendar, datetime as dt
 
 class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = Employee.objects.all().order_by('last_name','first_name')
@@ -321,7 +323,33 @@ def monthly_plan(request, pk: int):
     return render(request, 'monthly_plan.html', {'plan': plan, 'professions': professions, 'employees': employees, 'shifts': shifts})
 
 
-
 def logout_view(request):
     logout(request)
     return redirect('login')
+
+def _is_staff_or_superuser(user):
+    return user.is_authenticated and (user.is_staff or user.is_superuser)
+
+@login_required
+@user_passes_test(_is_staff_or_superuser)
+def plan_create(request):
+    if request.method == "POST":
+        form = PlanCreateForm(request.POST)
+        if form.is_valid():
+            month = int(form.cleaned_data["month"])
+            year = int(form.cleaned_data["year"])
+
+            # se nel frattempo è stato creato…
+            existing = Plan.objects.filter(month=month, year=year).first()
+            if existing:
+                messages.info(request, "Esiste già un piano per questo mese/anno. Apertura del piano esistente.")
+                return redirect("monthly_plan", pk=existing.pk)
+
+            plan = form.save(commit=False)
+            plan.created_by = request.user
+            plan.save()
+            messages.success(request, "Piano creato correttamente.")
+            return redirect("monthly_plan", pk=plan.pk)
+    else:
+        form = PlanCreateForm()
+    return render(request, "plan_create.html", {"form": form})

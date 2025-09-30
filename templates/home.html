@@ -1,6 +1,13 @@
 {% extends 'layout.html' %}
 {% block content %}
 <h2>Lista Piani turno creati</h2>
+
+{% if user.is_staff or user.is_superuser %}
+  <a href="{% url 'plan_create' %}" class="btn teal waves-effect">
+    <i class="material-icons left">add</i> Crea nuovo Piano
+  </a>
+{% endif %}
+
 <ul>
     {% for p in plans %}
     <li>
@@ -16,5 +23,5 @@
     <li>Nessun piano</li>
     {% endfor %}
 </ul>
-<p><a href="/admin/core/plan/add/">+ Crea nuovo Piano</a></p>
+
 {% endblock %}

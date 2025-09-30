@@ -1,0 +1,57 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Crea nuovo piano — Shift Planner{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col s12">
+    <h5 style="margin-top:0;">Crea nuovo piano</h5>
+  </div>
+
+  <form method="post" class="col s12 m8 l6">
+    {% csrf_token %}
+
+    <!-- Nome piano -->
+    <div class="input-field">
+      <label class="active" for="{{ form.name.id_for_label }}">Nome piano (testuale)</label>
+      {{ form.name }}
+      {% if form.name.errors %}<div class="red-text">{{ form.name.errors }}</div>{% endif %}
+    </div>
+
+    <div class="row">
+      <!-- Mese (1..12) -->
+      <div class="input-field col s6">
+        <label class="active" for="{{ form.month.id_for_label }}">Mese</label>
+        {{ form.month }}
+        {% if form.month.errors %}<div class="red-text">{{ form.month.errors }}</div>{% endif %}
+      </div>
+
+      <!-- Anno (>=2025) -->
+      <div class="input-field col s6">
+        <label class="active" for="{{ form.year.id_for_label }}">Anno</label>
+        {{ form.year }}
+        {% if form.year.errors %}<div class="red-text">{{ form.year.errors }}</div>{% endif %}
+      </div>
+    </div>
+
+    <!-- Stato (Bozza/Pubblicato) -->
+    <div class="input-field">
+      <label class="active" for="{{ form.status.id_for_label }}">Stato</label>
+      {{ form.status }}
+      {% if form.status.errors %}<div class="red-text">{{ form.status.errors }}</div>{% endif %}
+    </div>
+
+    {% if form.non_field_errors %}
+      <div class="card-panel red lighten-4 red-text text-darken-4" style="padding:8px 12px;">
+        {{ form.non_field_errors }}
+      </div>
+    {% endif %}
+
+    <button type="submit" class="btn waves-effect waves-light">
+      <i class="material-icons left">add</i>Crea piano
+    </button>
+    <a href="{% url 'home' %}" class="btn-flat waves-effect">Annulla</a>
+  </form>
+</div>
+{% endblock %}

@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.contrib.auth import views as auth_views
 from rest_framework.routers import DefaultRouter
-from core import views as core_views
+from core import views as core_views, views
 
 router = DefaultRouter()
 router.register(r'api/employees', core_views.EmployeeViewSet)
@@ -24,4 +24,5 @@ urlpatterns = [
     path('password_change/done/', auth_views.PasswordChangeDoneView.as_view(
         template_name='password_change_done.html'
     ), name='password_change_done'),
+    path("plans/new/", views.plan_create, name="plan_create"),
 ]
