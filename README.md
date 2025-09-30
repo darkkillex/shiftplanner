@@ -23,3 +23,6 @@ Pannello Admin: http://localhost:8000/admin/
 ## Note
 - Il web attende Postgres (wait_for_db), poi migrate + collectstatic.
 - Le date sono inviate come `YYYY-MM-DD` (no toISOString) per evitare slittamenti UTC.
+- Le utenze di prova sono:
+  - superuser: admin - admin
+  - staff: staff - birillo123@
