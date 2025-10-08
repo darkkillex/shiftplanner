@@ -1,4 +1,5 @@
 import calendar, datetime as dt
+import logging
 
 from io import BytesIO
 
@@ -6,7 +7,11 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from django.core.mail import send_mass_mail
+from email.utils import formataddr
+
+from django.template.loader import render_to_string
+from django.conf import settings
+from django.core.mail import EmailMultiAlternatives
 from django.db import transaction
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -136,23 +141,71 @@ class PlanViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def notify(self, request, pk=None):
         plan = self.get_object()
-        qs = Assignment.objects.filter(plan=plan).select_related('employee')
+
+        logger = logging.getLogger(__name__)
+
+        qs = (Assignment.objects
+              .filter(plan=plan, employee__email__isnull=False)
+              .exclude(employee__email='')
+              .select_related('employee','shift_type','profession'))
+
         by_emp = {}
         for a in qs:
-            by_emp.setdefault(a.employee, 0)
-            by_emp[a.employee] += 1
-        messages = []
-        subject = f"Piano turni {plan.month:02d}/{plan.year}"
-        from_email = None
-        for emp, count in by_emp.items():
-            if not emp.email:
-                continue
-            body = f"Ciao {emp.full_name()},\n\nSono stati pubblicati {count} turni per il piano {plan.month:02d}/{plan.year}.\nAccedi all'app per i dettagli.\n\n— Ufficio Pianificazione"
-            messages.append((subject, body, from_email, [emp.email]))
-        if not messages:
-            return Response({'detail':'Nessuna email inviata (nessun assegnato o email mancanti).'}, status=200)
-        send_mass_mail(messages, fail_silently=False)
-        return Response({'sent': len(messages)}, status=200)
+            by_emp.setdefault(a.employee, []).append(a)
+
+        prepared = len(by_emp)
+        if not prepared:
+            return Response({'prepared': 0, 'sent': 0, 'detail': 'Nessun destinatario con email.'}, status=200)
+
+        month_number = dt.date(plan.year, plan.month, 1).strftime('%m')
+        legend = list(ShiftType.objects.values_list('code','label'))
+
+        sent = 0
+        for emp, items in by_emp.items():
+            items.sort(key=lambda x: x.date)
+            rows = [{
+                'weekday': ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'][a.date.weekday()],
+                'date': a.date.strftime('%d/%m/%Y'),
+                "profession_name": a.profession.name,
+                'shift_label': (a.shift_type.label if a.shift_type else ''),
+                'notes': a.notes or '',
+            } for a in items]
+
+            ctx = {
+                'employee_name': emp.full_name(),
+                'month_number': month_number,
+                'year': plan.year,
+                'legend': legend,
+                'assignments': rows,
+                'app_url': f"{settings.APP_BASE_URL}/plan/{plan.pk}/",
+                'reply_to_email': settings.REPLY_TO_EMAIL,
+            }
+
+            subject = f"Piano turni {plan.month:02d}/{plan.year} — {emp.full_name()}"
+            from_email = settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER
+            reply_to = [settings.REPLY_TO_EMAIL] if getattr(settings, 'REPLY_TO_EMAIL', None) else None
+
+            text_body = render_to_string("emails/plan_personal.txt", ctx)
+            html_body = render_to_string("emails/plan_personal.html", ctx)
+
+            msg = EmailMultiAlternatives(
+                subject=subject,
+                body=text_body,
+                from_email=from_email,
+                to=[formataddr((emp.full_name(), emp.email))],
+                reply_to=reply_to
+            )
+            msg.attach_alternative(html_body, "text/html")
+
+            try:
+                n = msg.send(fail_silently=False)
+                if n: sent += 1
+                else:
+                    logger.warning("Email non inviata (send()=0) a %s <%s>", emp.full_name(), emp.email)
+            except Exception as e:
+                logger.exception("Errore invio a %s <%s>: %s", emp.full_name(), emp.email, e)
+
+        return Response({'prepared': prepared, 'sent': sent}, status=200)
 
     @action(detail=True, methods=['post'])
     def bulk_clear(self, request, pk=None):
@@ -177,6 +230,7 @@ class PlanViewSet(viewsets.ModelViewSet):
             deleted += n
 
         return Response({'deleted': deleted}, status=status.HTTP_200_OK)
+
 
     @action(detail=True, methods=['post'])
     def set_note(self, request, pk=None):

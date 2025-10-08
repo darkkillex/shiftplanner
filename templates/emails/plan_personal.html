@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>Piano turni</title>
+<style>
+body{margin:0;background:#f6f8fb;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+.wrapper{max-width:680px;margin:0 auto;padding:24px}
+.card{background:#fff;border-radius:12px;padding:20px 20px 8px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+h1{font-size:20px;margin:0 0 12px}
+.meta{color:#666;font-size:14px;margin-bottom:12px}
+.legend{font-size:12px;color:#555;margin:12px 0}
+.legend span{display:inline-block;margin-right:12px}
+.btn{display:inline-block;background:#1565c0;color:#fff;text-decoration:none;padding:10px 14px;border-radius:8px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:10px;border-bottom:1px solid #eee;vertical-align:top}
+th{color:#345;text-align:left;background:#f3f6fa}
+.day{white-space:nowrap;font-weight:600}
+.note{color:#555;font-style:italic}
+.footer{color:#8a8a8a;font-size:12px;text-align:center;margin-top:12px}
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="card">
+    <h1>Piano turni {{ month_number }}/{{ year }}</h1>
+    <div class="meta"><strong>Legenda:</strong></div>
+
+    {% if legend %}
+    <div class="legend">
+      {% for code,label in legend %}
+        <span><strong>{{ code }}</strong> = {{ label }}</span>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="meta">Salve {{ employee_name }}, ecco i tuoi turni.</div>
+    <table role="presentation" aria-hidden="true">
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Turno</th>
+          <th>Mansione</th>
+          <th>Note</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in assignments %}
+        <tr>
+          <td class="day">{{ item.weekday }} {{ item.date }}</td>
+          <td>{{ item.shift_label|default:"—" }}</td>
+          <td>{{ item.profession_name|default:"—" }}</td>
+          <td class="note">{{ item.notes|default:"" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+  </div>
+  <div class="footer">
+    Questa è una notifica automatica. Per dubbi rispondi a {{ reply_to_email }} o chiama al +39 340 324 7641.
+  </div>
+</div>
+</body>
+</html>

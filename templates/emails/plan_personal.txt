@@ -1,0 +1,7 @@
+Piano turni {{ month_number }} {{ year }} — {{ employee_name }}
+
+{% for a in assignments %}
+• {{ a.weekday }} {{ a.date }} — {{ a.profession_name }} — {{ a.shift_label|default:"-" }}{% if a.notes %} ({{ a.notes }}){% endif %}
+{% endfor %}
+
+Dettagli: {{ app_url }}

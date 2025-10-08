@@ -536,7 +536,7 @@
       });
       if (!resp.ok) return M.toast({ html: "Errore invio notifiche", classes: "red" });
       const js = await resp.json().catch(() => ({}));
-      M.toast({ html: `Email inviate: ${js.sent ?? js.prepared ?? 0}` });
+      M.toast({ html: `Email inviate: ${js.sent || 0} / preparate: ${js.prepared || 0}` });
     });
   }
 
