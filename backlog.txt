@@ -1,7 +1,6 @@
 TO-DO
 
 TIER-1
-Rimuovere da layout.html la parte css e integrarla in un sorgente specifico
 Aggiungere colorazione nella griglia in base al turno ricoperto dal lavoratore
 Mutuo lavoro su stesso piano turni si due o più account connessi
 

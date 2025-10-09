@@ -1,6 +1,7 @@
 # v0.4.1
 * Aggiunto nel footer della notifica email il nome dell'utente che ha generato la revisione del PT ricevuto
 * Aggiunta nel footer dell'app la versione(dinamica) dell'applicazione e la consultazione del changelog
+* Style refactoring layout.html: separato <style> css e integrato in un sorgente specifico
 
 # v0.4.0
 * Funzionalità di invio del piano turni specifico piano turni a dipendenti in turno 
