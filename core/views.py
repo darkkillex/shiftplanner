@@ -151,6 +151,8 @@ class PlanViewSet(viewsets.ModelViewSet):
         plan.refresh_from_db()
         rev_str = f"Rev.{plan.revision:02d}"
 
+        sender_name = request.user.get_full_name() or request.user.username
+
         qs = (Assignment.objects
               .filter(plan=plan, employee__email__isnull=False)
               .exclude(employee__email='')
@@ -189,7 +191,8 @@ class PlanViewSet(viewsets.ModelViewSet):
                 'app_url': f"{settings.APP_BASE_URL}/plan/{plan.pk}/",
                 'reply_to_email': getattr(settings, 'REPLY_TO_EMAIL',
                                           settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER),
-                'revision_str': rev_str,  # <-- NEW (usalo nei template)
+                'revision_str': rev_str,
+                'sender_name': sender_name,
             }
 
             # Oggetto con Rev + nome e cognome

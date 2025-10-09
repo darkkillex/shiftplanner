@@ -1,3 +1,6 @@
+# v0.4.1
+*Inclusione nel footer della notifica email il nome dell'utente che ha generato la revisione del PT ricevuto
+
 # v0.4.0
 * Funzionalità di invio del piano turni specifico piano turni a dipendenti in turno 
 * Aggiunto il tracking n° di Rev. del Piano turni generato sulla base degli invii effettuati via email 

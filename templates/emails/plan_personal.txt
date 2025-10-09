@@ -5,3 +5,5 @@ Piano turni {{ month_name }} {{ year }} {{ revision_str }} — {{ employee_name 
 {% endfor %}
 
 Dettagli: {{ app_url }}
+—
+Notifica inviata da: {{ sender_name }}
