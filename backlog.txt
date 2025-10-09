@@ -1,19 +1,18 @@
 TO-DO
 
 TIER-1
-
+Rimuovere da layout.html la parte css e integrarla in un sorgente specifico
+Aggiungere colorazione nella griglia in base al turno ricoperto dal lavoratore
 Mutuo lavoro su stesso piano turni si due o più account connessi
-Mostrare nel footer la versione del prog
+
 
 TIER-2
-
+Creare pagina sulla homepage "Calendario", che apra un calendario sulla quale poter inserire delle note sui giorni
 Ordinare la home page (lista piani turno)
 
 
 
 TIER-3
-
-Aggiungere colorazione nella griglia in base al turno ricoperto dal lavoratore
 Refactoring degli style su sorgenti dedicati
 Copia incolla celle turno tramite ctrl+c ctrl+v
 Copia incolla celle turno tramite DnD
