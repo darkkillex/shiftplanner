@@ -1,5 +1,17 @@
 DONE
 
+v0.4.0
+Funzionalità di invio del piano turni specifico piano turni a dipendenti in turno
+Aggiunto il tracking n° di Rev. del Piano turni generato sulla base degli invii effettuati via email
+Aggiunti elementi visivi vari (icone)
+Accesso lato admin ristretto ai soli superusers
+
+v0.3.0
+Aggiunta azione di download piano turni in formato .xlsx
+Controllo duplicati assegnazione turno su stesso per il dipendente
+Griglia piano turni scrollabile tramite DnD
+
+
 v0.2.0
 Celle - rimuovere cod. Turno e inserire la Label
 Aggiungere Campo Note (opzionale) da poter inserire all'atto dell'applicazione del turno (prevedere qualcosa che faccia capire che sulla cella c'è una nota)
@@ -47,8 +59,6 @@ Creare azione/bottone "Rimuovi da celle selezionate" ✔
 TO-DO
 
 TIER-1
-Testare effettiva funzionalità dell'invio notifiche
-
 
 
 
@@ -62,3 +72,5 @@ TIER-3
 
 Aggiungere colorazione nella griglia in base al turno ricoperto dal lavoratore
 Refactoring degli style su sorgenti dedicati
+Copia incolla celle turno tramite ctrl+c ctrl+v
+Copia incolla celle turno tramite DnD
