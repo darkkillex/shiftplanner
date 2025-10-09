@@ -1,0 +1,14 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Changelog{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'core/changelog.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="changelog-content">
+  {{ html|safe }}
+</div>
+{% endblock %}
