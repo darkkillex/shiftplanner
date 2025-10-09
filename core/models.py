@@ -33,9 +33,16 @@ class Plan(models.Model):
     name = models.CharField(max_length=120, default="", blank=True)
     status = models.CharField(max_length=12, choices=[('Draft','Draft'),('Published','Published')], default='Draft')
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    revision = models.PositiveIntegerField(default=0)
     class Meta:
         unique_together = ('month','year')
     def __str__(self): return f"{self.name or 'Piano'} {self.month:02d}/{self.year}"
+
+class PlanNotification(models.Model):
+    plan = models.ForeignKey(Plan, on_delete=models.CASCADE, related_name='notifications')
+    revision = models.PositiveIntegerField()
+    sent_count = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
 
 class Assignment(models.Model):
     plan = models.ForeignKey(Plan, on_delete=models.CASCADE, related_name='assignments')

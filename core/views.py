@@ -18,6 +18,8 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import logout
 from django.contrib import messages
 from django.http import HttpResponse
+from django.db.models import F
+
 
 
 from openpyxl import Workbook
@@ -141,13 +143,18 @@ class PlanViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def notify(self, request, pk=None):
         plan = self.get_object()
-
         logger = logging.getLogger(__name__)
+
+        # 1) bump revisione in modo atomico
+        with transaction.atomic():
+            Plan.objects.select_for_update().filter(pk=plan.pk).update(revision=F('revision') + 1)
+        plan.refresh_from_db()
+        rev_str = f"Rev.{plan.revision:02d}"
 
         qs = (Assignment.objects
               .filter(plan=plan, employee__email__isnull=False)
               .exclude(employee__email='')
-              .select_related('employee','shift_type','profession'))
+              .select_related('employee', 'shift_type', 'profession'))
 
         by_emp = {}
         for a in qs:
@@ -155,16 +162,18 @@ class PlanViewSet(viewsets.ModelViewSet):
 
         prepared = len(by_emp)
         if not prepared:
-            return Response({'prepared': 0, 'sent': 0, 'detail': 'Nessun destinatario con email.'}, status=200)
+            return Response(
+                {'prepared': 0, 'sent': 0, 'rev': plan.revision, 'detail': 'Nessun destinatario con email.'},
+                status=200)
 
         month_number = dt.date(plan.year, plan.month, 1).strftime('%m')
-        legend = list(ShiftType.objects.values_list('code','label'))
+        legend = list(ShiftType.objects.values_list('code', 'label'))
 
         sent = 0
         for emp, items in by_emp.items():
             items.sort(key=lambda x: x.date)
             rows = [{
-                'weekday': ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'][a.date.weekday()],
+                'weekday': ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'][a.date.weekday()],
                 'date': a.date.strftime('%d/%m/%Y'),
                 "profession_name": a.profession.name,
                 'shift_label': (a.shift_type.label if a.shift_type else ''),
@@ -178,10 +187,13 @@ class PlanViewSet(viewsets.ModelViewSet):
                 'legend': legend,
                 'assignments': rows,
                 'app_url': f"{settings.APP_BASE_URL}/plan/{plan.pk}/",
-                'reply_to_email': settings.REPLY_TO_EMAIL,
+                'reply_to_email': getattr(settings, 'REPLY_TO_EMAIL',
+                                          settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER),
+                'revision_str': rev_str,  # <-- NEW (usalo nei template)
             }
 
-            subject = f"Piano turni {plan.month:02d}/{plan.year} — {emp.full_name()}"
+            # Oggetto con Rev + nome e cognome
+            subject = f"Piano turni {plan.month:02d}/{plan.year} {rev_str} - {emp.full_name()}"
             from_email = settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER
             reply_to = [settings.REPLY_TO_EMAIL] if getattr(settings, 'REPLY_TO_EMAIL', None) else None
 
@@ -199,13 +211,20 @@ class PlanViewSet(viewsets.ModelViewSet):
 
             try:
                 n = msg.send(fail_silently=False)
-                if n: sent += 1
-                else:
+                sent += (1 if n else 0)
+                if not n:
                     logger.warning("Email non inviata (send()=0) a %s <%s>", emp.full_name(), emp.email)
             except Exception as e:
                 logger.exception("Errore invio a %s <%s>: %s", emp.full_name(), emp.email, e)
 
-        return Response({'prepared': prepared, 'sent': sent}, status=200)
+        # (Opzionale) salva log invio se hai il modello PlanNotification
+        try:
+            from .models import PlanNotification  # solo se esiste
+            PlanNotification.objects.create(plan=plan, revision=plan.revision, sent_count=sent)
+        except Exception:
+            pass
+
+        return Response({'prepared': prepared, 'sent': sent, 'rev': plan.revision}, status=200)
 
     @action(detail=True, methods=['post'])
     def bulk_clear(self, request, pk=None):

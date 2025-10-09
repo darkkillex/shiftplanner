@@ -1,7 +1,7 @@
-Piano turni {{ month_number }} {{ year }} — {{ employee_name }}
+Piano turni {{ month_name }} {{ year }} {{ revision_str }} — {{ employee_name }}
 
 {% for a in assignments %}
-• {{ a.weekday }} {{ a.date }} — {{ a.profession_name }} — {{ a.shift_label|default:"-" }}{% if a.notes %} ({{ a.notes }}){% endif %}
+• {{ a.weekday }} {{ a.date }} — {{ a.profession }} — {{ a.shift_label|default:"-" }}{% if a.notes %} ({{ a.notes }}){% endif %}
 {% endfor %}
 
 Dettagli: {{ app_url }}
