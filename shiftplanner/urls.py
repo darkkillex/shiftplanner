@@ -46,4 +46,6 @@ urlpatterns = [
     ), name='password_change_done'),
     path("plans/new/", views.plan_create, name="plan_create"),
     path("changelog/", changelog_view, name="changelog"),
+    path("templates/new/", core_views.template_create, name="template_create"),
+    path("templates/<int:pk>/", core_views.template_detail, name="template_detail"),
 ]

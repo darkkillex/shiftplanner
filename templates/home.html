@@ -6,22 +6,28 @@
   <a href="{% url 'plan_create' %}" class="btn teal waves-effect">
     <i class="material-icons left">add</i> Crea nuovo Piano
   </a>
+
+  <a href="{% url 'template_create' %}" class="btn blue-grey lighten-1 waves-effect" style="margin-left:8px;">
+    <i class="material-icons left">note_add</i> Crea nuovo Template piano turni
+  </a>
 {% endif %}
 
 <ul>
-    {% for p in plans %}
+  {% for p in plans %}
     <li>
-        <a href="{% url 'monthly_plan' p.id %}">{{ p.name }} — {{ p.month }}/{{ p.year }} ({{ p.status }})</a>
-        <!-- dentro il loop dei plans -->
-        <a href="/api/plans/{{ p.id }}/export_xlsx/"
-           class="btn-small btn-compact teal waves-effect"
-           title="Esporta XLSX">
-          <i class="material-icons tiny left">file_download</i> XLSX
-        </a>
-    </li>
-    {% empty %}
-    <li>Nessun piano</li>
-    {% endfor %}
-</ul>
+      <a href="{% url 'monthly_plan' p.id %}">
+        {{ p.name }} — {{ p.month }}/{{ p.year }} ({{ p.status }})
+      </a>
 
+      <a href="/api/plans/{{ p.id }}/export_xlsx/"
+         class="btn-small btn-compact teal waves-effect"
+         title="Esporta XLSX">
+        <i class="material-icons tiny left">file_download</i> XLSX
+      </a>
+    </li>
+  {% empty %}
+    <li>Nessun piano</li>
+  {% endfor %}
+</ul>
 {% endblock %}
+

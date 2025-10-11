@@ -1,0 +1,35 @@
+{% extends "layout.html" %}
+{% load static %}
+{% block title %}Nuovo Template{% endblock %}
+
+{% block content %}
+<h4>Nuovo template piano turni</h4>
+
+<form method="post">
+  {% csrf_token %}
+  <div class="input-field" style="margin-top:1.2rem;">
+    {{ form.name.label_tag }} {{ form.name }}
+  </div>
+
+  <p>
+    <label>
+      {{ form.is_active }} <span class="lever"></span> Attivo
+    </label>
+  </p>
+
+  <div class="input-field" style="margin-top:1.2rem;">
+    {{ form.rows_text.label_tag }}
+    {{ form.rows_text }}
+    <small class="grey-text">
+      Ogni riga rappresenta una mansione. Lascia righe vuote per creare spazi nel piano.
+    </small>
+  </div>
+
+  <div style="margin-top:1.5rem;">
+    <button class="btn waves-effect teal" type="submit">
+      <i class="material-icons left">save</i> Salva Template
+    </button>
+    <a href="{% url 'home' %}" class="btn-flat">Annulla</a>
+  </div>
+</form>
+{% endblock %}

@@ -28,7 +28,8 @@ from openpyxl.comments import Comment
 from openpyxl.utils import get_column_letter
 
 from .forms import PlanCreateForm
-from .models import Plan
+from .forms import TemplateCreateForm
+from .models import Template, TemplateRow
 
 from .serializers import *
 
@@ -53,25 +54,70 @@ class PlanViewSet(viewsets.ModelViewSet):
     def grid(self, request, pk=None):
         plan = self.get_object()
         days = calendar.monthrange(plan.year, plan.month)[1]
-        profs = list(Profession.objects.all().order_by('name'))
-        assignments = Assignment.objects.filter(plan=plan).select_related('employee','shift_type','profession')
+
+        # preload assignments
+        assignments = (Assignment.objects
+                       .filter(plan=plan)
+                       .select_related('employee', 'shift_type', 'profession'))
         idx = {(a.profession_id, a.date): a for a in assignments}
+
+        # mappa nome->Profession (casefold per tolleranza)
+        prof_by_name = {p.name.strip().casefold(): p for p in Profession.objects.all()}
+
         rows = []
-        for p in profs:
-            row = {'profession_id': p.id, 'profession': p.name}
-            for d in range(1, days+1):
-                day = dt.date(plan.year, plan.month, d)
-                a = idx.get((p.id, day))
-                row[str(d)] = {
-                    'employee_id': a.employee_id if a else None,
-                    'employee_name': a.employee.full_name() if a else '',
-                    'shift_code': a.shift_type.code if (a and a.shift_type) else '',
-                    'shift_label': a.shift_type.label if (a and a.shift_type) else '',
-                    'notes': a.notes if a and a.notes else '',
-                    'has_note': bool(a and a.notes)
+        if plan.rows.exists():
+            # Usa PlanRow (mansioni e spazi)
+            for r in plan.rows.all().order_by('order'):
+                if r.is_spacer:
+                    label = ''
+                    prof = None
+                else:
+                    label = r.duty
+                    prof = prof_by_name.get((r.duty or '').strip().casefold())
+
+                row = {
+                    'profession_id': getattr(prof, 'id', None),
+                    'profession': label,  # prima colonna: etichetta del template
+                    'spacer': bool(r.is_spacer),
                 }
-            rows.append(row)
+                for d in range(1, days + 1):
+                    day = dt.date(plan.year, plan.month, d)
+                    if not prof:  # spacer o mansione non mappata a Profession
+                        row[str(d)] = {
+                            'employee_id': None, 'employee_name': '',
+                            'shift_code': '', 'shift_label': '',
+                            'notes': '', 'has_note': False
+                        }
+                    else:
+                        a = idx.get((prof.id, day))
+                        row[str(d)] = {
+                            'employee_id': a.employee_id if a else None,
+                            'employee_name': a.employee.full_name() if a else '',
+                            'shift_code': a.shift_type.code if (a and a.shift_type) else '',
+                            'shift_label': a.shift_type.label if (a and a.shift_type) else '',
+                            'notes': a.notes if a and a.notes else '',
+                            'has_note': bool(a and a.notes),
+                        }
+                rows.append(row)
+        else:
+            # Fallback: professioni alfabetiche
+            for p in Profession.objects.order_by('name'):
+                row = {'profession_id': p.id, 'profession': p.name, 'spacer': False}
+                for d in range(1, days + 1):
+                    day = dt.date(plan.year, plan.month, d)
+                    a = idx.get((p.id, day))
+                    row[str(d)] = {
+                        'employee_id': a.employee_id if a else None,
+                        'employee_name': a.employee.full_name() if a else '',
+                        'shift_code': a.shift_type.code if (a and a.shift_type) else '',
+                        'shift_label': a.shift_type.label if (a and a.shift_type) else '',
+                        'notes': a.notes if a and a.notes else '',
+                        'has_note': bool(a and a.notes)
+                    }
+                rows.append(row)
+
         return Response({'year': plan.year, 'month': plan.month, 'days': days, 'rows': rows})
+
 
     @action(detail=True, methods=['post'])
     def bulk_assign(self, request, pk=None):
@@ -318,45 +364,61 @@ class PlanViewSet(viewsets.ModelViewSet):
                 ws.cell(row=1, column=col).fill = sunday_fill
             col_for_day[col] = the_date
 
-        # Riga 2..: professioni
-        professions = Profession.objects.order_by('name').all()
-        # (se hai introdotto un campo `order`, sostituisci con .order_by('order','id'))
+        # -------- Layout righe: usa PlanRow se presenti, altrimenti Profession --------
+        prof_by_name = {p.name.strip().casefold(): p for p in Profession.objects.all()}
+        use_plan_rows = plan.rows.exists()
+        if use_plan_rows:
+            layout = []
+            for r in plan.rows.all().order_by('order'):
+                if r.is_spacer:
+                    layout.append({'label': '', 'profession': None, 'spacer': True})
+                else:
+                    layout.append({
+                        'label': r.duty,
+                        'profession': prof_by_name.get((r.duty or '').strip().casefold()),
+                        'spacer': False
+                    })
+        else:
+            layout = [{'label': p.name, 'profession': p, 'spacer': False}
+                      for p in Profession.objects.order_by('name')]
 
-        # Precarica assignments
+        # -------- Precarica assignments --------
         ass = (Assignment.objects
                .filter(plan=plan)
                .select_related('employee', 'shift_type', 'profession'))
         idx = {(a.profession_id, a.date): a for a in ass}
 
+        # -------- Scrittura righe --------
         row = 2
-        for p in professions:
-            # Colonna A: nome professione
-            ws.cell(row=row, column=1, value=p.name)
+        for item in layout:
+            # Colonna A: etichetta del template (vuota per spacer)
+            ws.cell(row=row, column=1, value=item['label'])
 
+            # Celle giorno per giorno
             for d in range(1, days+1):
                 col = d + 1
                 day = col_for_day[col]
+
+                # Spacer o mansione non mappata a Profession -> lascia vuoto
+                if item['spacer'] or not item['profession']:
+                    continue
+
+                p = item['profession']
                 a = idx.get((p.id, day))
                 if not a:
                     continue
 
                 name = a.employee.full_name()
                 shift = f" ({a.shift_type.label})" if a.shift_type else ""
-                val = f"{name}{shift}"
-
-                cell = ws.cell(row=row, column=col, value=val)
+                cell = ws.cell(row=row, column=col, value=f"{name}{shift}")
                 cell.alignment = wrap
-
-                # Note: inserite note come Comment nativo
                 if a.notes:
                     try:
                         cell.comment = Comment(a.notes, "ShiftPlanner")
                     except Exception:
                         pass
-                # # Domeniche con fill
-                # if day.weekday() == 6:
-                #     cell.fill = sunday_fill
             row += 1
+
 
         # layout
         ws.freeze_panes = "B2"
@@ -393,10 +455,16 @@ def profile(request):
 @login_required
 def monthly_plan(request, pk: int):
     plan = get_object_or_404(Plan, pk=pk)
-    professions = Profession.objects.order_by('name').all()
-    employees = Employee.objects.order_by('last_name','first_name').all()
-    shifts = ShiftType.objects.order_by('code').all()
-    return render(request, 'monthly_plan.html', {'plan': plan, 'professions': professions, 'employees': employees, 'shifts': shifts})
+    employees = Employee.objects.order_by('last_name','first_name')
+    shifts = ShiftType.objects.order_by('code')
+    use_plan_rows = plan.rows.exists()
+    return render(request, 'monthly_plan.html', {
+        'plan': plan,
+        'use_plan_rows': use_plan_rows,
+        'employees': employees,
+        'shifts': shifts,
+    })
+
 
 
 def logout_view(request):
@@ -405,6 +473,7 @@ def logout_view(request):
 
 def _is_staff_or_superuser(user):
     return user.is_authenticated and (user.is_staff or user.is_superuser)
+
 
 @login_required
 @user_passes_test(_is_staff_or_superuser)
@@ -415,7 +484,6 @@ def plan_create(request):
             month = int(form.cleaned_data["month"])
             year = int(form.cleaned_data["year"])
 
-            # se nel frattempo è stato creato…
             existing = Plan.objects.filter(month=month, year=year).first()
             if existing:
                 messages.info(request, "Esiste già un piano per questo mese/anno. Apertura del piano esistente.")
@@ -424,8 +492,72 @@ def plan_create(request):
             plan = form.save(commit=False)
             plan.created_by = request.user
             plan.save()
+
+            # --- Clona righe dal template, se selezionato ---
+            template = form.cleaned_data.get("template")
+            if template:
+                from .models import TemplateRow, PlanRow
+                rows = []
+                for r in template.rows.all():
+                    rows.append(PlanRow(
+                        plan=plan,
+                        order=r.order,
+                        duty=r.duty,
+                        is_spacer=r.is_spacer,
+                        notes=r.notes
+                    ))
+                if rows:
+                    PlanRow.objects.bulk_create(rows)
+
             messages.success(request, "Piano creato correttamente.")
             return redirect("monthly_plan", pk=plan.pk)
     else:
         form = PlanCreateForm()
+
     return render(request, "plan_create.html", {"form": form})
+
+
+def _parse_rows(text: str):
+    """Ritorna un elenco di TemplateRow da testo multilinea."""
+    lines = text.replace("\r\n", "\n").split("\n")
+    rows = []
+    order = 1
+    for ln in lines:
+        stripped = ln.strip()
+        if stripped == "":
+            rows.append(TemplateRow(order=order, duty="", is_spacer=True))
+        else:
+            rows.append(TemplateRow(order=order, duty=stripped, is_spacer=False))
+        order += 1
+    # elimina eventuali spazi finali consecutivi
+    while rows and rows[-1].is_spacer:
+        rows.pop()
+    return rows
+
+@login_required
+@user_passes_test(_is_staff_or_superuser)
+@transaction.atomic
+def template_create(request):
+    """Form per creare un nuovo template di piano turni."""
+    if request.method == "POST":
+        form = TemplateCreateForm(request.POST)
+        if form.is_valid():
+            template = form.save()
+            rows = _parse_rows(form.cleaned_data["rows_text"])
+            for r in rows:
+                r.template = template
+            if rows:
+                TemplateRow.objects.bulk_create(rows)
+            messages.success(request, "Template creato correttamente.")
+            return redirect("template_detail", pk=template.pk)
+    else:
+        form = TemplateCreateForm()
+    return render(request, "template_create.html", {"form": form})
+
+
+@login_required
+@user_passes_test(_is_staff_or_superuser)
+def template_detail(request, pk):
+    """Visualizza un template e le sue righe."""
+    template = get_object_or_404(Template.objects.prefetch_related("rows"), pk=pk)
+    return render(request, "template_detail.html", {"template": template})

@@ -1,0 +1,34 @@
+{% extends "layout.html" %}
+{% block title %}Template: {{ template.name }}{% endblock %}
+
+{% block content %}
+<h4>{{ template.name }}</h4>
+
+<p>
+  Stato:
+  {% if template.is_active %}
+    <span class="green-text text-darken-2">Attivo</span>
+  {% else %}
+    <span class="red-text text-darken-2">Disattivo</span>
+  {% endif %}
+</p>
+
+<ul class="collection" style="max-width:600px;">
+  {% for r in template.rows.all %}
+    {% if r.is_spacer %}
+      <li class="collection-item grey lighten-4 center-align" style="font-style:italic;">(spazio)</li>
+    {% else %}
+      <li class="collection-item">{{ r.duty }}</li>
+    {% endif %}
+  {% empty %}
+    <li class="collection-item">Nessuna riga definita</li>
+  {% endfor %}
+</ul>
+
+<div style="margin-top:1rem;">
+  <a href="{% url 'template_create' %}" class="btn-small waves-effect blue-grey lighten-1">
+    <i class="material-icons left">note_add</i> Nuovo Template
+  </a>
+  <a href="{% url 'home' %}" class="btn-flat">Torna alla Home</a>
+</div>
+{% endblock %}
