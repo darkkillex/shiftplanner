@@ -1,13 +1,18 @@
 TO-DO
 
 TIER-1
-Aggiungere colorazione nella griglia in base al turno ricoperto dal lavoratore
-Mutuo lavoro su stesso piano turni si due o più account connessi
+Bugfix: se il template PT contiene più voci uguali (es. Ufficio), se viene assegnato a un singolo ufficio un dipendente,\
+    il dipendente automaticamente verrà assegnato a tutte ler voci Ufficio
+Visualizzare Lista dei template creati
+Creare pagina sulla homepage "Calendario", che apra un calendario sulla quale poter inserire delle note sui giorni
+Creare due menu nella barra superiore "Template PT"-> lista template PT e + Crea nuovo Template piano turni e "Piani turno"->lista  PT e + Crea nuovo piano turni
 
 
 TIER-2
-Creare pagina sulla homepage "Calendario", che apra un calendario sulla quale poter inserire delle note sui giorni
+
 Ordinare la home page (lista piani turno)
+Aggiungere colorazione nella griglia in base al turno ricoperto dal lavoratore
+Mutuo lavoro su stesso piano turni si due o più account connessi
 
 
 
