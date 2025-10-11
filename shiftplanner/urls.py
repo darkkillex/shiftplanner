@@ -48,4 +48,7 @@ urlpatterns = [
     path("changelog/", changelog_view, name="changelog"),
     path("templates/new/", core_views.template_create, name="template_create"),
     path("templates/<int:pk>/", core_views.template_detail, name="template_detail"),
+    path("funzioni/", views.functions_hub, name="functions"),
+    path("piani/", views.plans_area, name="plans_area"),
+    path("template-piani/", views.templates_area, name="templates_area"),
 ]

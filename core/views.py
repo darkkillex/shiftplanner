@@ -19,8 +19,8 @@ from django.contrib.auth import logout
 from django.contrib import messages
 from django.http import HttpResponse
 from django.db.models import F
-
-
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.shortcuts import render, redirect
 
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill
@@ -29,7 +29,7 @@ from openpyxl.utils import get_column_letter
 
 from .forms import PlanCreateForm
 from .forms import TemplateCreateForm
-from .models import Template, TemplateRow
+from .models import Template, TemplateRow, Plan
 
 from .serializers import *
 
@@ -465,14 +465,28 @@ def monthly_plan(request, pk: int):
         'shifts': shifts,
     })
 
-
-
 def logout_view(request):
     logout(request)
     return redirect('login')
 
 def _is_staff_or_superuser(user):
     return user.is_authenticated and (user.is_staff or user.is_superuser)
+
+@login_required
+def functions_hub(request):
+    return render(request, "functions_hub.html")
+
+@login_required
+@user_passes_test(_is_staff_or_superuser)
+def plans_area(request):
+    plans = Plan.objects.order_by("-year","-month","name")
+    return render(request, "plans_area.html", {"plans": plans})
+
+@login_required
+@user_passes_test(_is_staff_or_superuser)
+def templates_area(request):
+    tpls = Template.objects.order_by("name")
+    return render(request, "templates_area.html", {"templates": tpls})
 
 
 @login_required

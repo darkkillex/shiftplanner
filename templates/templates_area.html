@@ -1,0 +1,20 @@
+{% extends "layout.html" %}
+{% block title %}Template piani turno{% endblock %}
+{% block content %}
+<h4>Template piani turno</h4>
+
+<a href="{% url 'template_create' %}" class="btn blue-grey waves-effect" style="margin-bottom:12px;">
+  <i class="material-icons left">note_add</i> Crea nuovo Template piano turni
+</a>
+
+<ul class="collection">
+  {% for t in templates %}
+    <li class="collection-item">
+      <a href="{% url 'template_detail' t.id %}">{{ t.name }}</a>
+      {% if not t.is_active %}<span class="new badge red" data-badge-caption="disattivo"></span>{% endif %}
+    </li>
+  {% empty %}
+    <li class="collection-item">Nessun template.</li>
+  {% endfor %}
+</ul>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "layout.html" %}
+{% block title %}Piani turno{% endblock %}
+{% block content %}
+<h4>Piani turno</h4>
+
+<a href="{% url 'plan_create' %}" class="btn teal waves-effect" style="margin-bottom:12px;">
+  <i class="material-icons left">add</i> Crea nuovo Piano
+</a>
+
+<ul class="collection">
+  {% for p in plans %}
+    <li class="collection-item">
+      <a href="{% url 'monthly_plan' p.id %}">{{ p.name }} — {{ p.month }}/{{ p.year }} ({{ p.status }})</a>
+      <a href="/api/plans/{{ p.id }}/export_xlsx/" class="secondary-content btn-small teal waves-effect">
+        <i class="material-icons tiny left">file_download</i> XLSX
+      </a>
+    </li>
+  {% empty %}
+    <li class="collection-item">Nessun piano.</li>
+  {% endfor %}
+</ul>
+{% endblock %}
