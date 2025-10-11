@@ -486,8 +486,22 @@
       }
 
       if (!resp.ok) {
-        return M.toast({ html: "Errore applicazione", classes: "red" });
+        let msg = "Errore applicazione";
+        try {
+          const js = await resp.json();
+          if (js.detail) msg = js.detail;
+          if (js.skipped && js.skipped.length) {
+            const lines = js.skipped.slice(0, 8).map(s => `${s.date}: ${s.reason}`);
+            msg += "<br>" + lines.join("<br>");
+          }
+          if (js.errors && js.errors.length) {
+            const lines = js.errors.slice(0, 8).map(e => JSON.stringify(e));
+            msg += "<br>" + lines.join("<br>");
+          }
+        } catch (_) {}
+        return M.toast({ html: msg, classes: "red", displayLength: 8000 });
       }
+
       location.reload();
     });
   }

@@ -118,7 +118,6 @@ class PlanViewSet(viewsets.ModelViewSet):
 
         return Response({'year': plan.year, 'month': plan.month, 'days': days, 'rows': rows})
 
-
     @action(detail=True, methods=['post'])
     def bulk_assign(self, request, pk=None):
         plan = self.get_object()
@@ -126,65 +125,115 @@ class PlanViewSet(viewsets.ModelViewSet):
         shift_id = request.data.get('shift_type_id')
         cells = request.data.get('cells', [])
         note = (request.data.get('note') or '').strip()
-        if not employee_id or not cells:
-            return Response({'detail':'employee_id e cells obbligatori'}, status=400)
 
-        # --- Check conflitti: stesso plan, stesse date, stesso employee ma su ALTRE professioni
-        # Costruiamo mappa date -> set di profession_id target (per escludere i casi in cui sta già nella stessa cella)
-        targets_by_date = {}
+        if not employee_id or not isinstance(cells, list) or not cells:
+            return Response({'detail': 'employee_id e cells obbligatori'}, status=400)
+
+        # mappa professioni per nome (tollerante)
+        prof_by_name = {p.name.strip().casefold(): p for p in Profession.objects.all()}
+
+        valid_targets = []  # [(profession_id:int, date:date)]
+        skipped = []  # [{'date':iso, 'reason': str}]
+        errors = []  # hard errors di formato
+
+        # normalizza celle
         for c in cells:
             try:
-                pid = int(c['profession_id'])
-                d = str(c['date'])
+                d_iso = str(c.get('date'))
+                day = dt.date.fromisoformat(d_iso)
             except Exception:
-                return Response({'detail': f'Formato cella non valido: {c}'}, status=status.HTTP_400_BAD_REQUEST)
-            targets_by_date.setdefault(d, set()).add(pid)
+                errors.append({'cell': c, 'reason': 'date non valida'})
+                continue
 
-        dates = list(targets_by_date.keys())
-        # tutto ciò che è già assegnato a questo employee nelle stesse date
-        conflicts_qs = (
-            Assignment.objects
-            .filter(plan=plan, date__in=dates, employee_id=employee_id)
-            .select_related('profession', 'shift_type')
-        )
+            prof_id = c.get('profession_id')
+            if prof_id:
+                # verifica che la professione esista
+                if Profession.objects.filter(pk=prof_id).exists():
+                    valid_targets.append((int(prof_id), day))
+                    continue
+                else:
+                    skipped.append({'date': d_iso, 'reason': 'profession_id inesistente'})
+                    continue
 
-        # escludi i casi in cui è nella STESSA cella (stessa professione)
+            # fallback: plan_row_id -> mappa duty->Profession
+            pr_id = c.get('plan_row_id')
+            if pr_id:
+                from .models import PlanRow  # import locale, nessuna hard dep se il modello manca
+                try:
+                    r = PlanRow.objects.select_related(None).get(pk=pr_id, plan=plan)
+                    if r.is_spacer or not (r.duty or '').strip():
+                        skipped.append({'date': d_iso, 'reason': 'riga spacer/non mappabile'})
+                        continue
+                    key = r.duty.strip().casefold()
+                    p = prof_by_name.get(key)
+                    if not p:
+                        skipped.append({'date': d_iso, 'reason': f"mansione '{r.duty}' non mappata a Profession"})
+                        continue
+                    valid_targets.append((p.id, day))
+                    continue
+                except Exception:
+                    skipped.append({'date': d_iso, 'reason': 'plan_row inesistente o di altro piano'})
+                    continue
+
+            # nessun id utile
+            skipped.append({'date': d_iso, 'reason': 'nessun profession_id/plan_row_id'})
+            continue
+
+        if errors:
+            # formato celle non valido
+            return Response(
+                {'detail': 'formato celle non valido', 'errors': errors, 'skipped': []},
+                status=400
+            )
+
+        if not valid_targets:
+            # nessuna cella mappabile
+            return Response(
+                {'detail': 'nessuna cella valida',
+                 'skipped': skipped,  # <-- motivi per ogni data
+                 'hint': 'verifica plan_row_id/profession_id e corrispondenza mansione->Profession'},
+                status=400
+            )
+        log = logging.getLogger(__name__)
+        log.info("bulk_assign plan=%s employee=%s cells=%s", plan.id, employee_id, cells[:5])
+        # conflitti: stesso dipendente già assegnato in quelle date su ALTRE professioni
+        dates = list({d for _, d in valid_targets})
+        conflicts_qs = (Assignment.objects
+                        .filter(plan=plan, date__in=dates, employee_id=employee_id)
+                        .select_related('profession', 'shift_type'))
+        target_set = set(valid_targets)  # confronto su (profession_id, date)
+
         conflicts = []
         for a in conflicts_qs:
-            d_iso = a.date.isoformat()
-            if a.profession_id in targets_by_date.get(d_iso, set()):
+            if (a.profession_id, a.date) in target_set:
                 continue  # stessa cella: ok
             conflicts.append({
-                'date': d_iso,
+                'date': a.date.isoformat(),
                 'profession_id': a.profession_id,
-                'profession': a.profession.name,
+                'profession': a.profession.name if a.profession_id else '',
                 'shift_code': a.shift_type.code if a.shift_type else '',
                 'shift_label': a.shift_type.label if a.shift_type else '',
             })
-
         if conflicts:
             return Response(
-                {
-                    'detail': 'Il lavoratore risulta già assegnato in altre posizioni nelle date selezionate.',
-                    'conflicts': conflicts
-                },
+                {'detail': 'conflitto assegnazioni sulle date selezionate', 'conflicts': conflicts},
                 status=status.HTTP_409_CONFLICT
             )
 
-        # --- Nessun conflitto: procedi in transazione (all-or-nothing)
+        # write
+        updated = 0
         with transaction.atomic():
-            for c in cells:
+            for prof_id, day in valid_targets:
                 obj, _ = Assignment.objects.update_or_create(
-                    plan=plan,
-                    profession_id=c['profession_id'],
-                    date=c['date'],
+                    plan=plan, profession_id=prof_id, date=day,
                     defaults={'employee_id': employee_id, 'shift_type_id': shift_id}
                 )
-                # aggiorna/impone la nota (anche quando la riassegni)
-                obj.notes = note
-                obj.save(update_fields=['notes'])
+                if obj.notes != note:
+                    obj.notes = note
+                    obj.save(update_fields=['notes'])
+                updated += 1
 
-        return Response({'updated': len(cells)}, status=200)
+        return Response({'updated': updated, 'skipped': skipped}, status=200)
 
     @action(detail=True, methods=['post'])
     def notify(self, request, pk=None):
