@@ -1,3 +1,12 @@
+# v0.4.2
+---- Visualizzazione Lista dei template creati
+---- Aggiornamento Seed Professions
+
+
+
+
+
+
 # v0.4.1
 * Aggiunto nel footer della notifica email il nome dell'utente che ha generato la revisione del PT ricevuto
 * Aggiunta nel footer dell'app la versione(dinamica) dell'applicazione e la consultazione del changelog
