@@ -1,5 +1,9 @@
+# v0.4.3
+* Aggiunto nel lato admin la gestione dei template PT (inclusa la clonazione del template)
+* Aggiunta la possibilità di clonare i Plan (solo struttura/con assegnazioni)
+
 # v0.4.2
-* Corretta la gestione delle mansioni duplicate nei template e nel backend(gestione separata da convenzione".NUMERO")
+* Corretta la gestione delle mansioni duplicate nei template e nel backend(gestione separata da convenzione '.NUMERO')
 * Visualizzazione Lista dei template in memoria
 * Aggiornamento Seed Professions per base di partenza lista mansioni
 

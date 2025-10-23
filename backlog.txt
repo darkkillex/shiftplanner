@@ -1,11 +1,6 @@
 TIER-1
 
 *** Gestione invio notifiche solamente cambi rispetto all'invio precedente
-
-Bugfix: se il template PT contiene più voci uguali (es. Ufficio), se viene assegnato a un singolo ufficio un dipendente,\
-    il dipendente automaticamente verrà assegnato a tutte ler voci Ufficio
-
-
 Creare due menu nella barra superiore "Template PT"-> lista template PT e + Crea nuovo Template piano turni e "Piani turno"->lista  PT e + Crea nuovo piano turni
 
 
