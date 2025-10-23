@@ -1,5 +1,6 @@
-import calendar, datetime as dt
-import logging
+import datetime as dt
+import calendar, logging, re
+from collections import defaultdict
 
 from io import BytesIO
 
@@ -13,7 +14,7 @@ from django.template.loader import render_to_string
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.db import transaction
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import logout
 from django.contrib import messages
@@ -29,10 +30,27 @@ from openpyxl.utils import get_column_letter
 
 from .forms import PlanCreateForm
 from .forms import TemplateCreateForm
-from .models import Template, TemplateRow, Plan
+from .models import Template, TemplateRow, Profession
 
 from .serializers import *
 
+_SLOT_RE = re.compile(r'^(.*?)(?:\.(\d+))?$')
+
+def _split_slot(name: str):
+    m = _SLOT_RE.match((name or '').strip())
+    base = (m.group(1) or '').strip()
+    num = int(m.group(2) or 0)
+    return base, num
+
+def _existing_max_suffix(base: str) -> int:
+    # Rileva il massimo suffisso esistente per quella base
+    names = Profession.objects.filter(name__regex=rf'^{re.escape(base)}(?:\.(\d+))?$').values_list('name', flat=True)
+    m = 0
+    for n in names:
+        _, k = _split_slot(n)
+        if k > m:
+            m = k
+    return m
 
 class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = Employee.objects.all().order_by('last_name','first_name')
@@ -55,39 +73,35 @@ class PlanViewSet(viewsets.ModelViewSet):
         plan = self.get_object()
         days = calendar.monthrange(plan.year, plan.month)[1]
 
-        # preload assignments
-        assignments = (Assignment.objects
-                       .filter(plan=plan)
-                       .select_related('employee', 'shift_type', 'profession'))
-        idx = {(a.profession_id, a.date): a for a in assignments}
-
-        # mappa nome->Profession (casefold per tolleranza)
-        prof_by_name = {p.name.strip().casefold(): p for p in Profession.objects.all()}
+        ass = (Assignment.objects
+               .filter(plan=plan)
+               .select_related('employee', 'shift_type', 'profession'))
+        idx = {(a.profession_id, a.date): a for a in ass}
 
         rows = []
         if plan.rows.exists():
-            # Usa PlanRow (mansioni e spazi)
             for r in plan.rows.all().order_by('order'):
                 if r.is_spacer:
-                    label = ''
+                    duty_full = ''
+                    base = ''
                     prof = None
                 else:
-                    label = r.duty
-                    prof = prof_by_name.get((r.duty or '').strip().casefold())
+                    duty_full = (r.duty or '').strip()  # es. "Magazzino.4"
+                    base = duty_full.split('.', 1)[0] if duty_full else ''
+                    prof = Profession.objects.filter(name=duty_full).first()  # match ESATTO
 
                 row = {
+                    'plan_row_id': r.id,
                     'profession_id': getattr(prof, 'id', None),
-                    'profession': label,  # prima colonna: etichetta del template
+                    'profession': base,  # UI senza suffisso
                     'spacer': bool(r.is_spacer),
                 }
+
                 for d in range(1, days + 1):
                     day = dt.date(plan.year, plan.month, d)
-                    if not prof:  # spacer o mansione non mappata a Profession
-                        row[str(d)] = {
-                            'employee_id': None, 'employee_name': '',
-                            'shift_code': '', 'shift_label': '',
-                            'notes': '', 'has_note': False
-                        }
+                    if not prof:
+                        row[str(d)] = {'employee_id': None, 'employee_name': '', 'shift_code': '', 'shift_label': '',
+                                       'notes': '', 'has_note': False}
                     else:
                         a = idx.get((prof.id, day))
                         row[str(d)] = {
@@ -100,9 +114,9 @@ class PlanViewSet(viewsets.ModelViewSet):
                         }
                 rows.append(row)
         else:
-            # Fallback: professioni alfabetiche
             for p in Profession.objects.order_by('name'):
-                row = {'profession_id': p.id, 'profession': p.name, 'spacer': False}
+                base = p.name.split('.', 1)[0]
+                row = {'profession_id': p.id, 'profession': base, 'spacer': False}
                 for d in range(1, days + 1):
                     day = dt.date(plan.year, plan.month, d)
                     a = idx.get((p.id, day))
@@ -559,18 +573,45 @@ def plan_create(request):
             # --- Clona righe dal template, se selezionato ---
             template = form.cleaned_data.get("template")
             if template:
-                from .models import TemplateRow, PlanRow
-                rows = []
-                for r in template.rows.all():
-                    rows.append(PlanRow(
-                        plan=plan,
-                        order=r.order,
-                        duty=r.duty,
-                        is_spacer=r.is_spacer,
-                        notes=r.notes
+                from collections import defaultdict
+                from .models import TemplateRow, PlanRow, Profession
+
+                occ = defaultdict(int)  # contatore per base NEL SOLO PIANO
+                rows_to_create = []
+
+                for r in template.rows.all().order_by('order'):
+                    if r.is_spacer:
+                        rows_to_create.append(PlanRow(
+                            plan=plan, order=r.order, duty="", is_spacer=True, notes=r.notes
+                        ))
+                        continue
+
+                    raw = (r.duty or "").strip()
+                    if not raw:
+                        rows_to_create.append(PlanRow(
+                            plan=plan, order=r.order, duty="", is_spacer=False, notes=r.notes
+                        ))
+                        continue
+
+                    # split suffisso esplicito
+                    parts = raw.rsplit(".", 1)
+                    if len(parts) == 2 and parts[1].isdigit():
+                        base, num = parts[0].strip(), int(parts[1])
+                        duty_full = f"{base}.{num}"
+                        occ[base] = max(occ[base], num)  # allinea contatore
+                    else:
+                        base = raw
+                        occ[base] += 1
+                        duty_full = f"{base}.{occ[base]}"
+
+                    Profession.objects.get_or_create(name=duty_full)  # accredita se manca
+
+                    rows_to_create.append(PlanRow(
+                        plan=plan, order=r.order, duty=duty_full, is_spacer=False, notes=r.notes
                     ))
-                if rows:
-                    PlanRow.objects.bulk_create(rows)
+
+                if rows_to_create:
+                    PlanRow.objects.bulk_create(rows_to_create)
 
             messages.success(request, "Piano creato correttamente.")
             return redirect("monthly_plan", pk=plan.pk)
@@ -601,7 +642,7 @@ def _parse_rows(text: str):
 @user_passes_test(_is_staff_or_superuser)
 @transaction.atomic
 def template_create(request):
-    """Form per creare un nuovo template di piano turni."""
+    """Form per creare un nuovo template di piano turni + accredito Profession."""
     if request.method == "POST":
         form = TemplateCreateForm(request.POST)
         if form.is_valid():
@@ -609,8 +650,35 @@ def template_create(request):
             rows = _parse_rows(form.cleaned_data["rows_text"])
             for r in rows:
                 r.template = template
+
+            # --- ACCREDITO PROFESSION in base alle righe inserite ---
+            from .models import Profession, TemplateRow  # import locale per chiarezza
+            base_counters = defaultdict(int)  # occorrenze per base nel SOLO template
+
+            for r in rows:
+                if r.is_spacer:
+                    continue
+                base, num = _split_slot(r.duty)
+                if not base:
+                    continue
+
+                if num > 0:
+                    # suffisso esplicito: crea esattamente base.num se manca
+                    desired = f"{base}.{num}"
+                    Profession.objects.get_or_create(name=desired)
+                else:
+                    # senza suffisso: usa il prossimo disponibile considerando DB + occorrenze nel template
+                    base_counters[base] += 1
+                    idx_in_template = base_counters[base]
+                    start = _existing_max_suffix(base)       # max già presente in DB
+                    target_num = start + idx_in_template     # continua la sequenza
+                    desired = f"{base}.{target_num}"
+                    Profession.objects.get_or_create(name=desired)
+
+            # --- Salvataggio righe template così come inserite dall’utente ---
             if rows:
                 TemplateRow.objects.bulk_create(rows)
+
             messages.success(request, "Template creato correttamente.")
             return redirect("template_detail", pk=template.pk)
     else:
