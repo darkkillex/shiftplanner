@@ -112,7 +112,7 @@ class Command(BaseCommand):
             'Site Operations Specialist/Tecnico HSE - a discrezione del Coordinatore Operativo COVA.13',
             'Site Operations Specialist/Tecnico HSE - a discrezione del Coordinatore Operativo COVA.14',
             'Site Operations Specialist/Tecnico HSE - a discrezione del Coordinatore Operativo COVA.15',
-            'Site Operations Specialist/Tecnico HSE - a discrezione del Coordinatore Operativo COVA - Front Office',
+            'Site Operations Specialist/Tecnico HSE - a discrezione del Coordinatore Operativo COVA - Front Office.1',
             'Site Operations Specialist/Tecnico HSE - a discrezione del Coordinatore Operativo COVA.16',
             'Site Operations Specialist/Tecnico HSE - RDC.2',
             'Site Operations Specialist/Tecnico HSE - a discrezione del referente Delegati e front office pozzi.1',
