@@ -1,11 +1,7 @@
 # v0.4.2
----- Visualizzazione Lista dei template creati
----- Aggiornamento Seed Professions
-
-
-
-
-
+* Corretta la gestione delle mansioni duplicate nei template e nel backend(gestione separata da convenzione".NUMERO")
+* Visualizzazione Lista dei template in memoria
+* Aggiornamento Seed Professions per base di partenza lista mansioni
 
 # v0.4.1
 * Aggiunto nel footer della notifica email il nome dell'utente che ha generato la revisione del PT ricevuto
