@@ -9,8 +9,7 @@ Rimuovere la dicitura REV incrementale dalla notifica via email
 Dopo inserimento lavoratore su griglia piano turni, il refresh della grid deve lasciarmi la visualizzazione sulla riga dell'ultiumo inserimento, non nuovamente dalla prima riga
 
 Ordinare lista Turni per ID (scheda plan)
-Lista lavoratore, mostrare cognome nome(scheda plan)
-Ordinare lista Lavoratore per ordine alfabetico cognome (scheda plan)
+
 Ordinare la home page (lista piani turno)
 Aggiungere colorazione nella griglia in base al turno ricoperto dal lavoratore
 Mutuo lavoro su stesso piano turni si due o più account connessi

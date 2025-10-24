@@ -18,7 +18,11 @@ class Employee(models.Model):
     professions = models.ManyToManyField(Profession, blank=True)
     is_active = models.BooleanField(default=True)
     def __str__(self): return f"{self.last_name} {self.first_name}"
-    def full_name(self): return f"{self.first_name} {self.last_name}"
+    def full_name(self): return f"{self.last_name} {self.first_name}"
+
+    class Meta:
+        ordering = ['last_name', 'first_name']
+
 
 class ShiftType(models.Model):
     code = models.CharField(max_length=20, unique=True)
