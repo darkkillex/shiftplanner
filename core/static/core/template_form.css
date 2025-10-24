@@ -1,0 +1,16 @@
+  /* Monospace per incolla liste, numeri di linea a sinistra */
+  .monospace { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+  textarea.materialize-textarea {
+    line-height: 1.35;
+    white-space: pre;
+    overflow: auto;
+  }
+  /* Finto gutter con numeri di linea */
+  textarea.materialize-textarea {
+    background-image:
+      linear-gradient(to bottom, rgba(0,0,0,0.06) 1px, transparent 1px);
+    background-size: 100% 1.35em;
+    background-position-y: 0.9em;
+  }
+  /* Colonna numeri semplice via CSS counter usando ::before su contenitore (fallback non perfetto ma utile) */
+  .input-field textarea.materialize-textarea::placeholder { opacity: .5; }

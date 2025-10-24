@@ -8,7 +8,7 @@ class PlanCreateForm(forms.ModelForm):
         fields = ["name", "month", "year", "status", "template"]
         widgets = {
             "name": forms.TextInput(attrs={
-                "class": "browser-default",
+                #"class": "browser-default",
                 "placeholder": "Es. Piano Reparto A"
             }),
             # month, year, status li settiamo in __init__ come Select
@@ -76,25 +76,19 @@ class TemplateCreateForm(forms.ModelForm):
     Le righe vuote saranno considerate spazi vuoti nel piano.
     """
     rows_text = forms.CharField(
-        label="Mansioni (una per riga — lascia vuote per spazi)",
+        label="Righe del template (una mansione per riga, righe vuote = separatori)",
         widget=forms.Textarea(attrs={
-            "rows": 14,
-            "class": "browser-default",
-            "placeholder": "Esempio:\nACAM\nBO-1\nBO-2\n\nCoordinatore COVA\n\nDelegato ai Lavori",
-        }),
-        help_text="Ogni riga corrisponde a una cella della prima colonna del piano turni."
+            "class": "materialize-textarea monospace z-depth-1",
+            "rows": 24,                 # altezza
+            "style": "min-height:520px;height:520px;resize:vertical;",
+            "placeholder": "Ufficio.1\nUfficio.2\n\nMagazzino.1\nMagazzino\n...",
+            "spellcheck": "false",
+            "autocomplete": "off",
+            "autocapitalize": "off",
+            "autocorrect": "off",
+        })
     )
 
     class Meta:
         model = Template
         fields = ["name", "is_active"]
-        widgets = {
-            "name": forms.TextInput(attrs={
-                "class": "browser-default",
-                "placeholder": "Nome template (es. Reparto A - Settimana)"
-            })
-        }
-        labels = {
-            "name": "Nome del template",
-            "is_active": "Attivo"
-        }

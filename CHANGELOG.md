@@ -1,3 +1,7 @@
+# v0.4.4
+* Adeguata pagina "nuovo template PT" al material style 
+
+
 # v0.4.3
 * Aggiunto nel lato admin la gestione dei template PT (inclusa la clonazione del template)
 * Aggiunta la possibilità di clonare i Plan (solo struttura/con assegnazioni)

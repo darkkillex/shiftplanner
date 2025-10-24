@@ -1,6 +1,7 @@
 <!doctype html>
 {% load static %}
 <html lang="it">
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -16,9 +17,12 @@
     <link rel="stylesheet" href="{% static 'core/layout.css' %}">
     {% endblock %}
 
-</head>
-<body class="grey lighten-4">
+    {% block extra_css %}{% endblock %}
 
+</head>
+
+
+<body class="grey lighten-4">
 <!-- NAVBAR -->
 <nav class="blue">
     <div class="nav-wrapper container" style="display:flex; align-items:center; justify-content:space-between;">
@@ -90,5 +94,6 @@
   </small>
 </footer>
 
+{% block extra_js %}{% endblock %}
 </body>
 </html>

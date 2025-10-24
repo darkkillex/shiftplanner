@@ -2,34 +2,67 @@
 {% load static %}
 {% block title %}Nuovo Template{% endblock %}
 
-{% block content %}
-<h4>Nuovo template piano turni</h4>
-
-<form method="post">
-  {% csrf_token %}
-  <div class="input-field" style="margin-top:1.2rem;">
-    {{ form.name.label_tag }} {{ form.name }}
-  </div>
-
-  <p>
-    <label>
-      {{ form.is_active }} <span class="lever"></span> Attivo
-    </label>
-  </p>
-
-  <div class="input-field" style="margin-top:1.2rem;">
-    {{ form.rows_text.label_tag }}
-    {{ form.rows_text }}
-    <small class="grey-text">
-      Ogni riga rappresenta una mansione. Lascia righe vuote per creare spazi nel piano.
-    </small>
-  </div>
-
-  <div style="margin-top:1.5rem;">
-    <button class="btn waves-effect teal" type="submit">
-      <i class="material-icons left">save</i> Salva Template
-    </button>
-    <a href="{% url 'home' %}" class="btn-flat">Annulla</a>
-  </div>
-</form>
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'core/template_form.css' %}">
 {% endblock %}
+
+<!-- auto-resize Materialize -->
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // auto-resize Materialize
+    var ta = document.querySelector('textarea.materialize-textarea');
+    if (ta && M && M.textareaAutoResize) { M.textareaAutoResize(ta); }
+  });
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width:980px;">
+  <h4 class="teal-text text-darken-2" style="margin-bottom:18px;">Crea template piano turni</h4>
+
+  <form method="post" class="card">
+    <div class="card-content">
+      {% csrf_token %}
+
+      <div class="row" style="margin-bottom:0;">
+        <div class="input-field col s12 m8">
+          <input id="name" name="name" type="text" value="{{ form.name.value|default_if_none:'' }}" required>
+          <label for="name" class="{% if form.name.value %}active{% endif %}">Nome template</label>
+          {% for e in form.name.errors %}<span class="helper-text red-text">{{ e }}</span>{% endfor %}
+        </div>
+
+        <div class="input-field col s12 m4" style="margin-top:18px;">
+          <label>
+            <input type="checkbox" name="is_active" {% if form.is_active.value %}checked{% endif %}>
+            <span>Attivo</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:8px;">
+        <div class="input-field col s12">
+          {{ form.rows_text }}
+          <label for="{{ form.rows_text.id_for_label }}" class="active">Righe del template</label>
+          <span class="helper-text">
+            Una mansione per riga. Righe vuote = separatori. I suffissi <code>.NUMERO</code> verranno mantenuti.
+          </span>
+          {% for e in form.rows_text.errors %}<span class="helper-text red-text">{{ e }}</span>{% endfor %}
+        </div>
+      </div>
+
+      <ul class="browser-default" style="margin-top:8px;">
+        <li>Il sistema accredita automaticamente le mansioni mancanti.</li>
+      </ul>
+    </div>
+
+    <div class="card-action right-align" style="position:sticky; bottom:0; background:#fafafa;">
+      <a href="{% url 'templates_area' %}" class="btn-flat">Annulla</a>
+      <button type="submit" class="btn waves-effect waves-light teal">
+        <i class="material-icons left">save</i>Salva template
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
