@@ -103,3 +103,18 @@ class PlanRow(models.Model):
             models.UniqueConstraint(fields=['plan', 'order'], name='uniq_plan_order'),
         ]
         indexes = [models.Index(fields=['plan', 'order'])]
+
+
+class Reminder(models.Model):
+    date = models.DateField()                 # giorno sul calendario
+    title = models.CharField(max_length=160)  # testo breve
+    details = models.TextField(blank=True)
+    completed = models.BooleanField(default=False)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["date", "completed"])]
+        ordering = ["date", "completed", "title"]
+
+    def __str__(self): return f"{self.date} - {self.title}"

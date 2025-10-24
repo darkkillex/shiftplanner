@@ -19,7 +19,6 @@ Mutuo lavoro su stesso piano turni si due o più account connessi
 
 TIER-3
 Giorno sabato e festività nazionali in rosso(calendario shiftplan)
-Creare pagina sulla homepage "Calendario", che apra un calendario sulla quale poter inserire delle note sui giorni
 Refactoring degli style su sorgenti dedicati
 Copia incolla celle turno tramite ctrl+c ctrl+v
 Copia incolla celle turno tramite DnD

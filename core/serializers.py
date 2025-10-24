@@ -1,5 +1,7 @@
-from rest_framework import serializers
-from .models import Company, Profession, Employee, ShiftType, Plan, Assignment
+from rest_framework import serializers, viewsets
+from .models import Company, Profession, Employee, ShiftType, Plan, Assignment, Reminder
+
+import datetime as dt
 
 class CompanySerializer(serializers.ModelSerializer):
     class Meta: model = Company; fields = '__all__'
@@ -34,3 +36,12 @@ class AssignmentSerializer(serializers.ModelSerializer):
 
     def get_has_note(self, obj):
         return bool(obj.notes)
+
+
+class ReminderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Reminder
+        fields = "__all__"
+        read_only_fields = ("created_by", "created_at")
+
+

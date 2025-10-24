@@ -1,9 +1,173 @@
-{% extends 'layout.html' %}
+<!-- templates/home.html -->
+{% extends "layout.html" %}
+{% block title %}Home{% endblock %}
 {% block content %}
-<h2>Lista Piani turno creati</h2>
+<div class="container" style="max-width:1100px;">
+  <div class="card">
+    <div class="card-content">
+      <span class="card-title teal-text text-darken-2" style="margin-bottom:8px;">Scadenze del mese</span>
 
-<ul>
+      <ul id="reminder-list" class="collection" style="margin-bottom:16px;"></ul>
 
-</ul>
+      <div class="divider" style="margin:12px 0;"></div>
+
+      <div id="calendar"></div>
+
+      <p class="grey-text" style="margin-top:8px;">
+        Clicca sulla casella del giorno desiderato per aggiungere una nota. Spunta la nota nella lista in alto per completare.
+      </p>
+
+      <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-top:6px;">
+        <span>Legenda colori:</span>
+        <span style="display:inline-flex; align-items:center; gap:6px;">
+          <i style="width:14px; height:14px; background:#90caf9; border-radius:3px; display:inline-block;"></i>
+          <span style="color:#1e88e5;">blu</span>: nota in validità temporale
+        </span>
+        <span style="display:inline-flex; align-items:center; gap:6px;">
+          <i style="width:14px; height:14px; background:#ffe082; border-radius:3px; display:inline-block;"></i>
+          <span style="color:#f9a825;">giallo</span>: se mancano ≤3 giorni alla scadenza
+        </span>
+        <span style="display:inline-flex; align-items:center; gap:6px;">
+          <i style="width:14px; height:14px; background:#ef9a9a; border-radius:3px; display:inline-block;"></i>
+          <span style="color:#e53935;">rosso</span>: nota scaduta
+        </span>
+      </div>
+
+    </div>
+  </div>
+</div>
 {% endblock %}
 
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css" rel="stylesheet">
+<style>
+  #calendar { background:#fff; padding:12px; border-radius:8px; }
+  /* Lista */
+  .collection .collection-item.due-soon { background:#fff8e1; }   /* giallo chiaro */
+  .collection .collection-item.overdue  { background:#ffebee; }   /* rosso chiaro */
+  .collection .collection-item.done { opacity:.6; text-decoration: line-through; }
+
+  /* Eventi calendario */
+  .fc-daygrid-event.due-soon { background:#ffe082; border-color:#ffe082; }
+  .fc-daygrid-event.overdue  { background:#ef9a9a; border-color:#ef9a9a; }
+  .fc-daygrid-event.done     { background:#cfd8dc; border-color:#cfd8dc; }
+
+  /* Checkbox Materialize spacing */
+  .reminder-row { display:flex; align-items:flex-start; gap:10px; }
+  .reminder-meta { display:flex; flex-direction:column; }
+  .reminder-date { font-weight:600; }
+  .reminder-details { margin-left:28px; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+<script>
+(function(){
+  function getCookie(name){
+    const m = document.cookie.match('(^|;)\\s*'+name+'\\s*=\\s*([^;]+)');
+    return m ? m.pop() : '';
+  }
+  const CSRF = getCookie('csrftoken');
+  const headersJSON = {'Content-Type':'application/json','X-CSRFToken': CSRF};
+
+  const list = document.getElementById('reminder-list');
+  const calEl = document.getElementById('calendar');
+  let currentYear, currentMonth;
+
+  async function fetchReminders(y, m){
+    const r = await fetch(`/api/reminders/?year=${y}&month=${m}`, {credentials:'same-origin'});
+    if(!r.ok) return [];
+    return r.json();
+  }
+  function spanDays(a,b){ return Math.round((b-a)/(1000*60*60*24)); }
+
+  function classify(rem){
+    if(rem.completed) return 'done';
+    const now = new Date(); now.setHours(0,0,0,0);
+    const d = new Date(rem.date+'T00:00:00');
+    const dd = spanDays(now, d);
+    if(dd < 0) return 'overdue';
+    if(dd <= 3) return 'due-soon';
+    return '';
+  }
+
+  function renderList(data){
+    list.innerHTML = '';
+    if(!data.length){
+      list.innerHTML = '<li class="collection-item">Nessuna scadenza.</li>';
+      return;
+    }
+    data.forEach(r=>{
+      const d = new Date(r.date+'T00:00:00');
+      const cls = classify(r);
+      const li = document.createElement('li');
+      li.className = `collection-item ${cls}`;
+      li.innerHTML = `
+        <div class="reminder-row">
+          <label>
+            <input type="checkbox" ${r.completed?'checked':''} data-id="${r.id}">
+            <span></span>
+          </label>
+          <div class="reminder-meta">
+            <span class="reminder-date">${d.toLocaleDateString()}</span>
+            <span>${r.title}</span>
+          </div>
+        </div>
+        ${r.details ? `<div class="grey-text text-darken-1 reminder-details">${r.details}</div>`:''}
+      `;
+      li.querySelector('input[type=checkbox]').addEventListener('change', async (e)=>{
+        await fetch(`/api/reminders/${r.id}/`, {
+          method:'PATCH', headers: headersJSON, credentials:'same-origin',
+          body: JSON.stringify({completed: e.target.checked})
+        });
+        load();
+      });
+      list.appendChild(li);
+    });
+  }
+
+  async function load(){
+    const data = await fetchReminders(currentYear, currentMonth);
+    renderList(data);
+    calendar.removeAllEvents();
+    calendar.addEventSource(data.map(r=>{
+      const cls = classify(r);
+      return {
+        id: r.id,
+        title: r.title + (r.completed?' ✓':''),
+        start: r.date,
+        classNames: cls ? [cls] : []
+      };
+    }));
+  }
+
+  const calendar = new FullCalendar.Calendar(calEl, {
+    initialView: 'dayGridMonth',
+    firstDay: 1,
+    locale: 'it',
+    height: 'auto',
+    headerToolbar: { left:'prev,next today', center:'title', right:'' }, /* rimosso bottone Month */
+
+    dateClick: async (info)=>{
+      const title = prompt(`Nuovo appunto per ${info.dateStr}:`);
+      if(!title) return;
+      await fetch('/api/reminders/', {
+        method:'POST', headers: headersJSON, credentials:'same-origin',
+        body: JSON.stringify({date: info.dateStr, title, details: ''})
+      });
+      await load();
+    },
+
+    datesSet: async (arg)=>{
+      const d = arg.view.currentStart;
+      currentYear = d.getFullYear();
+      currentMonth = d.getMonth() + 1;
+      await load();
+    }
+  });
+
+  calendar.render();
+})();
+</script>
+{% endblock %}

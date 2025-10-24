@@ -14,7 +14,7 @@ router.register(r'api/employees', core_views.EmployeeViewSet)
 router.register(r'api/professions', core_views.ProfessionViewSet)
 router.register(r'api/shift-types', core_views.ShiftTypeViewSet)
 router.register(r'api/plans', core_views.PlanViewSet, basename='plans')
-
+router.register(r'api/reminders', core_views.ReminderViewSet)
 
 class SuperuserOnlyAdmin(AdminSite):
     site_header = "Shift Planner — Admin"

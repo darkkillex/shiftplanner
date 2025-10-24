@@ -2,7 +2,7 @@ from django.contrib import admin
 from .models import (
     Company, Profession, Employee, ShiftType,
     Plan, Assignment,
-    Template, TemplateRow, PlanRow
+    Template, TemplateRow, PlanRow, Reminder
 )
 from calendar import monthrange
 from django.db import transaction
@@ -157,3 +157,20 @@ class AssignmentAdmin(admin.ModelAdmin):
     list_display = ('id', 'plan', 'profession', 'date', 'employee', 'shift_type')
     list_filter = ('plan', 'profession', 'date', 'shift_type')
     search_fields = ('employee__first_name', 'employee__last_name', 'profession__name')
+
+@admin.register(Reminder)
+class ReminderAdmin(admin.ModelAdmin):
+    list_display = ('id','date','title','completed','created_by','created_at')
+    list_filter = ('completed','date')
+    search_fields = ('title','details')
+    actions = ['segna_completati','segna_da_fare']
+
+    def segna_completati(self, request, queryset):
+        n = queryset.update(completed=True)
+        self.message_user(request, f"Segnati completati: {n}")
+    segna_completati.short_description = "Segna come completati"
+
+    def segna_da_fare(self, request, queryset):
+        n = queryset.update(completed=False)
+        self.message_user(request, f"Reimpostati da fare: {n}")
+    segna_da_fare.short_description = "Segna come da fare"

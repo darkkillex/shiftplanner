@@ -1,4 +1,3 @@
-import datetime as dt
 import calendar, logging, re
 from collections import defaultdict
 
@@ -63,6 +62,26 @@ class ProfessionViewSet(viewsets.ModelViewSet):
 class ShiftTypeViewSet(viewsets.ModelViewSet):
     queryset = ShiftType.objects.all().order_by('code')
     serializer_class = ShiftTypeSerializer
+
+class ReminderViewSet(viewsets.ModelViewSet):
+    serializer_class = ReminderSerializer
+    queryset = Reminder.objects.all().order_by("date","completed","title")
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        # filtra per mese: ?year=2025&month=10
+        y = self.request.query_params.get("year")
+        m = self.request.query_params.get("month")
+        if y and m:
+            from calendar import monthrange
+            y, m = int(y), int(m)
+            start = dt.date(y, m, 1)
+            end = dt.date(y, m, monthrange(y, m)[1])
+            qs = qs.filter(date__range=(start, end))
+        return qs
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
 
 class PlanViewSet(viewsets.ModelViewSet):
     queryset = Plan.objects.all().order_by('-year','-month')
