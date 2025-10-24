@@ -17,11 +17,11 @@ class Employee(models.Model):
     email = models.EmailField(unique=True)
     professions = models.ManyToManyField(Profession, blank=True)
     is_active = models.BooleanField(default=True)
-    def __str__(self): return f"{self.last_name} {self.first_name}"
-    def full_name(self): return f"{self.last_name} {self.first_name}"
 
     class Meta:
         ordering = ['last_name', 'first_name']
+    def __str__(self): return f"{self.last_name} {self.first_name}"
+    def full_name(self): return f"{self.last_name} {self.first_name}"
 
 
 class ShiftType(models.Model):
@@ -29,6 +29,9 @@ class ShiftType(models.Model):
     label = models.CharField(max_length=60)
     start_time = models.TimeField()
     end_time = models.TimeField()
+
+    class Meta:
+        ordering = ['id']
     def __str__(self): return f"{self.code} - {self.label}"
 
 

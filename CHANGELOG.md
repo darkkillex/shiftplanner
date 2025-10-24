@@ -1,7 +1,9 @@
 # v0.4.4
 * Adeguata pagina "nuovo template PT" al material style
 * Homepage: inserito un calendario che permette di inserire delle note/appunti
-* Menù a tendina PT -Seleziona lavoratore-: ordinata lista lavoratori per cognome-nome
+* Menù a tendina PT -Lavoratore-: ordinata lista lavoratori per cognome-nome
+* Menù a tendina PT -Turno- e legenda notifiche: ordinata lista turni per id
+
 
 # v0.4.3
 * Aggiunto nel lato admin la gestione dei template PT (inclusa la clonazione del template)

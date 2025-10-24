@@ -60,7 +60,7 @@ class ProfessionViewSet(viewsets.ModelViewSet):
     serializer_class = ProfessionSerializer
 
 class ShiftTypeViewSet(viewsets.ModelViewSet):
-    queryset = ShiftType.objects.all().order_by('code')
+    queryset = ShiftType.objects.all().order_by('id')
     serializer_class = ShiftTypeSerializer
 
 class ReminderViewSet(viewsets.ModelViewSet):
@@ -297,7 +297,7 @@ class PlanViewSet(viewsets.ModelViewSet):
                 status=200)
 
         month_number = dt.date(plan.year, plan.month, 1).strftime('%m')
-        legend = list(ShiftType.objects.values_list('code', 'label'))
+        legend = list(ShiftType.objects.order_by('id').values_list('code', 'label'))
 
         sent = 0
         for emp, items in by_emp.items():
@@ -538,7 +538,7 @@ def profile(request):
 def monthly_plan(request, pk: int):
     plan = get_object_or_404(Plan, pk=pk)
     employees = Employee.objects.order_by('last_name','first_name')
-    shifts = ShiftType.objects.order_by('code')
+    shifts = ShiftType.objects.order_by('id')
     use_plan_rows = plan.rows.exists()
     return render(request, 'monthly_plan.html', {
         'plan': plan,
