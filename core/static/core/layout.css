@@ -1,127 +1,174 @@
-nav.teal {
-  background-color: #005B81 !important; /* Pantone 308 */
+/* --- NAVBAR --- */
+nav.teal { background-color:#005B81 !important; }
+
+:root { --nav-h:56px; }
+@media (min-width:993px){ :root { --nav-h:64px; } }
+
+.navbar-fixed nav {
+  height:var(--nav-h);
+  line-height:var(--nav-h);
 }
 
-/* --- GRIGLIA: larghezza a contenuto + sticky header + prima colonna sticky --- */
+.nav-wrapper.container {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  height:var(--nav-h);
+}
 
+/* centro il gruppo menu tra brand e menu destro */
+.nav-wrapper.container { position: relative; }
+.nav-center{
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  margin: 0;
+}
+.nav-center > li > a { line-height: var(--nav-h); }
+
+/* evita sovrapposizioni su viewport stretti */
+@media (max-width: 1200px){
+  .nav-center { max-width: 50%; }
+  .nav-center > li > a { padding: 0 10px; }
+}
+
+/* brand */
+.brand-logo {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  position:static !important;
+  transform:none !important;
+}
+
+.logo-img {
+  height:48px;
+  width:auto;
+  object-fit:contain;
+}
+@media (min-width:993px){
+  .logo-img { height:54px; }
+}
+
+.site-name {
+  font-size:1.4rem;
+  font-weight:600;
+  color:#fff;
+}
+
+/* spacer sotto navbar */
+#nav-spacer {
+  height:var(--nav-h);              /* mantiene il distacco minimo */
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+
+/* --- GRIGLIA --- */
 .grid-wrapper {
-  overflow: auto;
-  -webkit-overflow-scrolling: touch;
-  border-radius: 6px;
-  border: 1px solid #e0e0e0;
-  background: #fff;
-  max-height: 75vh;            /* barra orizzontale sempre visibile */
+  overflow:auto;
+  -webkit-overflow-scrolling:touch;
+  border-radius:6px;
+  border:1px solid #e0e0e0;
+  background:#fff;
+  max-height:75vh;
 }
 
 #grid {
-  border-collapse: collapse;
-  width: 100%;
-  table-layout: auto;
+  border-collapse:collapse;
+  width:100%;
+  table-layout:auto;
 }
 
 #grid th, #grid td {
-  border: 1px solid #e0e0e0;
-  padding: 6px 8px;
-  text-align: center;
-  white-space: nowrap;         /* no wrap, colonna si allarga */
+  border:1px solid #e0e0e0;
+  padding:6px 8px;
+  text-align:center;
+  white-space:nowrap;
 }
 
 /* Header sticky */
 #grid thead th {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: #fafafa;
+  position:sticky;
+  top:0;
+  z-index:2;
+  background:#fafafa;
 }
 
 /* Prima colonna sticky */
 #grid thead th:first-child,
 #grid tbody th:first-child,
 #grid tbody td:first-child {
-  position: sticky;
-  left: 0;
-  z-index: 3;
-  background: #fff;
-  text-align: left;
-  font-weight: 600;
-  box-shadow: 2px 0 0 #e0e0e0;
-  transform: translateZ(0);
+  position:sticky;
+  left:0;
+  z-index:3;
+  background:#fff;
+  text-align:left;
+  font-weight:600;
+  box-shadow:2px 0 0 #e0e0e0;
+  transform:translateZ(0);
 }
 
-/* Angolo (prima colonna + header) sopra a tutto */
+/* Angolo */
 #grid thead th:first-child {
-  z-index: 4;
-  background: #fafafa;
-  box-shadow: 2px 0 0 #e0e0e0, 0 2px 0 #e0e0e0;
+  z-index:4;
+  background:#fafafa;
+  box-shadow:2px 0 0 #e0e0e0, 0 2px 0 #e0e0e0;
 }
 
-/* Domeniche in rosso */
-#grid thead th.holiday { color: #d32f2f; }
+/* Domeniche */
+#grid thead th.holiday { color:#d32f2f; }
 
-/* Etichetta weekday */
-#grid thead .day-label {
-  font-size: 11px;
-  opacity: .75;
-  line-height: 1;
-}
+/* Weekday label */
+#grid thead .day-label { font-size:11px; opacity:.75; line-height:1; }
 
-/* Celle di lavoro */
-#grid td.cell {
-  cursor: pointer;
-  height: 34px;
-  vertical-align: middle;
-  font-size: 13px;
-}
+/* Celle */
+#grid td.cell { cursor:pointer; height:34px; vertical-align:middle; font-size:13px; }
 
 /* Selezione */
-#grid td.cell.selected {
-  outline: 2px solid #000;
-  outline-offset: -2px;
-}
+#grid td.cell.selected { outline:2px solid #000; outline-offset:-2px; }
 
 /* Zebra + hover */
-#grid tbody tr:nth-child(odd)  { background-color: #fafafa; }
-#grid tbody tr:nth-child(even) { background-color: #ffffff; }
-#grid tbody tr:hover { background-color: #f0f8ff; }
+#grid tbody tr:nth-child(odd){ background-color:#fafafa; }
+#grid tbody tr:nth-child(even){ background-color:#ffffff; }
+#grid tbody tr:hover{ background-color:#f0f8ff; }
 
-/* Scrollbar orizzontale superiore */
-.grid-scroll-top {
-  height: 16px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  background: #fafafa;
-  margin-bottom: 8px;
+/* Scrollbar top */
+.grid-scroll-top{
+  height:16px;
+  overflow-x:auto;
+  overflow-y:hidden;
+  border:1px solid #e0e0e0;
+  border-radius:6px;
+  background:#fafafa;
+  margin-bottom:8px;
 }
-.grid-scroll-inner {
-  height: 1px;
-}
+.grid-scroll-inner{ height:1px; }
 
-.spacer-8 { height: 8px; }
+.spacer-8{ height:8px; }
 
-@media (max-width: 600px) {
-  #grid th, #grid td { padding: 4px 6px; font-size: 12px; }
-  #grid td.cell { height: 30px; }
+@media (max-width:600px){
+  #grid th, #grid td { padding:4px 6px; font-size:12px; }
+  #grid td.cell { height:30px; }
 }
 
-#grid td .material-icons.tiny {
-  font-size: 16px;
-  vertical-align: middle;
-  margin-left: 4px;
-  color: #f57c00; /* ambra */
-  opacity: .9;
+#grid td .material-icons.tiny{
+  font-size:16px;
+  vertical-align:middle;
+  margin-left:4px;
+  color:#f57c00;
+  opacity:.9;
 }
 
-/* Bottoni compatti adattivi al font (em-based) */
-.btn-compact {
-  height: auto;
-  line-height: 1.6;
-  padding: 0.25em 0.6em;
-  font-size: 0.92em;         /* scala col font del contesto */
-  border-radius: 8px;         /* più discreti */
+/* Bottoni compatti */
+.btn-compact{
+  height:auto;
+  line-height:1.6;
+  padding:0.25em 0.6em;
+  font-size:0.92em;
+  border-radius:8px;
 }
-.btn-compact .material-icons {
-  font-size: 1em;             /* segue il testo */
-  margin-right: .35em;
-}
+.btn-compact .material-icons{ font-size:1em; margin-right:.35em; }

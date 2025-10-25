@@ -1,11 +1,9 @@
 <!doctype html>
 {% load static %}
 <html lang="it">
-
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-
     <title>{% block title %}Shift Planner{% endblock %}</title>
 
     <!-- Materialize + Icons -->
@@ -16,64 +14,43 @@
     {% block extra_head %}
     <link rel="stylesheet" href="{% static 'core/layout.css' %}">
     {% endblock %}
-
     {% block extra_css %}{% endblock %}
-
 </head>
-
 
 <body class="grey lighten-4">
 <!-- NAVBAR -->
 <div class="navbar-fixed">
     <nav class="teal">
-        <div class="nav-wrapper container" style="display:flex; align-items:center; justify-content:space-between;">
+        <div class="nav-wrapper container">
+            <!-- trigger mobile -->
+            <a href="#" data-target="mobile-nav" class="sidenav-trigger hide-on-med-and-up">
+                <i class="material-icons">menu</i>
+            </a>
 
-            <!-- Sinistra: Brand + Divider + Link amministrazione/home -->
-            <div class="nav-left" style="display:flex; align-items:center; gap:12px;">
-                <a href="/" class="brand-logo" style="position:static; transform:none;">Shift Planner</a>
+            <!-- Brand -->
+            <a href="{% url 'home' %}" class="brand-logo">
+                <img src="{% static 'core/assets/kairos-logo.svg' %}" class="logo-img" alt="Kairos">
+                <span class="site-name">ATI RINA/Sivam</span>
+            </a>
 
-                <!-- Divisore verticale -->
-                <span class="nav-divider"
-                      style="display:inline-block; width:1px; height:28px; background:rgba(255,255,255,.5); margin:0 8px;"></span>
+            <!-- Menu CENTRALE (desktop) -->
+            <ul class="nav-center hide-on-med-and-down">
+                {% if request.user.is_superuser %}
+                <li><a href="{% url 'admin:index' %}"><i class="material-icons left">settings</i>Area
+                    Amministratore</a></li>
+                {% endif %}
+                <li><a href="/"><i class="material-icons left">home</i>Home Page</a></li>
+                <li><a href="{% url 'functions' %}"><i class="material-icons left">handyman</i>Funzioni</a></li>
+            </ul>
 
-                <!-- Link “di struttura” -->
-                <ul style="display:flex; gap:8px; margin:0;">
-                    {% if request.user.is_superuser%}
-                      <li>
-                        <a href="{% url 'admin:index' %}">
-                          <i class="material-icons left">settings</i>Area Amministratore
-                        </a>
-                      </li>
-                    {% endif %}
-                    <li>
-                        <a href="/" style="padding:0 10px;">
-                            <i class="material-icons left">home</i>Home Page
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{% url 'functions' %}">Funzioni
-                        </a>
-                    </li>
-                </ul>
-                <!-- Divisore verticale -->
-                <span class="nav-divider"
-                      style="display:inline-block; width:1px; height:28px; background:rgba(255,255,255,.5); margin:0 8px;"></span>
-            </div>
-
-            <!-- Destra: utente -->
-            <ul id="nav-mobile" class="right" style="margin:0;">
+            <!-- Menu DESTRO: profilo/logout (desktop) -->
+            <ul class="right hide-on-med-and-down">
                 {% if request.user.is_authenticated %}
-                <li>
-                    <a href="{% url 'profile' %}">
-                        <i class="material-icons left">account_circle</i>
-                        {{ request.user.get_full_name|default:request.user.username }}
-                    </a>
-                </li>
-                <li>
-                    <a href="/logout/">
-                        <i class="material-icons left">exit_to_app</i>Logout
-                    </a>
-                </li>
+                <li><a href="{% url 'profile' %}">
+                    <i class="material-icons left">account_circle</i>
+                    {{ request.user.get_full_name|default:request.user.username }}
+                </a></li>
+                <li><a href="/logout/"><i class="material-icons left">exit_to_app</i>Logout</a></li>
                 {% else %}
                 <li><a href="/login/"><i class="material-icons left">login</i>Login</a></li>
                 {% endif %}
@@ -81,8 +58,24 @@
         </div>
     </nav>
 </div>
-<div id="nav-spacer" aria-hidden="true"></div>
 
+<!-- sidenav mobile -->
+<ul id="mobile-nav" class="sidenav">
+    {% if request.user.is_superuser %}
+    <li><a href="{% url 'admin:index' %}"><i class="material-icons">settings</i>Area Amministratore</a></li>
+    <li class="divider"></li>
+    {% endif %}
+    <li><a href="/"><i class="material-icons">home</i>Home Page</a></li>
+    <li><a href="{% url 'functions' %}"><i class="material-icons">apps</i>Funzioni</a></li>
+    {% if request.user.is_authenticated %}
+    <li><a href="{% url 'profile' %}"><i class="material-icons">account_circle</i>Profilo</a></li>
+    <li><a href="/logout/"><i class="material-icons">exit_to_app</i>Logout</a></li>
+    {% else %}
+    <li><a href="/login/"><i class="material-icons">login</i>Login</a></li>
+    {% endif %}
+</ul>
+<!-- spacer -->
+<div id="nav-spacer" aria-hidden="true"></div>
 
 <!-- CONTENUTO -->
 <main class="container-fluid" style="margin:12px 16px;">
@@ -92,11 +85,15 @@
 {% block extra_body %}{% endblock %}
 
 <footer class="center grey-text text-darken-2" style="margin-top:40px;font-size:19px">
-  <small>
-    Versione <a href="{% url 'changelog' %}">{{ APP_VERSION }}</a>
-  </small>
+    <small>Versione <a href="{% url 'changelog' %}">{{ APP_VERSION }}</a></small>
 </footer>
 
 {% block extra_js %}{% endblock %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const el = document.querySelectorAll('.sidenav');
+      M.Sidenav.init(el);
+    });
+</script>
 </body>
 </html>

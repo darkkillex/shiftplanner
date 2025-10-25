@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 180">
+  <defs>
+    <style>
+      .w {
+        font-family: Poppins, Inter, Arial, sans-serif;
+        font-weight: 600;
+        font-size: 120px;
+        fill: #e0f0ff;
+      }
+    </style>
+  </defs>
+
+  <!-- “Kair” -->
+  <text class="w" x="0" y="120">Kair</text>
+
+  <!-- “O” integrata dopo la “r” -->
+  <g id="os" transform="translate(230,0)">
+    <circle cx="40" cy="90" r="30" fill="none" stroke="#e0f0ff" stroke-width="12"/>
+    <circle cx="40" cy="90" r="28" fill="none" stroke="#e0f0ff" stroke-width="3"/>
+    <!-- Lancetta delle ore (verso le 7) -->
+    <line x1="40" y1="92" x2="22" y2="110" stroke="#e0f0ff" stroke-width="6" stroke-linecap="round"/>
+    <!-- Lancetta dei minuti (verso le 12) -->
+    <line x1="40" y1="92" x2="40" y2="62" stroke="#e0f0ff" stroke-width="6" stroke-linecap="round"/>	
+	    <!-- "s" accanto alla O -->
+    <text class="w" x="75" y="120">s</text>
+  </g>
+</svg>
