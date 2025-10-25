@@ -1,6 +1,8 @@
 # v0.4.5
 * Bugfix: non veniva mostrato tutto il testo contenuto nel changelog accessibile dall'iperlink della vers.
 * Fissata navbar
+* Cambio del colore navbar a Pantone 308
+* 
 
 # v0.4.4
 * Adeguata pagina "nuovo template PT" al material style

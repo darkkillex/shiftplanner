@@ -1,3 +1,7 @@
+nav.teal {
+  background-color: #005B81 !important; /* Pantone 308 */
+}
+
 /* --- GRIGLIA: larghezza a contenuto + sticky header + prima colonna sticky --- */
 
 .grid-wrapper {
