@@ -24,61 +24,64 @@
 
 <body class="grey lighten-4">
 <!-- NAVBAR -->
-<nav class="blue">
-    <div class="nav-wrapper container" style="display:flex; align-items:center; justify-content:space-between;">
+<div class="navbar-fixed">
+    <nav class="pantone">
+        <div class="nav-wrapper container" style="display:flex; align-items:center; justify-content:space-between;">
 
-        <!-- Sinistra: Brand + Divider + Link amministrazione/home -->
-        <div class="nav-left" style="display:flex; align-items:center; gap:12px;">
-            <a href="/" class="brand-logo" style="position:static; transform:none;">Shift Planner</a>
+            <!-- Sinistra: Brand + Divider + Link amministrazione/home -->
+            <div class="nav-left" style="display:flex; align-items:center; gap:12px;">
+                <a href="/" class="brand-logo" style="position:static; transform:none;">Shift Planner</a>
 
-            <!-- Divisore verticale -->
-            <span class="nav-divider"
-                  style="display:inline-block; width:1px; height:28px; background:rgba(255,255,255,.5); margin:0 8px;"></span>
+                <!-- Divisore verticale -->
+                <span class="nav-divider"
+                      style="display:inline-block; width:1px; height:28px; background:rgba(255,255,255,.5); margin:0 8px;"></span>
 
-            <!-- Link “di struttura” -->
-            <ul style="display:flex; gap:8px; margin:0;">
-                {% if request.user.is_superuser%}
-                  <li>
-                    <a href="{% url 'admin:index' %}">
-                      <i class="material-icons left">settings</i>Area Amministratore
+                <!-- Link “di struttura” -->
+                <ul style="display:flex; gap:8px; margin:0;">
+                    {% if request.user.is_superuser%}
+                      <li>
+                        <a href="{% url 'admin:index' %}">
+                          <i class="material-icons left">settings</i>Area Amministratore
+                        </a>
+                      </li>
+                    {% endif %}
+                    <li>
+                        <a href="/" style="padding:0 10px;">
+                            <i class="material-icons left">home</i>Home Page
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'functions' %}">Funzioni
+                        </a>
+                    </li>
+                </ul>
+                <!-- Divisore verticale -->
+                <span class="nav-divider"
+                      style="display:inline-block; width:1px; height:28px; background:rgba(255,255,255,.5); margin:0 8px;"></span>
+            </div>
+
+            <!-- Destra: utente -->
+            <ul id="nav-mobile" class="right" style="margin:0;">
+                {% if request.user.is_authenticated %}
+                <li>
+                    <a href="{% url 'profile' %}">
+                        <i class="material-icons left">account_circle</i>
+                        {{ request.user.get_full_name|default:request.user.username }}
                     </a>
-                  </li>
+                </li>
+                <li>
+                    <a href="/logout/">
+                        <i class="material-icons left">exit_to_app</i>Logout
+                    </a>
+                </li>
+                {% else %}
+                <li><a href="/login/"><i class="material-icons left">login</i>Login</a></li>
                 {% endif %}
-                <li>
-                    <a href="/" style="padding:0 10px;">
-                        <i class="material-icons left">home</i>Home Page
-                    </a>
-                </li>
-                <li>
-                    <a href="{% url 'functions' %}">Funzioni
-                    </a>
-                </li>
             </ul>
-            <!-- Divisore verticale -->
-            <span class="nav-divider"
-                  style="display:inline-block; width:1px; height:28px; background:rgba(255,255,255,.5); margin:0 8px;"></span>
         </div>
-
-        <!-- Destra: utente -->
-        <ul id="nav-mobile" class="right" style="margin:0;">
-            {% if request.user.is_authenticated %}
-            <li>
-                <a href="{% url 'profile' %}">
-                    <i class="material-icons left">account_circle</i>
-                    {{ request.user.get_full_name|default:request.user.username }}
-                </a>
-            </li>
-            <li>
-                <a href="/logout/">
-                    <i class="material-icons left">exit_to_app</i>Logout
-                </a>
-            </li>
-            {% else %}
-            <li><a href="/login/"><i class="material-icons left">login</i>Login</a></li>
-            {% endif %}
-        </ul>
-    </div>
-</nav>
+    </nav>
+</div>
+<div id="nav-spacer" aria-hidden="true"></div>
 
 
 <!-- CONTENUTO -->

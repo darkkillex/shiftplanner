@@ -1,3 +1,7 @@
+# v0.4.5
+* Bugfix: non veniva mostrato tutto il testo contenuto nel changelog accessibile dall'iperlink della vers.
+* Fissata navbar
+
 # v0.4.4
 * Adeguata pagina "nuovo template PT" al material style
 * Homepage: inserito un calendario che permette di inserire delle note/appunti
