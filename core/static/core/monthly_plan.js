@@ -536,6 +536,62 @@
   }
 
   // -------------------------------
+  // EXPORT CSV destinatari notify (Europe/Rome)
+  // -------------------------------
+  function downloadNotifyRecipientsCSV(js, planId) {
+    // 1) timestamp in fuso Europe/Rome con offset
+    function zonedIso(ts = new Date(), timeZone = 'Europe/Rome') {
+      const dtf = new Intl.DateTimeFormat('it-IT', {
+        timeZone,
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hour12: false,
+        timeZoneName: 'shortOffset' // es. GMT+1, GMT+2
+      });
+      const parts = Object.fromEntries(dtf.formatToParts(ts).map(p => [p.type, p.value]));
+      // offset normalizzato a +HH:MM
+      let off = (parts.timeZoneName || '').replace('GMT', '').replace('UTC', '');
+      const m = off.match(/^([+-])?(\d{1,2})(?::?(\d{2}))?$/);
+      if (m) {
+        const sign = m[1] || '+';
+        const hh = String(m[2]).padStart(2, '0');
+        const mm = String(m[3] || '0').padStart(2, '0');
+        off = `${sign}${hh}:${mm}`;
+      } else {
+        off = '+00:00'; // fallback
+      }
+      const Y = parts.year, M = parts.month, D = parts.day;
+      const h = parts.hour, i = parts.minute, s = parts.second;
+      return `${Y}-${M}-${D}T${h}:${i}:${s}${off}`;
+    }
+
+    const sentAt = zonedIso(new Date(), 'Europe/Rome');
+
+    // 2) righe CSV
+    const rows = [
+      ['sent_at_europe_rome'],
+      [sentAt],
+      [],
+      ['recipient_full_name']
+    ];
+    (js.recipients || []).forEach(name => rows.push([name]));
+
+    // 3) serializza e scarica
+    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const safeTs = sentAt.slice(0,19).replace(/[:T]/g, '-'); // yyyy-mm-dd-hh-mm-ss
+    a.href = url;
+    a.download = `notify_recipients_plan_${planId}_${safeTs}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+
+  // -------------------------------
   // NOTIFY (invio email)
   // -------------------------------
   function initNotify(state) {
@@ -563,9 +619,10 @@
         displayLength: 8000
       });
 
-
+      downloadNotifyRecipientsCSV(js, planId);
     });
   }
+
 
   // -------------------------------
   // NOTE editing (dblclick + modal + salvataggio)
