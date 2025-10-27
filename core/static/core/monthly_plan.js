@@ -550,15 +550,20 @@
       });
       if (!resp.ok) return M.toast({ html: "Errore invio notifiche", classes: "red" });
       const js = await resp.json().catch(() => ({}));
+
       M.toast({
         html: `
-          Dipendenti totali nel piano: ${js.total_employees || 0}<br>
-          Con email valida: ${js.prepared || 0}<br>
-          Email inviate con successo: ${js.sent || 0}<br>
-          ${(js.recipients?.length ? "Destinatari: " + js.recipients.join(", ") : "")}
+          Dipendenti registrati: ${js.total_employees_registered ?? 0}<br>
+          Dipendenti totali nel piano: ${js.total_in_plan ?? 0}<br>
+          Con email valida: ${js.with_email ?? 0}<br>
+          Da notificare ora: ${js.prepared ?? 0}<br>
+          Email inviate: ${js.sent ?? 0}<br>
+          ${js.recipients?.length ? "<hr>" + js.recipients.join(", ") : ""}
         `,
         displayLength: 8000
       });
+
+
     });
   }
 

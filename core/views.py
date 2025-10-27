@@ -18,7 +18,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import logout
 from django.contrib import messages
 from django.http import HttpResponse
-from django.db.models import F
+from django.db.models import F, Subquery
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.shortcuts import render, redirect
 
@@ -278,49 +278,71 @@ class PlanViewSet(viewsets.ModelViewSet):
         plan = self.get_object()
         logger = logging.getLogger(__name__)
 
-        # assegnazioni correnti con email valida
+        # --- Totali "griglia" sempre calcolati ---
+        total_employees_registered = Employee.objects.count()
+
+        emp_ids_qs = (Assignment.objects
+                      .filter(plan=plan)
+                      .values_list('employee_id', flat=True)
+                      .distinct())
+        total_in_plan = emp_ids_qs.count()
+        with_email = (Employee.objects
+                      .filter(id__in=Subquery(emp_ids_qs), email__isnull=False)
+                      .exclude(email='')
+                      .count())
+
+        # --- Assegnazioni correnti con email valida (per invii reali) ---
         cur_qs = (Assignment.objects
                   .filter(plan=plan, employee__email__isnull=False)
                   .exclude(employee__email='')
-                  .select_related('employee','shift_type','profession'))
+                  .select_related('employee', 'shift_type', 'profession'))
 
-        # firme correnti: key=(emp_id, date) -> sig
+        # Firma corrente: (emp_id, date) -> signature
         cur_sig = {}
         for a in cur_qs:
-            cur_sig[(a.employee_id, a.date)] = _assign_signature(a)
+            cur_sig[(a.employee_id, a.date)] = _assign_signature(a)  # funzione esistente nel tuo codice
 
-        # snapshot ultimo invio del mese (se c’è)
+        # --- Snapshot mese ---
         snap_qs = AssignmentSnapshot.objects.filter(year=plan.year, month=plan.month)
         has_snapshot = snap_qs.exists()
 
         changed_emp_ids = set()
         if not has_snapshot:
-            # primo invio del mese -> tutti quelli presenti nel piano
+            # Primo invio del mese: tutti quelli presenti con email valida
             changed_emp_ids = {a.employee_id for a in cur_qs}
         else:
             snap_sig = {(s.employee_id, s.date): s.signature for s in snap_qs}
             keys = set(cur_sig.keys()) | set(snap_sig.keys())
+            # Un employee è "cambiato" se almeno una cella differisce
             for (eid, day) in keys:
                 if cur_sig.get((eid, day)) != snap_sig.get((eid, day)):
-                    # conta come “modificato” l’employee presente oggi sul piano
+                    # Notifica solo se l'employee è presente oggi nel piano (con email valida)
                     if any(k[0] == eid for k in cur_sig.keys()):
                         changed_emp_ids.add(eid)
 
-        # nessun destinatario -> esci pulito
+        # Nessun destinatario: rispondi comunque coi totali
         if not changed_emp_ids:
-            return Response({'prepared': 0, 'sent': 0, 'detail': 'Nessuna variazione rispetto all’ultimo invio.'})
+            return Response({
+                "total_employees_registered": total_employees_registered,
+                "total_in_plan": total_in_plan,
+                "with_email": with_email,
+                "prepared": 0,
+                "sent": 0,
+                "recipients": [],
+                "detail": "Nessuna variazione rispetto all’ultimo invio."
+            }, status=200)
 
-        # grouping per email, RIUSANDO i tuoi template/oggetto/formato
+        # --- Grouping per destinatario, mantenendo i tuoi template ---
         by_emp = defaultdict(list)
         for a in cur_qs.filter(employee_id__in=changed_emp_ids):
             by_emp[a.employee].append(a)
 
         month_number = f"{plan.month:02d}"
-        legend = list(ShiftType.objects.order_by('id').values_list('code','label'))
+        legend = list(ShiftType.objects.order_by('id').values_list('code', 'label'))
         sender_name = request.user.get_full_name() or request.user.username
         from_email = settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER
-        reply_to = [settings.REPLY_TO_EMAIL] if getattr(settings,'REPLY_TO_EMAIL',None) else None
-        rev_str = ""  # se non vuoi più la “Rev”, lascialo vuoto
+        reply_to = [settings.REPLY_TO_EMAIL] if getattr(settings, 'REPLY_TO_EMAIL', None) else None
+        rev_str = ""  # lasciato vuoto come richiesto
 
         prepared = len(by_emp)
         sent = 0
@@ -328,7 +350,7 @@ class PlanViewSet(viewsets.ModelViewSet):
         for emp, items in by_emp.items():
             items.sort(key=lambda x: x.date)
             rows = [{
-                'weekday': ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'][a.date.weekday()],
+                'weekday': ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'][a.date.weekday()],
                 'date': a.date.strftime('%d/%m/%Y'),
                 'profession_name': a.profession.name if a.profession else '',
                 'shift_label': a.shift_type.label if a.shift_type else '',
@@ -342,7 +364,7 @@ class PlanViewSet(viewsets.ModelViewSet):
                 'legend': legend,
                 'assignments': rows,
                 'app_url': f"{settings.APP_BASE_URL}/plan/{plan.pk}/",
-                'reply_to_email': getattr(settings,'REPLY_TO_EMAIL', from_email),
+                'reply_to_email': getattr(settings, 'REPLY_TO_EMAIL', from_email),
                 'revision_str': rev_str,
                 'sender_name': sender_name,
             }
@@ -366,28 +388,28 @@ class PlanViewSet(viewsets.ModelViewSet):
             except Exception as e:
                 logger.exception("Errore invio a %s <%s>: %s", emp.full_name(), emp.email, e)
 
-        # aggiorna snapshot SOLO per gli employee notificati
-        # 1) cancella gli snapshot precedenti di questi employee nel mese
-        AssignmentSnapshot.objects.filter(
-            year=plan.year, month=plan.month, employee_id__in=changed_emp_ids
-        ).delete()
-        # 2) salva lo stato attuale
-        snaps = []
-        for (eid, day), sig in cur_sig.items():
-            if eid in changed_emp_ids:
-                snaps.append(AssignmentSnapshot(
-                    year=plan.year, month=plan.month, employee_id=eid, date=day, signature=sig
-                ))
-        if snaps:
-            AssignmentSnapshot.objects.bulk_create(snaps, ignore_conflicts=True)
+        # --- Aggiorna snapshot SOLO per gli employee notificati ---
+        if prepared:
+            AssignmentSnapshot.objects.filter(
+                year=plan.year, month=plan.month, employee_id__in=changed_emp_ids
+            ).delete()
+            snaps = []
+            for (eid, day), sig in cur_sig.items():
+                if eid in changed_emp_ids:
+                    snaps.append(AssignmentSnapshot(
+                        year=plan.year, month=plan.month, employee_id=eid, date=day, signature=sig
+                    ))
+            if snaps:
+                AssignmentSnapshot.objects.bulk_create(snaps, ignore_conflicts=True)
 
         recipients_list = [e.full_name() for e in by_emp.keys()]
         return Response({
-            'total_employees': Employee.objects.count(),
-            'prepared': prepared,
-            'sent': sent,
-            'recipients': [e.full_name() for e in by_emp.keys()],
-            'rev': plan.revision
+            "total_employees_registered": total_employees_registered, # totale dipendenti registrati su Kairos
+            "total_in_plan": total_in_plan,  # distinti presenti nel piano
+            "with_email": with_email,  # di quelli, con email valida
+            "prepared": prepared,  # cambiati e notificabili ora
+            "sent": sent,  # invii effettivi
+            "recipients": recipients_list  # nomi destinatari
         }, status=200)
 
     @action(detail=True, methods=['post'])
