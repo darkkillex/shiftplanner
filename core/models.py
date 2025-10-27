@@ -70,6 +70,19 @@ class Assignment(models.Model):
     class Meta:
         unique_together = ('plan','profession','date')
 
+class AssignmentSnapshot(models.Model):
+    year = models.PositiveSmallIntegerField()
+    month = models.PositiveSmallIntegerField()
+    employee = models.ForeignKey('Employee', on_delete=models.PROTECT)
+    date = models.DateField()
+    signature = models.CharField(max_length=128, db_index=True)  # es. "shift|profession|notes"
+
+    class Meta:
+        db_table = 'core_assignmentsnapshot'
+        unique_together = (('year','month','employee','date'),)
+        indexes = [models.Index(fields=['year','month','employee'])]
+
+
 class Template(models.Model):
     name = models.CharField(max_length=120, unique=True)
     is_active = models.BooleanField(default=True)

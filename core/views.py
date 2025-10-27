@@ -29,7 +29,7 @@ from openpyxl.utils import get_column_letter
 
 from .forms import PlanCreateForm
 from .forms import TemplateCreateForm
-from .models import Template, TemplateRow, Profession
+from .models import Template, TemplateRow, Profession, AssignmentSnapshot
 
 from .serializers import *
 
@@ -50,6 +50,10 @@ def _existing_max_suffix(base: str) -> int:
         if k > m:
             m = k
     return m
+
+def _assign_signature(a):
+    return f"{a.shift_type_id or ''}|{a.profession_id or ''}|{(a.notes or '').strip()}"
+
 
 class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = Employee.objects.all().order_by('last_name','first_name')
@@ -269,44 +273,65 @@ class PlanViewSet(viewsets.ModelViewSet):
         return Response({'updated': updated, 'skipped': skipped}, status=200)
 
     @action(detail=True, methods=['post'])
+    @transaction.atomic
     def notify(self, request, pk=None):
         plan = self.get_object()
         logger = logging.getLogger(__name__)
 
-        # 1) bump revisione in modo atomico
-        with transaction.atomic():
-            Plan.objects.select_for_update().filter(pk=plan.pk).update(revision=F('revision') + 1)
-        plan.refresh_from_db()
-        rev_str = f"Rev.{plan.revision:02d}"
+        # assegnazioni correnti con email valida
+        cur_qs = (Assignment.objects
+                  .filter(plan=plan, employee__email__isnull=False)
+                  .exclude(employee__email='')
+                  .select_related('employee','shift_type','profession'))
 
+        # firme correnti: key=(emp_id, date) -> sig
+        cur_sig = {}
+        for a in cur_qs:
+            cur_sig[(a.employee_id, a.date)] = _assign_signature(a)
+
+        # snapshot ultimo invio del mese (se c’è)
+        snap_qs = AssignmentSnapshot.objects.filter(year=plan.year, month=plan.month)
+        has_snapshot = snap_qs.exists()
+
+        changed_emp_ids = set()
+        if not has_snapshot:
+            # primo invio del mese -> tutti quelli presenti nel piano
+            changed_emp_ids = {a.employee_id for a in cur_qs}
+        else:
+            snap_sig = {(s.employee_id, s.date): s.signature for s in snap_qs}
+            keys = set(cur_sig.keys()) | set(snap_sig.keys())
+            for (eid, day) in keys:
+                if cur_sig.get((eid, day)) != snap_sig.get((eid, day)):
+                    # conta come “modificato” l’employee presente oggi sul piano
+                    if any(k[0] == eid for k in cur_sig.keys()):
+                        changed_emp_ids.add(eid)
+
+        # nessun destinatario -> esci pulito
+        if not changed_emp_ids:
+            return Response({'prepared': 0, 'sent': 0, 'detail': 'Nessuna variazione rispetto all’ultimo invio.'})
+
+        # grouping per email, RIUSANDO i tuoi template/oggetto/formato
+        by_emp = defaultdict(list)
+        for a in cur_qs.filter(employee_id__in=changed_emp_ids):
+            by_emp[a.employee].append(a)
+
+        month_number = f"{plan.month:02d}"
+        legend = list(ShiftType.objects.order_by('id').values_list('code','label'))
         sender_name = request.user.get_full_name() or request.user.username
-
-        qs = (Assignment.objects
-              .filter(plan=plan, employee__email__isnull=False)
-              .exclude(employee__email='')
-              .select_related('employee', 'shift_type', 'profession'))
-
-        by_emp = {}
-        for a in qs:
-            by_emp.setdefault(a.employee, []).append(a)
+        from_email = settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER
+        reply_to = [settings.REPLY_TO_EMAIL] if getattr(settings,'REPLY_TO_EMAIL',None) else None
+        rev_str = ""  # se non vuoi più la “Rev”, lascialo vuoto
 
         prepared = len(by_emp)
-        if not prepared:
-            return Response(
-                {'prepared': 0, 'sent': 0, 'rev': plan.revision, 'detail': 'Nessun destinatario con email.'},
-                status=200)
-
-        month_number = dt.date(plan.year, plan.month, 1).strftime('%m')
-        legend = list(ShiftType.objects.order_by('id').values_list('code', 'label'))
-
         sent = 0
+
         for emp, items in by_emp.items():
             items.sort(key=lambda x: x.date)
             rows = [{
-                'weekday': ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'][a.date.weekday()],
+                'weekday': ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'][a.date.weekday()],
                 'date': a.date.strftime('%d/%m/%Y'),
-                "profession_name": a.profession.name,
-                'shift_label': (a.shift_type.label if a.shift_type else ''),
+                'profession_name': a.profession.name if a.profession else '',
+                'shift_label': a.shift_type.label if a.shift_type else '',
                 'notes': a.notes or '',
             } for a in items]
 
@@ -317,17 +342,12 @@ class PlanViewSet(viewsets.ModelViewSet):
                 'legend': legend,
                 'assignments': rows,
                 'app_url': f"{settings.APP_BASE_URL}/plan/{plan.pk}/",
-                'reply_to_email': getattr(settings, 'REPLY_TO_EMAIL',
-                                          settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER),
+                'reply_to_email': getattr(settings,'REPLY_TO_EMAIL', from_email),
                 'revision_str': rev_str,
                 'sender_name': sender_name,
             }
 
-            # Oggetto con Rev + nome e cognome
-            subject = f"Piano turni {plan.month:02d}/{plan.year} {rev_str} - {emp.full_name()}"
-            from_email = settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER
-            reply_to = [settings.REPLY_TO_EMAIL] if getattr(settings, 'REPLY_TO_EMAIL', None) else None
-
+            subject = f"Piano turni {plan.month:02d}/{plan.year} {rev_str}".strip()
             text_body = render_to_string("emails/plan_personal.txt", ctx)
             html_body = render_to_string("emails/plan_personal.html", ctx)
 
@@ -343,19 +363,25 @@ class PlanViewSet(viewsets.ModelViewSet):
             try:
                 n = msg.send(fail_silently=False)
                 sent += (1 if n else 0)
-                if not n:
-                    logger.warning("Email non inviata (send()=0) a %s <%s>", emp.full_name(), emp.email)
             except Exception as e:
                 logger.exception("Errore invio a %s <%s>: %s", emp.full_name(), emp.email, e)
 
-        # (Opzionale) salva log invio se hai il modello PlanNotification
-        try:
-            from .models import PlanNotification  # solo se esiste
-            PlanNotification.objects.create(plan=plan, revision=plan.revision, sent_count=sent)
-        except Exception:
-            pass
+        # aggiorna snapshot SOLO per gli employee notificati
+        # 1) cancella gli snapshot precedenti di questi employee nel mese
+        AssignmentSnapshot.objects.filter(
+            year=plan.year, month=plan.month, employee_id__in=changed_emp_ids
+        ).delete()
+        # 2) salva lo stato attuale
+        snaps = []
+        for (eid, day), sig in cur_sig.items():
+            if eid in changed_emp_ids:
+                snaps.append(AssignmentSnapshot(
+                    year=plan.year, month=plan.month, employee_id=eid, date=day, signature=sig
+                ))
+        if snaps:
+            AssignmentSnapshot.objects.bulk_create(snaps, ignore_conflicts=True)
 
-        return Response({'prepared': prepared, 'sent': sent, 'rev': plan.revision}, status=200)
+        return Response({'prepared': prepared, 'sent': sent, 'changed_employees': len(changed_emp_ids)})
 
     @action(detail=True, methods=['post'])
     def bulk_clear(self, request, pk=None):
