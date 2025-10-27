@@ -381,7 +381,14 @@ class PlanViewSet(viewsets.ModelViewSet):
         if snaps:
             AssignmentSnapshot.objects.bulk_create(snaps, ignore_conflicts=True)
 
-        return Response({'prepared': prepared, 'sent': sent, 'changed_employees': len(changed_emp_ids)})
+        recipients_list = [e.full_name() for e in by_emp.keys()]
+        return Response({
+            'total_employees': Employee.objects.count(),
+            'prepared': prepared,
+            'sent': sent,
+            'recipients': [e.full_name() for e in by_emp.keys()],
+            'rev': plan.revision
+        }, status=200)
 
     @action(detail=True, methods=['post'])
     def bulk_clear(self, request, pk=None):

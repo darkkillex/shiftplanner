@@ -550,7 +550,15 @@
       });
       if (!resp.ok) return M.toast({ html: "Errore invio notifiche", classes: "red" });
       const js = await resp.json().catch(() => ({}));
-      M.toast({ html: `Email inviate: ${js.sent || 0} / preparate: ${js.prepared || 0}` });
+      M.toast({
+        html: `
+          Dipendenti totali nel piano: ${js.total_employees || 0}<br>
+          Con email valida: ${js.prepared || 0}<br>
+          Email inviate con successo: ${js.sent || 0}<br>
+          ${(js.recipients?.length ? "Destinatari: " + js.recipients.join(", ") : "")}
+        `,
+        displayLength: 8000
+      });
     });
   }
 

@@ -1,8 +1,13 @@
+# v0.5.1
+* Feedback notifica selettiva maggiormente dettagliata
+
+# v0.5.0
+* Implementata notifica selettiva solamente per i lavoratori che subiscono modifiche al piano turni del mese
+
 # v0.4.5
 * Bugfix: non veniva mostrato tutto il testo contenuto nel changelog accessibile dall'iperlink della vers.
 * Fissata navbar
 * Cambio del colore navbar a Pantone 308
-* 
 
 # v0.4.4
 * Adeguata pagina "nuovo template PT" al material style
