@@ -583,7 +583,7 @@
     const a = document.createElement('a');
     const safeTs = sentAt.slice(0,19).replace(/[:T]/g, '-'); // yyyy-mm-dd-hh-mm-ss
     a.href = url;
-    a.download = `notify_recipients_plan_${planId}_${safeTs}.csv`;
+    a.download = `notify_recipients_planID_${planId}_date_${safeTs}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
