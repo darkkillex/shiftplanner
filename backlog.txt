@@ -1,7 +1,7 @@
 TIER-1
-*** Gestione invio notifiche solamente cambi rispetto all'invio precedente
+
 Creare due menu nella barra superiore "Template PT"-> lista template PT e + Crea nuovo Template piano turni e "Piani turno"->lista  PT e + Crea nuovo piano turni
-durata del toast più lunga
+
 
 TIER-2
 Rimuovere la dicitura REV incrementale dalla notifica via email

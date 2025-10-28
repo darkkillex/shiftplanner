@@ -127,6 +127,17 @@ nav.teal { background-color:#005B81 !important; }
 
 /* Celle */
 #grid td.cell { cursor:pointer; height:34px; vertical-align:middle; font-size:13px; }
+#grid td.cell { color: #111; }
+#grid td.cell .material-icons { color: #333; }
+
+/* righe interdette (mansione vuota) in nero */
+tr.spacer-row th.spacer-head,
+tr.spacer-row td.spacer-cell {
+  background:#000 !important;
+  color:#fff !important;
+}
+tr.spacer-row td.spacer-cell .material-icons { color:#fff !important; }
+
 
 /* Selezione */
 #grid td.cell.selected { outline:2px solid #000; outline-offset:-2px; }

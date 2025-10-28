@@ -28,6 +28,35 @@
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
+  // --- Palette pastello per mansione con più varietà ---
+  const PROF_COLORS = new Map();
+
+  function hash32(str){
+    let h = 2166136261 >>> 0;
+    for (let i=0;i<str.length;i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return h >>> 0;
+  }
+
+  function colorForProfession(key){
+    if (!key) return null;
+    const k = String(key).trim().toLowerCase();
+    if (PROF_COLORS.has(k)) return PROF_COLORS.get(k);
+
+  // bucket di hue morbidi: azzurri, teal, blu-grigi, violetti freddi
+    const HUES = [200, 210, 220, 190, 205, 215, 225, 235, 200, 208, 218, 228];
+    const h = hash32(k);
+
+    const hue = HUES[h % HUES.length];                 // hue selezionato dal bucket
+    const sat = 18 + (Math.floor(h / 7) % 10);         // 18–27% (bassa saturazione)
+    const light = 88 + (Math.floor(h / 11) % 7);       // 88–94% (alta luminosità)
+
+    const col = `hsl(${hue} ${sat}% ${light}%)`;
+    PROF_COLORS.set(k, col);
+    return col;
+  }
+
+
+
 
 // Inizializza i tooltip quando M.Tooltip è pronto
   function initTooltipsLazy(maxMs = 3000) {
@@ -143,12 +172,32 @@
       th.textContent = row.profession;
       tr.appendChild(th);
 
+      // Colore per tutta la riga in base alla mansione (uso la label base senza suffisso)
+      const isSpacer = !!row.spacer;
+      const rowKey = row.profession || "";           // es. "Ufficio"
+      const rowBg  = isSpacer ? null : colorForProfession(rowKey);
+
+      // evidenzia header mansione
+      if (isSpacer) {
+        tr.classList.add("spacer-row");
+        th.classList.add("spacer-head");
+      } else if (rowBg) {
+        th.style.backgroundColor = rowBg;
+      }
+
       for (let i = 1; i <= state.days; i++) {
         const cellData = row[String(i)] || {};
         const td = document.createElement("td");
         td.className = "cell";
         td.dataset.professionId = row.profession_id;
         td.dataset.day = i;
+
+        // colore riga per mansione
+        if (isSpacer) {
+          td.classList.add("spacer-cell");
+        } else if (rowBg) {
+          td.style.backgroundColor = rowBg;
+        }
 
         // contenuto + dataset utili
         const name = cellData.employee_name || "";

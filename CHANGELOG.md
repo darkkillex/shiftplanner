@@ -1,5 +1,9 @@
+# v0.5.2
+* Colorazione righe mansioni, tabella PT, per maggiore leggibilità delle righe
+
 # v0.5.1
 * Feedback notifica selettiva maggiormente dettagliata
+* Download automatico del report di invio notifiche
 
 # v0.5.0
 * Implementata notifica selettiva solamente per i lavoratori che subiscono modifiche al piano turni del mese
