@@ -37,25 +37,21 @@
     return h >>> 0;
   }
 
-  function colorForProfession(key){
+  function colorForProfession(key) {
     if (!key) return null;
     const k = String(key).trim().toLowerCase();
     if (PROF_COLORS.has(k)) return PROF_COLORS.get(k);
 
-  // bucket di hue morbidi: azzurri, teal, blu-grigi, violetti freddi
-    const HUES = [200, 210, 220, 190, 205, 215, 225, 235, 200, 208, 218, 228];
+    // Colori più marcati ma sempre leggibili su testo nero
     const h = hash32(k);
-
-    const hue = HUES[h % HUES.length];                 // hue selezionato dal bucket
-    const sat = 18 + (Math.floor(h / 7) % 10);         // 18–27% (bassa saturazione)
-    const light = 88 + (Math.floor(h / 11) % 7);       // 88–94% (alta luminosità)
-
+    const hue = h % 360;                // rotazione completa
+    const sat = 45 + (h % 25);          // 45–70% saturazione
+    const light = 78 + (h % 8);         // 78–85% luminosità
     const col = `hsl(${hue} ${sat}% ${light}%)`;
+
     PROF_COLORS.set(k, col);
     return col;
   }
-
-
 
 
 // Inizializza i tooltip quando M.Tooltip è pronto
