@@ -1,5 +1,5 @@
 TIER-1
-
+Rimuovere il PROFESSIONE.# dall'estrazione xlsx
 Creare due menu nella barra superiore "Template PT"-> lista template PT e + Crea nuovo Template piano turni e "Piani turno"->lista  PT e + Crea nuovo piano turni
 
 

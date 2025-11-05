@@ -1,22 +1,77 @@
 {% extends "layout.html" %}
+{% load static %}
 {% block title %}Piani turno{% endblock %}
+
 {% block content %}
-<h4>Piani turno</h4>
-
-<a href="{% url 'plan_create' %}" class="btn teal waves-effect" style="margin-bottom:12px;">
-  <i class="material-icons left">add</i> Crea nuovo Piano
-</a>
-
-<ul class="collection">
-  {% for p in plans %}
-    <li class="collection-item">
-      <a href="{% url 'monthly_plan' p.id %}">{{ p.name }} — {{ p.month }}/{{ p.year }} ({{ p.status }})</a>
-      <a href="/api/plans/{{ p.id }}/export_xlsx/" class="secondary-content btn-small teal waves-effect">
-        <i class="material-icons tiny left">file_download</i> XLSX
+<div class="container" style="max-width:1100px">
+  <div class="row valign-wrapper" style="margin-top:10px">
+    <div class="col s12 m6">
+      <h5 class="grey-text text-darken-2" style="margin:0">Piani turno</h5>
+      <span class="grey-text">Elenco piani con ricerca istantanea</span>
+    </div>
+    <div class="col s12 m6 right-align">
+      <a href="{% url 'plan_create' %}" class="btn teal waves-effect">
+        <i class="material-icons left">add</i>Crea nuovo Piano
       </a>
-    </li>
-  {% empty %}
-    <li class="collection-item">Nessun piano.</li>
-  {% endfor %}
-</ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-content">
+      <div class="row" style="margin-bottom:0">
+        <div class="col s12 m7">
+          <div class="input-field" style="margin-top:0">
+            <i class="material-icons prefix">search</i>
+            <input id="plans-filter" type="text" autocomplete="off">
+            <label for="plans-filter">Filtra per nome, mese o anno</label>
+          </div>
+        </div>
+        <div class="col s12 m5 right-align" style="padding-top:14px">
+          <span id="plans-count" class="grey-text"></span>
+        </div>
+      </div>
+
+      <ul class="collection" id="plans-list" style="margin-bottom:0">
+        {% for p in plans %}
+          <li class="collection-item">
+            <div class="row" style="margin-bottom:0">
+              <div class="col s12 m7">
+                <a href="{% url 'monthly_plan' p.id %}"
+                   class="blue-text text-darken-2"
+                   data-text="{{ p.name }} {{ p.month }} {{ p.year }} {{ p.status }}">
+                  <span class="truncate" style="font-weight:600">
+                    {{ p.name|default:"(senza nome)" }}
+                  </span>
+                </a>
+                <div class="chips" style="margin-top:6px">
+                  <span class="chip">
+                    {{ p.month|stringformat:"02d" }}/{{ p.year }}
+                  </span>
+                  {% if p.status %}
+                    <span class="chip grey lighten-3">{{ p.status }}</span>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="col s12 m5 right-align" style="padding-top:6px">
+                <a href="{% url 'monthly_plan' p.id %}" class="btn-small waves-effect">
+                  <i class="material-icons left">grid_on</i>Apri
+                </a>
+                <a href="{% url 'plans-export-xlsx' p.id %}"
+                   class="btn-small teal lighten-1 waves-effect">
+                  <i class="material-icons left">file_download</i>XLSX
+                </a>
+              </div>
+            </div>
+          </li>
+        {% empty %}
+          <li class="collection-item grey-text center-align">Nessun piano.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_body %}
+  <script src="{% static 'core/plans_area.js' %}"></script>
 {% endblock %}
