@@ -1,20 +1,71 @@
 {% extends "layout.html" %}
+{% load static %}
 {% block title %}Template piani turno{% endblock %}
+
 {% block content %}
-<h4>Template piani turno</h4>
+<div class="container" style="max-width:1100px">
+  <div class="row valign-wrapper" style="margin-top:10px">
+    <div class="col s12 m6">
+      <h5 class="grey-text text-darken-2" style="margin:0">Template piani turno</h5>
+      <span class="grey-text">Elenco template con ricerca istantanea</span>
+    </div>
+    <div class="col s12 m6 right-align">
+      <a href="{% url 'template_create' %}" class="btn teal waves-effect">
+        <i class="material-icons left">note_add</i>Nuovo Template
+      </a>
+    </div>
+  </div>
 
-<a href="{% url 'template_create' %}" class="btn blue-grey waves-effect" style="margin-bottom:12px;">
-  <i class="material-icons left">note_add</i> Crea nuovo Template piano turni
-</a>
+  <div class="card">
+    <div class="card-content">
+      <div class="row" style="margin-bottom:0">
+        <div class="col s12 m7">
+          <div class="input-field" style="margin-top:0">
+            <i class="material-icons prefix">search</i>
+            <input id="filter-tpl" type="text" autocomplete="off">
+            <label for="filter-tpl">Filtra per nome template</label>
+          </div>
+        </div>
+        <div class="col s12 m5 right-align" style="padding-top:14px">
+          <a id="filter-clear" class="btn-flat waves-effect">
+            <i class="material-icons left">backspace</i>Pulisci filtro
+          </a>
+        </div>
+      </div>
 
-<ul class="collection">
-  {% for t in templates %}
-    <li class="collection-item">
-      <a href="{% url 'template_detail' t.id %}">{{ t.name }}</a>
-      {% if not t.is_active %}<span class="new badge red" data-badge-caption="disattivo"></span>{% endif %}
-    </li>
-  {% empty %}
-    <li class="collection-item">Nessun template.</li>
-  {% endfor %}
-</ul>
+      <ul class="collection" id="tpl-list" style="margin-bottom:0">
+        {% for t in templates %}
+          <li class="collection-item">
+            <div class="row" style="margin-bottom:0">
+              <div class="col s12 m7">
+                <a href="{% url 'template_detail' t.id %}"
+                   class="blue-text text-darken-2"
+                   style="font-weight:500;">
+                  <i class="material-icons tiny left">description</i>{{ t.name|default:"(senza nome)" }}
+                </a>
+                {% if t.is_active %}
+                  <span class="new badge teal lighten-2 black-text" data-badge-caption="attivo"></span>
+                {% else %}
+                  <span class="new badge red" data-badge-caption="disattivo"></span>
+                {% endif %}
+              </div>
+
+              <div class="col s12 m5 right-align" style="padding-top:6px">
+                <a href="{% url 'template_detail' t.id %}" class="btn-small waves-effect">
+                  <i class="material-icons left">visibility</i>Apri
+                </a>
+              </div>
+            </div>
+          </li>
+        {% empty %}
+          <li class="collection-item grey-text center-align">Nessun template.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_body %}
+  <script src="{% static 'core/templates_area.js' %}"></script>
 {% endblock %}
