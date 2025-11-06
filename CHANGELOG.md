@@ -1,5 +1,6 @@
 # v0.5.2
-* Colorazione righe mansioni, tabella PT, per maggiore leggibilità delle righe
+* Le pagine PT e template PT sono state rese materialize e corredate di filtri live
+* Integrata colorazione alle righe mansioni nella tabella PT, per maggiore leggibilità delle righe
 
 # v0.5.1
 * Feedback notifica selettiva maggiormente dettagliata
