@@ -1,28 +1,123 @@
-{% extends 'layout.html' %}
+{% extends "layout.html" %}
+{% load static %}
+{% block title %}Profilo{% endblock %}
+
 {% block content %}
-<h2>Profilo utente</h2>
+<div class="row">
 
-<article>
-  <header>
-    <div style="margin-top:4px;">
-      {% if user_obj.is_superuser %}
-        <span class="new badge red" data-badge-caption="" style="float:none; margin-left:0;">Superuser</span>
-      {% elif user_obj.is_staff %}
-        <span class="new badge blue" data-badge-caption="" style="float:none; margin-left:0;">Staff</span>
-      {% endif %}
+  <!-- Header -->
+  <div class="col s12">
+    <h4 class="valign-wrapper" style="gap:10px">
+      <i class="material-icons">person</i> Profilo
+    </h4>
+    <p class="grey-text text-darken-1">Dati account e scorciatoie utili.</p>
+  </div>
+
+  <!-- Card profilo -->
+  <div class="col s12 m7 l6">
+    <div class="card">
+      <div class="card-content">
+        <span class="card-title">Account</span>
+
+        <div class="section" style="margin-top:0">
+          <div class="valign-wrapper" style="gap:12px">
+            <img src="https://www.gravatar.com/avatar/{{ user_obj.email|default_if_none:''|lower|slugify }}?d=identicon&s=80"
+                 alt="avatar" class="circle" width="64" height="64">
+            <div>
+              <div class="flow-text" style="margin:0">{{ user_obj.get_full_name|default:user_obj.username }}</div>
+              <div class="grey-text" style="margin-top:2px">{{ user_obj.email|default:"—" }}</div>
+            </div>
+          </div>
+        </div>
+
+        <ul class="collection" style="margin-top:8px">
+          <li class="collection-item">
+            <span class="grey-text text-darken-1">User ID</span><br>
+            <code>{{ user_obj.id }}</code>
+          </li>
+          <li class="collection-item">
+            <span class="grey-text text-darken-1">Username</span><br>
+            <code>{{ user_obj.username }}</code>
+          </li>
+          <li class="collection-item">
+            <span class="grey-text text-darken-1">Permessi</span><br>
+            {% if user_obj.is_superuser %}
+              <span class="chip teal white-text">Superuser</span>
+            {% endif %}
+            {% if user_obj.is_staff %}
+              <span class="chip blue white-text">Staff</span>
+            {% endif %}
+            {% if user_obj.groups.all %}
+              {% for g in user_obj.groups.all %}
+                <span class="chip">{{ g.name }}</span>
+              {% empty %}
+                <span class="grey-text">Nessun gruppo</span>
+              {% endfor %}
+            {% endif %}
+          </li>
+          <li class="collection-item">
+            <span class="grey-text text-darken-1">Email verificata</span><br>
+            {% if user_obj.email %}<span class="chip green white-text">presente</span>
+            {% else %}<span class="chip">mancante</span>{% endif %}
+          </li>
+          <li class="collection-item">
+            <span class="grey-text text-darken-1">Stato</span><br>
+            {% if user_obj.is_active %}
+            <span class="chip green white-text">attivo</span>
+            {% else %}
+            <span class="chip red white-text">disattivo</span>
+            {% endif %}
+          </li>
+        </ul>
+      </div>
     </div>
-  </header>
+  </div>
 
-  <ul>
-    <li><strong>Username:</strong> {{ user_obj.username }}</li>
-    <li><strong>Nome:</strong> {{ user_obj.first_name|default:"-" }}</li>
-    <li><strong>Cognome:</strong> {{ user_obj.last_name|default:"-" }}</li>
-    <li><strong>Email:</strong> {{ user_obj.email|default:"—" }}</li>
-    <li><strong>Ultimo accesso:</strong> {{ user_obj.last_login|date:"d/m/Y H:i" }}</li>
-    <li><strong>Membro dal:</strong> {{ user_obj.date_joined|date:"d/m/Y H:i" }}</li>
-  </ul>
-  <p>
-    <a role="button" href="{% url 'password_change' %}">Cambia password</a>
-  </p>
-</article>
+  <!-- Card azioni -->
+  <div class="col s12 m5 l6">
+    <div class="card">
+      <div class="card-content">
+        <span class="card-title">Azioni</span>
+
+        <div class="row" style="margin-bottom:0">
+          <div class="col s12" style="margin-bottom:10px">
+            <a href="{% url 'password_change' %}" class="btn waves-effect">
+              <i class="material-icons left">lock</i>Cambia password
+            </a>
+          </div>
+          <div class="col s12" style="margin-bottom:10px">
+            <a href="{% url 'logout' %}" class="btn red waves-effect">
+              <i class="material-icons left">exit_to_app</i>Logout
+            </a>
+          </div>
+        </div>
+
+        <p class="grey-text text-darken-1" style="margin-top:12px">
+          In caso di problemi contatta l’amministratore.
+        </p>
+      </div>
+    </div>
+
+    <!-- Info tecniche opzionali -->
+    <ul class="collection">
+      <li class="collection-item">
+        <span class="grey-text text-darken-1">Ultimo accesso</span><br>
+        {{ user_obj.last_login|date:"d/m/Y H:i" }}
+      </li>
+      <li class="collection-item">
+        <span class="grey-text text-darken-1">Creato il</span><br>
+        {{ user_obj.date_joined|date:"d/m/Y H:i" }}
+      </li>
+    </ul>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_body %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.M && M.AutoInit) M.AutoInit();
+});
+</script>
 {% endblock %}
