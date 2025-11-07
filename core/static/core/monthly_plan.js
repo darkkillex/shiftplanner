@@ -483,6 +483,7 @@
       const employeeId = employeeSel.value;
       if (!employeeId) return M.toast({ html: "Seleziona un lavoratore", classes: "orange" });
       const shiftId = shiftSel.value || null;
+      if (!shiftId) return M.toast({ html: "Seleziona un turno", classes: "orange" });
       const note = (noteToolbarInput?.value || "").trim();
 
       const cells = Array.from(selected).map((k) => {
