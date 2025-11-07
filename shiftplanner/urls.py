@@ -35,6 +35,8 @@ urlpatterns = [
     path('login/', auth_views.LoginView.as_view(template_name='login.html'), name='login'),
     path('logout/', core_views.logout_view, name='logout'),
     path('', core_views.home, name='home'),
+    path('funzioni/', views.functions_hub, name='functions_hub'),  # compatibilità
+    path('calendar-notes/', views.calendar_notes, name='calendar_notes'),
     path('plan/<int:pk>/', core_views.monthly_plan, name='monthly_plan'),
     path('', include(router.urls)),
     path('profile/', core_views.profile, name='profile'),

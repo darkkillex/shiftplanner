@@ -631,8 +631,16 @@ class PlanViewSet(viewsets.ModelViewSet):
 
 @login_required
 def home(request):
+    return render(request, 'home.html')
+
+@login_required
+def functions_hub(request):
+    return render(request, "home.html")
+
+@login_required
+def calendar_notes(request):
     plans = Plan.objects.order_by('-year','-month')[:12]
-    return render(request, 'home.html', {'plans': plans})
+    return render(request, 'calendar_notes.html', {'plans': plans})
 
 @login_required
 def profile(request):
@@ -660,10 +668,6 @@ def logout_view(request):
 
 def _is_staff_or_superuser(user):
     return user.is_authenticated and (user.is_staff or user.is_superuser)
-
-@login_required
-def functions_hub(request):
-    return render(request, "functions_hub.html")
 
 @login_required
 @user_passes_test(_is_staff_or_superuser)

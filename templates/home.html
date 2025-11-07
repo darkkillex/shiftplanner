@@ -1,36 +1,141 @@
-<!-- templates/home.html -->
 {% extends "layout.html" %}
-{% block title %}Home{% endblock %}
+{% load static %}
+{% block title %}Funzioni{% endblock %}
+
 {% block content %}
-<div class="container" style="max-width:1100px;">
-  <div class="card">
-    <div class="card-content">
-      <span class="card-title teal-text text-darken-2" style="margin-bottom:8px;">Scadenze del mese</span>
+<div class="row">
 
-      <ul id="reminder-list" class="collection" style="margin-bottom:16px;"></ul>
+  <div class="col s12">
+    <h4 class="valign-wrapper" style="gap:8px">
+      <i class="material-icons">home</i> Home
+    </h4>
+  </div>
 
-      <div class="divider" style="margin:12px 0;"></div>
+  <!-- filtro -->
+<!--  <div class="col s12 m8 l6">
+    <div class="input-field">
+      <i class="material-icons prefix">search</i>
+      <input id="hub-filter" type="text" autocomplete="off" />
+      <label for="hub-filter">Filtra</label>
+      <span id="hub-count" class="helper-text">Mostrati: tutti</span>
+    </div>
+  </div>
+  <div class="col s12 m4 l6 right-align" style="padding-top:18px">
+    <a id="hub-filter-clear" class="btn-flat waves-effect">
+      <i class="material-icons left">clear</i>Pulisci
+    </a>
+  </div>-->
 
-      <div id="calendar"></div>
+  <!-- griglia cards -->
+  <div id="hub-grid" class="col s12">
+    <div class="row" style="margin-bottom:0">
 
-      <p class="grey-text" style="margin-top:8px;">
-        Clicca sulla casella del giorno desiderato per aggiungere una nota. Spunta la nota nella lista in alto per completare.
-      </p>
+      <!-- Promemoria -->
+      <div class="col s12 m6 l4 hub-item" data-text="promemoria reminder scadenze">
+        <div class="card hoverable">
+          <div class="card-content">
+            <span class="card-title teal-text text-darken-1 valign-wrapper" style="gap:6px">
+              <i class="material-icons">event_note</i> Promemoria
+            </span>
+            <p class="grey-text">Gestione date e note operative.</p>
+          </div>
+          <div class="card-action">
+            <a href="{% url 'calendar_notes' %}" class="waves-effect">Apri</a>
+          </div>
+        </div>
+      </div>
 
-      <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-top:6px;">
-        <span>Legenda colori:</span>
-        <span style="display:inline-flex; align-items:center; gap:6px;">
-          <i style="width:14px; height:14px; background:#90caf9; border-radius:3px; display:inline-block;"></i>
-          <span style="color:#1e88e5;">blu</span>: nota in validità temporale
-        </span>
-        <span style="display:inline-flex; align-items:center; gap:6px;">
-          <i style="width:14px; height:14px; background:#ffe082; border-radius:3px; display:inline-block;"></i>
-          <span style="color:#f9a825;">giallo</span>: se mancano ≤3 giorni alla scadenza
-        </span>
-        <span style="display:inline-flex; align-items:center; gap:6px;">
-          <i style="width:14px; height:14px; background:#ef9a9a; border-radius:3px; display:inline-block;"></i>
-          <span style="color:#e53935;">rosso</span>: nota scaduta
-        </span>
+      <!-- Piani -->
+      <div class="col s12 m6 l4 hub-item" data-text="piani turni piani elenco calendario mensile">
+        <div class="card hoverable">
+          <div class="card-content">
+            <span class="card-title teal-text text-darken-1 valign-wrapper" style="gap:6px">
+              <i class="material-icons">view_module</i> Piani turni
+            </span>
+            <p class="grey-text">Elenco piani, apertura griglia, export XLSX.</p>
+          </div>
+          <div class="card-action">
+            <a href="{% url 'plans_area' %}" class="waves-effect">Apri elenco</a>
+            <a href="{% url 'plan_create' %}" class="waves-effect">Crea piano</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Template -->
+      <div class="col s12 m6 l4 hub-item" data-text="template struttura righe mansioni">
+        <div class="card hoverable">
+          <div class="card-content">
+            <span class="card-title teal-text text-darken-1 valign-wrapper" style="gap:6px">
+              <i class="material-icons">layers</i> Template piani
+            </span>
+            <p class="grey-text">Gestione struttura righe, spaziatori e propagazione.</p>
+          </div>
+          <div class="card-action">
+            <a href="{% url 'templates_area' %}" class="waves-effect">Apri elenco</a>
+            <a href="{% url 'template_create' %}" class="waves-effect">Crea template</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dipendenti -->
+<!--      <div class="col s12 m6 l4 hub-item" data-text="dipendenti personale anagrafica email">
+        <div class="card hoverable">
+          <div class="card-content">
+            <span class="card-title teal-text text-darken-1 valign-wrapper" style="gap:6px">
+              <i class="material-icons">people</i> Dipendenti
+            </span>
+            <p class="grey-text">Gestione anagrafiche e email per notifiche.</p>
+          </div>
+          <div class="card-action">
+            <a href="/admin/core/employee/" class="waves-effect">Apri in Admin</a>
+          </div>
+        </div>
+      </div>-->
+
+      <!-- Mansioni -->
+<!--      <div class="col s12 m6 l4 hub-item" data-text="mansioni professioni ruoli">
+        <div class="card hoverable">
+          <div class="card-content">
+            <span class="card-title teal-text text-darken-1 valign-wrapper" style="gap:6px">
+              <i class="material-icons">badge</i> Mansioni
+            </span>
+            <p class="grey-text">Elenco Profession e accredito automatico.</p>
+          </div>
+          <div class="card-action">
+            <a href="/admin/core/profession/" class="waves-effect">Apri in Admin</a>
+          </div>
+        </div>
+      </div>-->
+
+      <!-- Tipi turno -->
+<!--      <div class="col s12 m6 l4 hub-item" data-text="turni tipi orari">
+        <div class="card hoverable">
+          <div class="card-content">
+            <span class="card-title teal-text text-darken-1 valign-wrapper" style="gap:6px">
+              <i class="material-icons">schedule</i> Tipi turno
+            </span>
+            <p class="grey-text">Codici e fasce orarie.</p>
+          </div>
+          <div class="card-action">
+            <a href="/admin/core/shifttype/" class="waves-effect">Apri in Admin</a>
+          </div>
+        </div>
+      </div>-->
+
+      <!-- Impostazioni -->
+      <div class="col s12 m6 l4 hub-item" data-text="profilo utente impostazioni privacy">
+        <div class="card hoverable">
+          <div class="card-content">
+            <span class="card-title teal-text text-darken-1 valign-wrapper" style="gap:6px">
+              <i class="material-icons">settings</i> Impostazioni
+            </span>
+            <p class="grey-text">Profilo e informativa privacy.</p>
+          </div>
+          <div class="card-action">
+            <a href="{% url 'profile' %}" class="waves-effect">Profilo</a>
+            <a href="{% url 'privacy' %}" class="waves-effect">Privacy</a>
+          </div>
+        </div>
       </div>
 
     </div>
@@ -38,136 +143,6 @@
 </div>
 {% endblock %}
 
-{% block extra_css %}
-<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css" rel="stylesheet">
-<style>
-  #calendar { background:#fff; padding:12px; border-radius:8px; }
-  /* Lista */
-  .collection .collection-item.due-soon { background:#fff8e1; }   /* giallo chiaro */
-  .collection .collection-item.overdue  { background:#ffebee; }   /* rosso chiaro */
-  .collection .collection-item.done { opacity:.6; text-decoration: line-through; }
-
-  /* Eventi calendario */
-  .fc-daygrid-event.due-soon { background:#ffe082; border-color:#ffe082; }
-  .fc-daygrid-event.overdue  { background:#ef9a9a; border-color:#ef9a9a; }
-  .fc-daygrid-event.done     { background:#cfd8dc; border-color:#cfd8dc; }
-
-  /* Checkbox Materialize spacing */
-  .reminder-row { display:flex; align-items:flex-start; gap:10px; }
-  .reminder-meta { display:flex; flex-direction:column; }
-  .reminder-date { font-weight:600; }
-  .reminder-details { margin-left:28px; }
-</style>
-{% endblock %}
-
-{% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
-<script>
-(function(){
-  function getCookie(name){
-    const m = document.cookie.match('(^|;)\\s*'+name+'\\s*=\\s*([^;]+)');
-    return m ? m.pop() : '';
-  }
-  const CSRF = getCookie('csrftoken');
-  const headersJSON = {'Content-Type':'application/json','X-CSRFToken': CSRF};
-
-  const list = document.getElementById('reminder-list');
-  const calEl = document.getElementById('calendar');
-  let currentYear, currentMonth;
-
-  async function fetchReminders(y, m){
-    const r = await fetch(`/api/reminders/?year=${y}&month=${m}`, {credentials:'same-origin'});
-    if(!r.ok) return [];
-    return r.json();
-  }
-  function spanDays(a,b){ return Math.round((b-a)/(1000*60*60*24)); }
-
-  function classify(rem){
-    if(rem.completed) return 'done';
-    const now = new Date(); now.setHours(0,0,0,0);
-    const d = new Date(rem.date+'T00:00:00');
-    const dd = spanDays(now, d);
-    if(dd < 0) return 'overdue';
-    if(dd <= 3) return 'due-soon';
-    return '';
-  }
-
-  function renderList(data){
-    list.innerHTML = '';
-    if(!data.length){
-      list.innerHTML = '<li class="collection-item">Nessuna scadenza.</li>';
-      return;
-    }
-    data.forEach(r=>{
-      const d = new Date(r.date+'T00:00:00');
-      const cls = classify(r);
-      const li = document.createElement('li');
-      li.className = `collection-item ${cls}`;
-      li.innerHTML = `
-        <div class="reminder-row">
-          <label>
-            <input type="checkbox" ${r.completed?'checked':''} data-id="${r.id}">
-            <span></span>
-          </label>
-          <div class="reminder-meta">
-            <span class="reminder-date">${d.toLocaleDateString()}</span>
-            <span>${r.title}</span>
-          </div>
-        </div>
-        ${r.details ? `<div class="grey-text text-darken-1 reminder-details">${r.details}</div>`:''}
-      `;
-      li.querySelector('input[type=checkbox]').addEventListener('change', async (e)=>{
-        await fetch(`/api/reminders/${r.id}/`, {
-          method:'PATCH', headers: headersJSON, credentials:'same-origin',
-          body: JSON.stringify({completed: e.target.checked})
-        });
-        load();
-      });
-      list.appendChild(li);
-    });
-  }
-
-  async function load(){
-    const data = await fetchReminders(currentYear, currentMonth);
-    renderList(data);
-    calendar.removeAllEvents();
-    calendar.addEventSource(data.map(r=>{
-      const cls = classify(r);
-      return {
-        id: r.id,
-        title: r.title + (r.completed?' ✓':''),
-        start: r.date,
-        classNames: cls ? [cls] : []
-      };
-    }));
-  }
-
-  const calendar = new FullCalendar.Calendar(calEl, {
-    initialView: 'dayGridMonth',
-    firstDay: 1,
-    locale: 'it',
-    height: 'auto',
-    headerToolbar: { left:'prev,next today', center:'title', right:'' }, /* rimosso bottone Month */
-
-    dateClick: async (info)=>{
-      const title = prompt(`Nuovo appunto per ${info.dateStr}:`);
-      if(!title) return;
-      await fetch('/api/reminders/', {
-        method:'POST', headers: headersJSON, credentials:'same-origin',
-        body: JSON.stringify({date: info.dateStr, title, details: ''})
-      });
-      await load();
-    },
-
-    datesSet: async (arg)=>{
-      const d = arg.view.currentStart;
-      currentYear = d.getFullYear();
-      currentMonth = d.getMonth() + 1;
-      await load();
-    }
-  });
-
-  calendar.render();
-})();
-</script>
+{% block extra_body %}
+  <script src="{% static 'core/functions_hub.js' %}"></script>
 {% endblock %}

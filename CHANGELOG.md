@@ -1,3 +1,12 @@
+# v0.6.0
+* sdflksdfaksdhlskdfhash
+
+# v0.5.3
+* Inserita possibilità di inserimento mansione nel template PT, con conseguente modifica a cascata sui PT legati al template oggetto di modifica
+* Resa obbligatoria la selezione di Turno all'atto dell'assegnazione del lavoratore sul PT
+* Aggiunto footer materialize
+* Aggiunta pagina Informativa privacy
+
 # v0.5.2
 * Le pagine PT e template PT sono state rese materialize e corredate di filtri live
 * Integrata colorazione alle righe mansioni nella tabella PT, per maggiore leggibilità delle righe
@@ -46,38 +55,38 @@
 * Griglia piano turni scrollabile tramite DnD
 
 # v0.2.0
-* Celle - rimosso cod. Turno e inserita label 
+* Celle - rimosso cod. Turno e inserita label dedicata
 * Aggiunto Campo Note (opzionale) da poter inserire all'atto dell'applicazione del turno
 * Modifica/rimozione/aggiunta nota su cella, dopo doppio click su cella 
 * Refactoring degli script JS in sorgenti dedicati 
 * Bug fixing non corretta inizializzazione e visualizzazione allo scorrere del mouse, delle note presenti 
-* Se lavoratore è presente su altre professioni lo stesso giorno, blocca inserimento 
-* Inibire lato Area Amministrazione a utenti Staff 
-* Aggiungere bottone e azione per estrazione del piano mensile in .csv/.xlsx 
-* Homepage: rendere indipendente da sezione admin la funzione +Crea nuovo Piano 
-* Applicare filtri tabella su Dipendenti (filtro live)
-* Riposizionare componenti e tasti 
+* Inserito blocco inserimento del lavoratore se già presente su altre mansioni lo stesso giorno
+* Inibito lato Area Amministrazione a utenti Staff 
+* Aggiunta azione per estrazione del piano mensile in .csv/.xlsx 
+* Homepage: reso indipendente da sezione admin la funzione +Crea nuovo Piano 
+* Inserito filtro live sulla tabella Dipendenti
+* Riposizionati componenti e tasti secondo logiche più coerenti 
 * Aggiunte icone material sui campi mancanti 
-* Scorrere la tabella se l'utente seleziona tenendo il click del mouse premuto per scorrere e selezionare più giorni (non visibili)
+* Aggiunto scorrimento della tabella tramite click-and-hold del mouse per scorrere e selezionare più giorni (non visibili)
 
 # v0.1.3
-* Applicare filtri tabella su Professioni (filtro live)
-* Mostrare Nome e Cognome dell'utente connesso nella sezione Profilo
-* Mostrare badge privilegi utente connesso nella sezione Profilo
-* Riposizionare i bottoni e i menù nell'header (aggiungere separatori tra le scelte)
+* Inserito filtro live sulla tabella Professioni
+* Inseriti nome e cognome dell'utente connesso nella sezione Profilo
+* Inserito badge privilegi utente connesso nella sezione Profilo
+* Riposizionati i bottoni e i menù nella navbar
 
 # v0.1.2
-* Nella griglia, riportare oltre al numero del giorno, anche le iniziali (Es. Lun, mar, mer etc.)
-* Nella griglia, colorare le intestazioni delle date festive in rosso 
+* Aggiunta nella griglia PT, iniziali del giorno (Es. Lun, mar, mer etc.)
+* Aggiunta nella griglia, colorazione intestazioni delle date festive in rosso 
 * Aggiunto material design alla UI 
 * Aggiunta responsività tabella 
 * Aggiunta barra per scorrimento in orizzontale per ovviare al problema di navigazione derivante da grossa quantità di dati (Professioni)
 
 # v0.1.1
-* Aggiungere sulla barra in alto l'utente loggato 
-* Aggiungere consultazione profilo utente loggato 
-* Aggiungere funzione di cambio password
+* Aggiunta sulla navbar profilo utente loggato 
+* Aggiunta consultazione profilo utente loggato 
+* Aggiunta funzione di cambio password
 
 # v0.1.0
-* Azione logout non funzionante 
-* Creare azione/bottone "Rimuovi da celle selezionate" 
+* Bugfix: azione logout non funzionante 
+* Creata azione "Rimuovi da celle selezionate" 
