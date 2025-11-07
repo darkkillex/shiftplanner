@@ -881,3 +881,7 @@ def template_insert_row(request, pk: int):
         "profession_id": prof.id,
         "propagated_plans": plan_ids
     }, status=201)
+
+@login_required
+def privacy(request):
+    return render(request, "privacy/privacy.html")

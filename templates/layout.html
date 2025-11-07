@@ -84,8 +84,25 @@
 
 {% block extra_body %}{% endblock %}
 
-<footer class="center grey-text text-darken-2" style="margin-top:40px;font-size:19px">
-    <small>Versione <a href="{% url 'changelog' %}">{{ APP_VERSION }}</a></small>
+<footer class="page-footer white" style="border-top:3px solid #00695c; padding:6px 0;">
+  <div class="container">
+    <div class="footer-bar" style="display:flex; align-items:center; justify-content:center; position:relative; min-height:36px;">
+      <!-- Centro: credito + versione -->
+      <div class="center grey-text text-darken-2" style="font-size:0.9rem; text-align:center;">
+        © {% now "Y" %} Kairos —
+        <a href="{% url 'changelog' %}" class="teal-text text-darken-3 waves-effect" style="font-weight:500;">
+          {{ APP_VERSION|default:"0.0.0" }}
+        </a>
+        — Tutti i diritti riservati
+      </div>
+
+      <div class="right" style="position:absolute; right:0;">
+        <a href="{% url 'privacy' %}" class="teal-text text-darken-4 waves-effect" style="font-size:0.9rem; font-weight:500;">
+          Informativa Privacy
+        </a>
+      </div>
+    </div>
+  </div>
 </footer>
 
 {% block extra_js %}{% endblock %}
