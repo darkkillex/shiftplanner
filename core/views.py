@@ -395,13 +395,17 @@ class PlanViewSet(viewsets.ModelViewSet):
 
         for emp, items in by_emp.items():
             items.sort(key=lambda x: x.date)
-            rows = [{
-                'weekday': ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'][a.date.weekday()],
-                'date': a.date.strftime('%d/%m/%Y'),
-                'profession_name': a.profession.name if a.profession else '',
-                'shift_label': a.shift_type.label if a.shift_type else '',
-                'notes': a.notes or '',
-            } for a in items]
+            rows = []
+            for a in items:
+                full_name = a.profession.name if a.profession else ''
+                base_name, _ = _split_slot(full_name)
+                rows.append({
+                    'weekday': ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'][a.date.weekday()],
+                    'date': a.date.strftime('%d/%m/%Y'),
+                    'profession_name': base_name,
+                    'shift_label': a.shift_type.label if a.shift_type else '',
+                    'notes': a.notes or '',
+                })
 
             ctx = {
                 'employee_name': emp.full_name(),
