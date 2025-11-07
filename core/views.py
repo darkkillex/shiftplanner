@@ -574,8 +574,10 @@ class PlanViewSet(viewsets.ModelViewSet):
         # -------- Scrittura righe --------
         row = 2
         for item in layout:
-            # Colonna A: etichetta del template (vuota per spacer)
-            ws.cell(row=row, column=1, value=item['label'])
+            # Colonna A: etichetta del template (senza suffisso .N; vuota per spacer)
+            label_full = item.get('label') or ''
+            base_label, _ = _split_slot(label_full)  # <- usa helper già definito
+            ws.cell(row=row, column=1, value=base_label if not item.get('spacer') else '')
 
             # Celle giorno per giorno
             for d in range(1, days+1):
