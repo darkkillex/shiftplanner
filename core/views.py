@@ -3,6 +3,7 @@ from collections import defaultdict
 
 from io import BytesIO
 
+from django.views.decorators.http import require_POST
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -17,7 +18,7 @@ from django.shortcuts import get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import logout
 from django.contrib import messages
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.db.models import F, Subquery
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.shortcuts import render, redirect
@@ -29,7 +30,7 @@ from openpyxl.utils import get_column_letter
 
 from .forms import PlanCreateForm
 from .forms import TemplateCreateForm
-from .models import Template, TemplateRow, Profession, AssignmentSnapshot
+from .models import Template, TemplateRow, Profession, AssignmentSnapshot, PlanRow
 
 from .serializers import *
 
@@ -53,6 +54,51 @@ def _existing_max_suffix(base: str) -> int:
 
 def _assign_signature(a):
     return f"{a.shift_type_id or ''}|{a.profession_id or ''}|{(a.notes or '').strip()}"
+
+def _next_suffix_for_base(base: str) -> int:
+    # guarda tutte le Profession già esistenti per quella base
+    names = Profession.objects.filter(
+        name__regex=rf'^{re.escape(base)}(?:\.(\d+))?$'
+    ).values_list('name', flat=True)
+    mx = 0
+    for n in names:
+        _, k = _split_slot(n)
+        if k > mx: mx = k
+    return mx + 1
+
+def _ensure_profession_for(base: str, explicit_num: int | None) -> Profession:
+    if explicit_num and explicit_num > 0:
+        name = f"{base}.{explicit_num}"
+    else:
+        name = f"{base}.{_next_suffix_for_base(base)}"
+    prof, _ = Profession.objects.get_or_create(name=name)
+    return prof
+
+def _propagate_insert_to_plans(template: Template, insert_order: int, duty: str):
+    BUMP = 1000
+    plans = Plan.objects.filter(template=template).prefetch_related('rows')
+    for plan in plans:
+        # se già esiste una riga con quel duty, salta
+        if plan.rows.filter(duty=duty).exists():
+            continue
+        # bump per evitare collisione su uniq_plan_order
+        PlanRow.objects.filter(plan=plan, order__gte=insert_order).update(order=F('order') + BUMP)
+        PlanRow.objects.create(plan=plan, order=insert_order, duty=duty, is_spacer=False)
+        _normalize_plan_orders(plan)
+
+def _normalize_template_orders(template: Template):
+    rows = list(TemplateRow.objects.filter(template=template).order_by('order', 'id'))
+    for i, r in enumerate(rows, start=1):
+        if r.order != i:
+            r.order = i
+            r.save(update_fields=['order'])
+
+def _normalize_plan_orders(plan):
+    rows = list(PlanRow.objects.filter(plan=plan).order_by('order', 'id'))
+    for i, r in enumerate(rows, start=1):
+        if r.order != i:
+            r.order = i
+            r.save(update_fields=['order'])
 
 
 class EmployeeViewSet(viewsets.ModelViewSet):
@@ -766,3 +812,72 @@ def template_detail(request, pk):
     """Visualizza un template e le sue righe."""
     template = get_object_or_404(Template.objects.prefetch_related("rows"), pk=pk)
     return render(request, "template_detail.html", {"template": template})
+
+
+@login_required
+@user_passes_test(_is_staff_or_superuser)
+@require_POST
+@transaction.atomic
+def template_insert_row(request, pk: int):
+    import json
+    try:
+        data = json.loads(request.body.decode('utf-8') or "{}")
+    except Exception:
+        return JsonResponse({"detail": "JSON non valido"}, status=400)
+
+    pos = (data.get('position') or 'after').lower()
+    tr_id = data.get('template_row_id')
+    duty = (data.get('duty') or '').strip() or None
+    base = (data.get('base') or '').strip()
+
+    if pos not in ('after', 'before'):
+        return JsonResponse({"detail": "position deve essere 'after' o 'before'."}, status=400)
+    if not tr_id:
+        return JsonResponse({"detail": "template_row_id obbligatorio."}, status=400)
+
+    try:
+        template = Template.objects.prefetch_related('rows').get(pk=pk)
+    except Template.DoesNotExist:
+        return JsonResponse({"detail": "Template non trovato."}, status=404)
+
+    try:
+        ref = TemplateRow.objects.get(pk=int(tr_id), template=template)
+    except TemplateRow.DoesNotExist:
+        return JsonResponse({"detail": "template_row_id non appartiene al template."}, status=404)
+
+    insert_order = ref.order + (1 if pos == 'after' else 0)
+    if pos == 'before':
+        insert_order = max(1, ref.order)
+
+    # normalizza/risolve duty -> Profession
+    if not duty:
+        if not base:
+            return JsonResponse({"detail": "Serve 'base' se non passi 'duty'."}, status=400)
+        prof = _ensure_profession_for(base, None)
+        duty = prof.name
+    else:
+        b, num = _split_slot(duty)
+        if not b:
+            return JsonResponse({"detail": "duty non valido."}, status=400)
+        prof = _ensure_profession_for(b, num or None)
+        duty = prof.name  # normalizza
+
+    # --- BUMP -> INSERT -> NORMALIZE sul Template ---
+    BUMP = 1000
+    TemplateRow.objects.filter(template=template, order__gte=insert_order).update(order=F('order') + BUMP)
+    new_tr = TemplateRow.objects.create(template=template, order=insert_order, duty=duty, is_spacer=False)
+    _normalize_template_orders(template)
+
+    # Propaga ai Plan con lo stesso schema
+    _propagate_insert_to_plans(template, insert_order, duty)
+
+    plan_ids = list(Plan.objects.filter(template=template).values_list('id', flat=True))
+    return JsonResponse({
+        "ok": True,
+        "template_id": template.id,
+        "template_row_id": new_tr.id,
+        "insert_order": insert_order,
+        "duty": duty,
+        "profession_id": prof.id,
+        "propagated_plans": plan_ids
+    }, status=201)

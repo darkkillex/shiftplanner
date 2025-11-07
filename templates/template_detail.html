@@ -1,34 +1,144 @@
 {% extends "layout.html" %}
+{% load static %}
 {% block title %}Template: {{ template.name }}{% endblock %}
 
 {% block content %}
-<h4>{{ template.name }}</h4>
+<div class="row">
+  <div class="col s12">
+    <h4 class="valign-wrapper">
+      <i class="material-icons left">description</i>{{ template.name }}
+      {% if not template.is_active %}
+        <span class="new badge red" data-badge-caption="disattivo"></span>
+      {% endif %}
+    </h4>
+  </div>
 
-<p>
-  Stato:
-  {% if template.is_active %}
-    <span class="green-text text-darken-2">Attivo</span>
-  {% else %}
-    <span class="red-text text-darken-2">Disattivo</span>
-  {% endif %}
-</p>
+  <!-- Lista righe template -->
+  <div class="col s12 m7">
+    <ul class="collection" id="tpl-rows">
+      {% for r in template.rows.all|dictsort:"order" %}
+        <li class="collection-item" data-row-id="{{ r.id }}" data-order="{{ r.order }}">
+          <span class="grey-text">#{{ r.order }}</span>
+          {% if r.is_spacer %}
+            <span class="chip grey lighten-3 black-text" style="margin-left:8px">[spazio]</span>
+          {% else %}
+            <span class="chip blue-grey lighten-5 black-text" style="margin-left:8px">{{ r.duty }}</span>
+          {% endif %}
+        </li>
+      {% empty %}
+        <li class="collection-item">Nessuna riga nel template.</li>
+      {% endfor %}
+    </ul>
+  </div>
 
-<ul class="collection" style="max-width:600px;">
-  {% for r in template.rows.all %}
-    {% if r.is_spacer %}
-      <li class="collection-item grey lighten-4 center-align" style="font-style:italic;">(spazio)</li>
-    {% else %}
-      <li class="collection-item">{{ r.duty }}</li>
-    {% endif %}
-  {% empty %}
-    <li class="collection-item">Nessuna riga definita</li>
-  {% endfor %}
-</ul>
+  <!-- Form inserimento riga -->
+  <div class="col s12 m5">
+    <div class="card">
+      <div class="card-content">
+        <span class="card-title">Inserisci nuova riga</span>
 
-<div style="margin-top:1rem;">
-  <a href="{% url 'template_create' %}" class="btn-small waves-effect blue-grey lighten-1">
-    <i class="material-icons left">note_add</i> Nuovo Template
-  </a>
-  <a href="{% url 'home' %}" class="btn-flat">Torna alla Home</a>
+        <div class="input-field">
+          <select id="ref-row">
+            <option value="" disabled selected>Scegli riga di riferimento</option>
+            {% for r in template.rows.all|dictsort:"order" %}
+              <option value="{{ r.id }}">#{{ r.order }} — {% if r.is_spacer %}[spazio]{% else %}{{ r.duty }}{% endif %}</option>
+            {% endfor %}
+          </select>
+          <label>Riga di riferimento</label>
+        </div>
+
+        <div class="input-field">
+          <select id="position">
+            <option value="after" selected>Dopo</option>
+            <option value="before">Prima</option>
+          </select>
+          <label>Posizione</label>
+        </div>
+
+        <p class="grey-text" style="margin-top:4px">
+          Inserisci <code>duty</code> completo <em>oppure</em> solo la <code>base</code>.
+          Se lasci <strong>duty</strong> vuoto e compili <strong>base</strong>,
+          verrà generato automaticamente <code>base.next</code>.
+        </p>
+
+        <div class="input-field">
+          <input id="duty" type="text" placeholder="Esempio: Ufficio.2">
+          <label for="duty">Duty (opzionale)</label>
+        </div>
+
+        <div class="input-field">
+          <input id="base" type="text" placeholder="Esempio: Ufficio">
+          <label for="base">Base (usata se duty è vuoto)</label>
+        </div>
+
+      </div>
+      <div class="card-action right-align">
+        <a class="btn grey lighten-3 black-text" href="{% url 'templates_area' %}">
+          <i class="material-icons left">chevron_left</i>Indietro
+        </a>
+        <button id="btn-insert" class="btn waves-effect">
+          <i class="material-icons left">add</i>Inserisci
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
+{% endblock %}
+
+{% block extra_body %}
+<script>
+(function(){
+  function initMaterialize(){
+    if (!window.M) return;
+    try {
+      M.FormSelect.init(document.querySelectorAll('select'));
+    } catch(e){}
+  }
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', initMaterialize, {once:true});
+  } else { initMaterialize(); }
+
+  function getCookie(name){
+    const v = `; ${document.cookie}`;
+    const p = v.split(`; ${name}=`);
+    if (p.length === 2) return p.pop().split(';').shift();
+  }
+
+  const btn = document.getElementById('btn-insert');
+  if (!btn) return;
+
+  btn.addEventListener('click', async ()=>{
+    const ref   = document.getElementById('ref-row').value;
+    const pos   = document.getElementById('position').value || 'after';
+    const duty  = document.getElementById('duty').value.trim();
+    const base  = document.getElementById('base').value.trim();
+    if (!ref){ return M.toast({html:'Seleziona la riga di riferimento', classes:'orange'}); }
+    if (!duty && !base){ return M.toast({html:'Inserisci duty o base', classes:'orange'}); }
+
+    const csrftoken = getCookie('csrftoken');
+    const url = '/api/templates/{{ template.id }}/insert_row/';
+    const body = { position: pos, template_row_id: Number(ref) };
+    if (duty) body.duty = duty; else body.base = base;
+
+    const resp = await fetch(url, {
+      method:'POST',
+      headers: { 'Content-Type':'application/json', ...(csrftoken ? {'X-CSRFToken':csrftoken} : {}) },
+      credentials: 'same-origin',
+      body: JSON.stringify(body)
+    });
+
+    if (!resp.ok){
+      let msg = 'Errore inserimento';
+      try { const j = await resp.json(); if (j.detail) msg = j.detail; } catch(_){}
+      return M.toast({html: msg, classes:'red'});
+    }
+
+    const js = await resp.json();
+    M.toast({html: `Inserita: ${js.duty} in posizione #${js.insert_order}`});
+
+    // ricarica per vedere ordine aggiornato e propagazione
+    location.reload();
+  });
+})();
+</script>
 {% endblock %}

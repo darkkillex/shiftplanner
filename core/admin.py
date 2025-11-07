@@ -6,6 +6,9 @@ from .models import (
 )
 from calendar import monthrange
 from django.db import transaction
+from django import forms
+from django.db.models import F
+from django.template.response import TemplateResponse
 
 import datetime as dt
 
@@ -33,25 +36,39 @@ class ShiftTypeAdmin(admin.ModelAdmin):
     search_fields = ('code', 'label')
 
 # ---------------- Template + Righe ----------------
+class InsertRowForm(forms.Form):
+    position = forms.IntegerField(min_value=1, label="Posizione (order)")
+    duty = forms.CharField(required=False, label="Mansione")
+    is_spacer = forms.BooleanField(required=False, initial=False, label="Spacer")
+    notes = forms.CharField(required=False, widget=forms.Textarea, label="Note")
+
 
 class TemplateRowInline(admin.TabularInline):
     model = TemplateRow
-    extra = 1
+    extra = 0
     fields = ('order', 'duty', 'is_spacer', 'notes')
     ordering = ('order',)
+    sortable_field_name = 'order'  # drag&drop se supportato dal tema admin
 
 @admin.register(Template)
 class TemplateAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'is_active')
+    list_display = ('id', 'name', 'is_active', 'rows_count')
     list_filter = ('is_active',)
     search_fields = ('name',)
     ordering = ('name',)
     inlines = [TemplateRowInline]
-    actions = ['clona_template']
+    actions = ['clona_template', 'normalize_orders', 'propagate_layout', 'inserisci_riga_posizione']
 
+    def rows_count(self, obj):
+        return obj.rows.count()
+
+    @admin.action(description="Clona template selezionati")
     def clona_template(self, request, queryset):
         for tpl in queryset:
-            copy = Template.objects.create(name=f"{tpl.name} (copia)", is_active=tpl.is_active)
+            copy = Template.objects.create(
+                name=f"{tpl.name} (copia)",
+                is_active=tpl.is_active
+            )
             rows = [
                 TemplateRow(
                     template=copy,
@@ -59,12 +76,130 @@ class TemplateAdmin(admin.ModelAdmin):
                     duty=r.duty,
                     is_spacer=r.is_spacer,
                     notes=r.notes
-                ) for r in tpl.rows.all().order_by('order')
+                )
+                for r in tpl.rows.all().order_by('order', 'id')
             ]
             if rows:
                 TemplateRow.objects.bulk_create(rows)
         self.message_user(request, f"Clonati {queryset.count()} template.")
-    clona_template.short_description = "Clona template selezionati"
+
+    @admin.action(description="Rinumera righe (1..N) per ordine attuale")
+    def normalize_orders(self, request, queryset):
+        with transaction.atomic():
+            for tpl in queryset.prefetch_related("rows"):
+                for i, r in enumerate(tpl.rows.order_by("order", "id"), start=1):
+                    if r.order != i:
+                        r.order = i
+                        r.save(update_fields=["order"])
+        self.message_user(request, "Righe rinumerate.")
+
+    @admin.action(description="Propaga layout ai piani che usano il template")
+    def propagate_layout(self, request, queryset):
+        from .models import PlanRow, Plan, Profession
+        created_rows = 0
+        updated_rows = 0
+
+        with transaction.atomic():
+            for tpl in queryset:
+                # normalizza ordine nel template
+                changed = False
+                for i, r in enumerate(tpl.rows.order_by("order", "id"), start=1):
+                    if r.order != i:
+                        r.order = i
+                        r.save(update_fields=["order"])
+                        changed = True
+                if changed:
+                    tpl.refresh_from_db()
+
+                tpl_rows = list(
+                    tpl.rows.order_by("order", "id")
+                           .values("order", "duty", "is_spacer", "notes")
+                )
+
+                plans = Plan.objects.filter(template=tpl).prefetch_related("rows")
+                for plan in plans:
+                    existing_by_order = {r.order: r for r in plan.rows.all()}
+
+                    for tr in tpl_rows:
+                        order = tr["order"]
+                        duty = (tr["duty"] or "").strip()
+                        is_spacer = bool(tr["is_spacer"])
+                        notes = tr["notes"]
+
+                        pr = existing_by_order.get(order)
+                        if pr:
+                            changed_pr = False
+                            if pr.is_spacer != is_spacer:
+                                pr.is_spacer = is_spacer; changed_pr = True
+                            if pr.duty != duty:
+                                pr.duty = duty; changed_pr = True
+                            if pr.notes != notes:
+                                pr.notes = notes; changed_pr = True
+                            if changed_pr:
+                                pr.save(update_fields=["is_spacer", "duty", "notes"])
+                                updated_rows += 1
+                        else:
+                            PlanRow.objects.create(
+                                plan=plan, order=order, duty=duty,
+                                is_spacer=is_spacer, notes=notes
+                            )
+                            created_rows += 1
+
+                        if duty:
+                            Profession.objects.get_or_create(name=duty)
+
+        self.message_user(
+            request,
+            f"Propagazione completata. Create {created_rows} righe, aggiornate {updated_rows}."
+        )
+
+    @admin.action(description="Inserisci riga a posizione K + propaga")
+    def inserisci_riga_posizione(self, request, queryset):
+        if queryset.count() != 1:
+            self.message_user(request, "Seleziona un solo Template.", level='warning')
+            return
+        tpl = queryset.first()
+
+        if request.method == "POST" and request.POST.get("apply") == "1":
+            form = InsertRowForm(request.POST)
+            if form.is_valid():
+                k = form.cleaned_data['position']
+                duty = (form.cleaned_data['duty'] or '').strip()
+                is_spacer = bool(form.cleaned_data['is_spacer'])
+                notes = form.cleaned_data['notes'] or ''
+
+                max_pos = tpl.rows.count() + 1
+                if k > max_pos: k = max_pos
+                if k < 1: k = 1
+
+                with transaction.atomic():
+                    # shift delle righe esistenti
+                    TemplateRow.objects.filter(template=tpl, order__gte=k).update(order=F('order') + 1)
+                    # inserimento riga
+                    TemplateRow.objects.create(
+                        template=tpl,
+                        order=k,
+                        duty='' if is_spacer else duty,
+                        is_spacer=is_spacer,
+                        notes=notes
+                    )
+                    # normalizza e propaga
+                    self.normalize_orders(request, Template.objects.filter(pk=tpl.pk))
+                    self.propagate_layout(request, Template.objects.filter(pk=tpl.pk))
+
+                self.message_user(request, f"Inserita riga in posizione {k} e propagato layout.")
+                return
+
+        else:
+            form = InsertRowForm(initial={'position': tpl.rows.count() + 1})
+
+        context = {
+            'form': form,
+            'template_obj': tpl,
+            'opts': self.model._meta,
+            'title': "Inserisci riga a posizione K",
+        }
+        return TemplateResponse(request, 'admin/core/template/insert_row.html', context)
 
 # ---------------- Plan Clonazione + Righe ----------------
 
