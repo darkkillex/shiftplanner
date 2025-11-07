@@ -1,7 +1,10 @@
 TIER-1
 Rimuovere il PROFESSIONE.# dall'estrazione xlsx
 Creare due menu nella barra superiore "Template PT"-> lista template PT e + Crea nuovo Template piano turni e "Piani turno"->lista  PT e + Crea nuovo piano turni
-
+Rimuovere PROFESSIONE.# da estrazione xlsx
+Rimuovere PROFESSIONE.# da email notifica
+Cancellazione riga template(tutto sincronizzato con il PT)
+Prevedere inserimento riga vuota nel template PT
 
 TIER-2
 Rimuovere la dicitura REV incrementale dalla notifica via email
