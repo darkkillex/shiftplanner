@@ -14,7 +14,7 @@ Dopo inserimento lavoratore su griglia piano turni, il refresh della grid deve l
 
 TIER-3
 Giorno sabato e festività nazionali in rosso(calendario shiftplan)
-Refactoring degli style su sorgenti dedicati (home.html)
+Refactoring degli style su sorgenti dedicati (calendar_notes.html)
 Copia incolla celle turno tramite ctrl+c ctrl+v
 Copia incolla celle turno tramite DnD
 

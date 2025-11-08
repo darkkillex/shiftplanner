@@ -1,5 +1,7 @@
 # v0.6.0
-* sdflksdfaksdhlskdfhash
+* Ristrutturata home page - aggiunta di card dedicate alle varie funzioni disponibili
+* Resa materialize pagina Profilo
+* Resa materialize pagina cambio password
 
 # v0.5.3
 * Inserita possibilità di inserimento mansione nel template PT, con conseguente modifica a cascata sui PT legati al template oggetto di modifica
