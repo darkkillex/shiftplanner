@@ -10,7 +10,18 @@ Dopo inserimento lavoratore su griglia piano turni, il refresh della grid deve l
 
 TIER-2
 
-Refactoring degli style su sorgenti dedicati (calendar_notes.html)
+Refactoring di css/js su sorgenti dedicati:
+-emails/plan_personal.html
+-calendar_notes.html
+-layout.html
+-monthly_plan.html
+-password_change.html
+-password_change_done.html
+-profile.html
+-template_create.html
+-template_detail.html
+
+
 Riportare l'intero calendario del mese nell'email di notifica. Quindi se in alcuni giorni il nome del dipendente non compare,
     riportare la riga del giorno vuota (DA DISCUTERE)
 
