@@ -101,6 +101,46 @@ def _normalize_plan_orders(plan):
             r.save(update_fields=['order'])
 
 
+def _easter_sunday(year: int) -> dt.date:
+    # algoritmo gregoriano (Anonymous Gregorian)
+    a = year % 19
+    b = year // 100
+    c = year % 100
+    d = b // 4
+    e = b % 4
+    f = (b + 8) // 25
+    g = (b - f + 1) // 3
+    h = (19*a + b - d - g + 15) % 30
+    i = c // 4
+    k = c % 4
+    l = (32 + 2*e + 2*i - h - k) % 7
+    m = (a + 11*h + 22*l) // 451
+    month = (h + l - 7*m + 114) // 31
+    day = 1 + ((h + l - 7*m + 114) % 31)
+    return dt.date(year, month, day)
+
+def italy_holidays(year: int) -> set[dt.date]:
+    """Festività nazionali italiane principali + Lunedì dell’Angelo."""
+    easter = _easter_sunday(year)
+    pasquetta = easter + dt.timedelta(days=1)
+
+    fixed = {
+        (1, 1),   # Capodanno
+        (1, 6),   # Epifania
+        (4, 25),  # Liberazione
+        (5, 1),   # Lavoro
+        (6, 2),   # Repubblica
+        (8, 15),  # Assunzione
+        (11, 1),  # Ognissanti
+        (12, 8),  # Immacolata
+        (12, 25), # Natale
+        (12, 26), # Santo Stefano
+    }
+    hs = {dt.date(year, m, d) for (m, d) in fixed}
+    hs.add(pasquetta)
+    return hs
+
+
 class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = Employee.objects.all().order_by('last_name','first_name')
     serializer_class = EmployeeSerializer
@@ -528,27 +568,33 @@ class PlanViewSet(viewsets.ModelViewSet):
         bold = Font(bold=True)
         center = Alignment(horizontal="center", vertical="center", wrap_text=True)
         wrap = Alignment(wrap_text=True)
-        sunday_fill = PatternFill("solid", fgColor="FFEBEE")     # rosato leggero per domeniche
         header_fill = PatternFill("solid", fgColor="E3F2FD")     # azzurrino header
+        red_font = Font(bold=True, color="FFD32F2F")
 
         # Header: A1 "Professione", poi 1..N con giorno + abbreviazione
         ws.cell(row=1, column=1, value="Professione").font = bold
         ws.cell(row=1, column=1).alignment = center
         ws.cell(row=1, column=1).fill = header_fill
 
+        it_hdays = italy_holidays(plan.year)
+        it_weekdays = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
         # mappa indice colonna -> (giorno, data)
         col_for_day = {}
-
-        it_weekdays = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
-        for d in range(1, days+1):
-            col = d + 1  # colonna 2..N
+        for d in range(1, days + 1):
+            col = d + 1
             the_date = dt.date(plan.year, plan.month, d)
             wd = it_weekdays[the_date.weekday()]
-            ws.cell(row=1, column=col, value=f"{d}\n{wd}").font = bold
-            ws.cell(row=1, column=col).alignment = center
-            ws.cell(row=1, column=col).fill = header_fill
-            if the_date.weekday() == 6:   # domenica
-                ws.cell(row=1, column=col).fill = sunday_fill
+
+            c = ws.cell(row=1, column=col, value=f"{d}\n{wd}")
+            c.alignment = center
+            c.fill = header_fill
+
+            # sabato/dom/holiday -> numeri rossi
+            if the_date.weekday() in (5, 6) or the_date in it_hdays:
+                c.font = red_font
+            else:
+                c.font = bold
+
             col_for_day[col] = the_date
 
         # -------- Layout righe: usa PlanRow se presenti, altrimenti Profession --------
