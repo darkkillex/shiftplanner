@@ -23,18 +23,21 @@ th{color:#345;text-align:left;background:#f3f6fa}
 <body>
 <div class="wrapper">
   <div class="card">
-    <h1>Piano turni {{ month_number }}/{{ year }} {{ revision_str }}</h1>
-    <div class="meta"><strong>Legenda:</strong></div>
+    <h1>{{ month_name }} {{ year }} {{ revision_str }}</h1>
+    <h2>ATI RINA/Sivam</h2>
 
+<!--    <div class="meta"><strong>Legenda:</strong></div>
     {% if legend %}
     <div class="legend">
       {% for code,label in legend %}
         <span><strong>{{ code }}</strong> = {{ label }}</span>
       {% endfor %}
     </div>
-    {% endif %}
+    {% endif %}-->
 
-    <div class="meta">Salve {{ employee_name }}, ecco i tuoi turni.</div>
+    <div class="meta">Salve <strong>{{ employee_name }}</strong>, di seguito il suo piano turni riferito al mese e all'anno in oggetto.</div>
+    <div class="meta" style="margin-bottom:8px;">Cordialmente,</div>
+    <div class="meta" style="margin-bottom:16px;"><strong>{{ sender_name }}</strong> </div>
     <table role="presentation" aria-hidden="true">
       <thead>
         <tr>
@@ -58,8 +61,9 @@ th{color:#345;text-align:left;background:#f3f6fa}
 
   </div>
   <div class="footer">
-    Questa è una notifica automatica inviata da <strong>{{ sender_name }}</strong> tramite la piattaforma ShiftPlanner.<br>
-    Per dubbi o segnalazioni rispondi a {{ reply_to_email }} o telefona al +39 340 324 7641.
+    <strong>Nota:</strong> questa è una notifica automatica inviata da <strong>{{ sender_name }}</strong> tramite la piattaforma Kairos - ATI RINA/Sivam.<br>
+    Qualora dovessero esserci variazioni o aggiornamenti del piano turni in oggetto, riceverà una nuova email di notifica.
+    Per dubbi o segnalazioni si prega di rispondere a {{ reply_to_email }} o telefonare al +39 340 324 7641.
   </div>
 </div>
 </body>

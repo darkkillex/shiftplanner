@@ -423,6 +423,12 @@ class PlanViewSet(viewsets.ModelViewSet):
         for a in cur_qs.filter(employee_id__in=changed_emp_ids):
             by_emp[a.employee].append(a)
 
+
+        ITALIAN_MONTHS = [
+            "", "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
+            "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"
+        ]
+        month_name = ITALIAN_MONTHS[plan.month]
         month_number = f"{plan.month:02d}"
         legend = list(ShiftType.objects.order_by('id').values_list('code', 'label'))
         sender_name = request.user.get_full_name() or request.user.username
@@ -449,7 +455,8 @@ class PlanViewSet(viewsets.ModelViewSet):
 
             ctx = {
                 'employee_name': emp.full_name(),
-                'month_number': month_number,
+                # 'month_number': month_number,
+                'month_name': month_name,
                 'year': plan.year,
                 'legend': legend,
                 'assignments': rows,
@@ -459,7 +466,7 @@ class PlanViewSet(viewsets.ModelViewSet):
                 'sender_name': sender_name,
             }
 
-            subject = f"Piano turni {plan.month:02d}/{plan.year} {rev_str}".strip()
+            subject = f"Piano turni {month_name} {plan.year} {rev_str}".strip()
             text_body = render_to_string("emails/plan_personal.txt", ctx)
             html_body = render_to_string("emails/plan_personal.html", ctx)
 
