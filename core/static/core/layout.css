@@ -120,6 +120,8 @@ nav.teal { background-color:#005B81 !important; }
 }
 
 /* Domeniche */
+#grid thead th.saturday { color:#d32f2f; }
+#grid thead th.sunday { color:#d32f2f; }
 #grid thead th.holiday { color:#d32f2f; }
 
 /* Weekday label */

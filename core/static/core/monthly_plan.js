@@ -42,43 +42,83 @@
     const k = String(key).trim().toLowerCase();
     if (PROF_COLORS.has(k)) return PROF_COLORS.get(k);
 
-    // Colori più marcati ma sempre leggibili su testo nero
+    // Colori marcati ma leggibili su testo nero
     const h = hash32(k);
-    const hue = h % 360;                // rotazione completa
-    const sat = 45 + (h % 25);          // 45–70% saturazione
-    const light = 78 + (h % 8);         // 78–85% luminosità
+    const hue = h % 360;
+    const sat = 45 + (h % 25);      // 45–70%
+    const light = 78 + (h % 8);     // 78–85%
     const col = `hsl(${hue} ${sat}% ${light}%)`;
 
     PROF_COLORS.set(k, col);
     return col;
   }
 
-
-// Inizializza i tooltip quando M.Tooltip è pronto
+  // Tooltip lazy
   function initTooltipsLazy(maxMs = 3000) {
-  const start = Date.now();
-  (function tick() {
-    if (window.M && M.Tooltip) {
-      try { M.Tooltip.init(document.querySelectorAll('.tooltipped')); } catch (_) {}
-      return;
-    }
-    if (Date.now() - start > maxMs) return; // smetti di riprovare
-    setTimeout(tick, 80);
-  })();
-}
+    const start = Date.now();
+    (function tick() {
+      if (window.M && M.Tooltip) {
+        try { M.Tooltip.init(document.querySelectorAll('.tooltipped')); } catch (_) {}
+        return;
+      }
+      if (Date.now() - start > maxMs) return;
+      setTimeout(tick, 80);
+    })();
+  }
 
-    // Helper CSRF
+  // CSRF
   function getCookie(name) {
     const value = `; ${document.cookie}`;
     const parts = value.split(`; ${name}=`);
     if (parts.length === 2) return parts.pop().split(';').shift();
   }
 
+  // --- Festività Italia + Pasqua/Lunedì dell'Angelo ---
+  function easterDate(year){
+    // Algoritmo Meeus/Jones/Butcher
+    const a = year % 19;
+    const b = Math.floor(year/100);
+    const c = year % 100;
+    const d = Math.floor(b/4);
+    const e = b % 4;
+    const f = Math.floor((b+8)/25);
+    const g = Math.floor((b - f + 1)/3);
+    const h = (19*a + b - d - g + 15) % 30;
+    const i = Math.floor(c/4);
+    const k = c % 4;
+    const l = (32 + 2*e + 2*i - h - k) % 7;
+    const m = Math.floor((a + 11*h + 22*l)/451);
+    const month = Math.floor((h + l - 7*m + 114)/31); // 3=Marzo, 4=Aprile
+    const day   = ((h + l - 7*m + 114) % 31) + 1;
+    return new Date(year, month-1, day);
+  }
+  function addDays(d, n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
+
+  function isItalianHoliday(y, m, d){
+    const fixed = new Set([
+      `${y}-01-01`, // Capodanno
+      `${y}-01-06`, // Epifania
+      `${y}-04-25`, // Liberazione
+      `${y}-05-01`, // Lavoro
+      `${y}-06-02`, // Repubblica
+      `${y}-08-15`, // Ferragosto
+      `${y}-11-01`, // Ognissanti
+      `${y}-12-08`, // Immacolata
+      `${y}-12-25`, // Natale
+      `${y}-12-26`  // Santo Stefano
+    ]);
+    const easter = easterDate(y);
+    const easterISO = easter.toISOString().slice(0,10);
+    const easterMonISO = addDays(easter,1).toISOString().slice(0,10);
+    const iso = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    return fixed.has(iso) || iso === easterISO || iso === easterMonISO;
+  }
+
   // -------------------------------
   // Config/refs bootstrap
   // -------------------------------
   document.addEventListener("DOMContentLoaded", () => {
-    // Inizializza Modal (i select li abbiamo già inizializzati sopra)
+    // Modal
     const modalElem = $("#noteModal");
     if (modalElem && window.M && M.Modal) {
       M.Modal.init(modalElem, { dismissible: true });
@@ -135,7 +175,7 @@
         if (window.M?.toast) M.toast({ html: "Errore inizializzazione", classes: "red" });
         else console.error("Errore inizializzazione");
       });
-    });
+  });
 
 
   // -------------------------------
@@ -149,14 +189,24 @@
     const data = await res.json();
     state.days = data.days;
 
-    // Header
+    // Header con flag giorno
+    const dayFlags = {}; // i -> { saturday, sunday, holiday }
     const weekdayFmt = new Intl.DateTimeFormat("it-IT", { weekday: "short" });
     for (let i = 1; i <= state.days; i++) {
       const th = document.createElement("th");
       const date = new Date(year, month - 1, i);
       const wd = weekdayFmt.format(date);
-      th.innerHTML = `<div>${i}</div><div class="day-label">${wd}</div>`;
-      if (date.getDay() === 0) th.classList.add("holiday");
+      const dow = date.getDay(); // 0=Dom, 6=Sab
+      const isSun = (dow === 0);
+      const isSat = (dow === 6);
+      const isHol = isItalianHoliday(year, month, i);
+
+      th.innerHTML = `<div class="day-num">${i}</div><div class="day-label">${wd}</div>`;
+      if (isSun) th.classList.add("sunday");
+      if (isSat) th.classList.add("saturday");
+      if (isHol) th.classList.add("holiday");
+
+      dayFlags[i] = { saturday:isSat, sunday:isSun, holiday:isHol };
       gridHead.appendChild(th);
     }
 
@@ -168,12 +218,11 @@
       th.textContent = row.profession;
       tr.appendChild(th);
 
-      // Colore per tutta la riga in base alla mansione (uso la label base senza suffisso)
+      // Colore riga per mansione
       const isSpacer = !!row.spacer;
-      const rowKey = row.profession || "";           // es. "Ufficio"
+      const rowKey = row.profession || "";
       const rowBg  = isSpacer ? null : colorForProfession(rowKey);
 
-      // evidenzia header mansione
       if (isSpacer) {
         tr.classList.add("spacer-row");
         th.classList.add("spacer-head");
@@ -188,7 +237,13 @@
         td.dataset.professionId = row.profession_id;
         td.dataset.day = i;
 
-        // colore riga per mansione
+        // Sabato/Domenica/Festività: SOLO sulle celle del giorno
+        const f = dayFlags[i];
+        if (f?.saturday) td.classList.add("saturday");
+        if (f?.sunday)   td.classList.add("sunday");
+        if (f?.holiday)  td.classList.add("holiday");
+
+        // Colore riga per mansione
         if (isSpacer) {
           td.classList.add("spacer-cell");
         } else if (rowBg) {
@@ -222,7 +277,7 @@
       gridBody.appendChild(tr);
     });
 
-    // init tooltip per eventuali note "latenti" nella comparsa
+    // tooltip su note
     initTooltipsLazy();
   }
 
@@ -278,16 +333,15 @@
     });
   }
 
-    // -------------------------------
-    // Contenitore scrollabile(click & drag)
-    // -------------------------------
-
+  // -------------------------------
+  // Contenitore scrollabile (auto-scroll durante drag)
+  // -------------------------------
   function initAutoScroll(state) {
-    const wrapper = state.grid.closest('.grid-wrapper'); //
+    const wrapper = state.grid.closest('.grid-wrapper');
     if (!wrapper) return;
 
-    const EDGE = 40;               // px dal bordo che attiva lo scroll
-    const MAX_SPEED = 28;          // px per frame (~60fps)
+    const EDGE = 40;
+    const MAX_SPEED = 28;
     let rafId = null;
     let mouseX = 0, mouseY = 0;
     let active = false;
@@ -351,7 +405,6 @@
     });
   }
 
-
   // -------------------------------
   // Filtro professioni (colonna 0)
   // -------------------------------
@@ -407,7 +460,7 @@
     applyFilter();
   }
 
-  // --- FILTRO DIPENDENTI (live) ---
+  // --- Filtro dipendenti (live) ---
   function initEmployeeFilterLive() {
     const input   = document.getElementById('filter-emp');
     const clearBtn= document.getElementById('filter-emp-clear');
@@ -442,10 +495,7 @@
           const td = tr.cells[c];
           // usiamo il dataset.name messo a render, più robusto del textContent
           const empName = (td && td.dataset && td.dataset.name) ? td.dataset.name : td.textContent;
-          if (normalize(empName).includes(q)) {
-            match = true;
-            break;
-          }
+          if (normalize(empName).includes(q)) { match = true; break; }
         }
 
         tr.style.display = match ? '' : 'none';
@@ -470,7 +520,6 @@
     }
     applyFilter();
   }
-
 
   // -------------------------------
   // APPLY (assegnazione)
@@ -507,8 +556,8 @@
       });
 
       if (resp.status === 409) {
-      const js = await resp.json().catch(() => ({}));
-      const conflicts = js.conflicts || [];
+        const js = await resp.json().catch(() => ({}));
+        const conflicts = js.conflicts || [];
 
           if (conflicts.length) {
             // prendiamo il nome del lavoratore selezionato dalla tendina
@@ -636,7 +685,6 @@
     URL.revokeObjectURL(url);
   }
 
-
   // -------------------------------
   // NOTIFY (invio email)
   // -------------------------------
@@ -668,7 +716,6 @@
       downloadNotifyRecipientsCSV(js, planId);
     });
   }
-
 
   // -------------------------------
   // NOTE editing (dblclick + modal + salvataggio)

@@ -1,21 +1,26 @@
 TIER-1
-Creare due menu nella barra superiore "Template PT"-> lista template PT e + Crea nuovo Template piano turni e "Piani turno"->lista  PT e + Crea nuovo piano turni
-
 
 Cancellazione riga template(tutto sincronizzato con il PT)
+
 Prevedere inserimento riga vuota nel template PT
 
-TIER-2
-Rimuovere la dicitura REV incrementale dalla notifica via email
-Dopo inserimento lavoratore su griglia piano turni, il refresh della grid deve lasciarmi la visualizzazione sulla riga dell'ultiumo inserimento, non nuovamente dalla prima riga
+Dopo inserimento lavoratore su griglia piano turni, il refresh della grid deve lasciarmi la visualizzazione sulla riga
+    dell'ultiumo inserimento, non nuovamente dalla prima riga
 
+
+TIER-2
+
+Refactoring degli style su sorgenti dedicati (calendar_notes.html)
+Riportare l'intero calendario del mese nell'email di notifica. Quindi se in alcuni giorni il nome del dipendente non compare,
+    riportare la riga del giorno vuota (DA DISCUTERE)
 
 
 
 TIER-3
-Giorno sabato e festività nazionali in rosso(calendario shiftplan)
-Refactoring degli style su sorgenti dedicati (calendar_notes.html)
+
 Copia incolla celle turno tramite ctrl+c ctrl+v
 Copia incolla celle turno tramite DnD
+
+Rimuovere la dicitura REV incrementale dalla notifica via email
 
 -----   Mutuo lavoro su stesso piano turni di due o più account connessi
