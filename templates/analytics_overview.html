@@ -1,0 +1,125 @@
+{% extends "layout.html" %}
+{% load static %}
+{% block title %}Statistiche{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width:1180px">
+  <h4 class="valign-wrapper" style="gap:8px">
+    <i class="material-icons">insights</i> Statistiche
+  </h4>
+  <!-- Filtri -->
+
+  <!-- Toolbar Filtri preset -->
+  <div class="card" style="margin-top:8px">
+    <div class="card-content" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <span class="grey-text text-darken-1">Periodo rapido:</span>
+      <button class="btn" data-preset="m1" title="Ultimo mese">M1</button>
+      <button class="btn" data-preset="q1" title="Ultimo trimestre">Q1</button>
+      <button class="btn" data-preset="h1" title="Ultimo semestre">H1</button>
+      <button class="btn" data-preset="y1" title="Ultimo anno">Y1</button>
+      <span class="grey-text text-darken-1" id="preset-note" style="margin-left:auto"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-content">
+      <div class="row" style="margin-bottom:0">
+        <div class="input-field col s12 m4">
+          <select id="company">
+            <option value="" selected>Tutte le aziende</option>
+            {% for c in companies %}
+              <option value="{{ c.id }}">{{ c.name }}</option>
+            {% endfor %}
+          </select>
+          <label>Azienda</label>
+        </div>
+
+        <div class="input-field col s6 m3">
+          <input id="start" type="date" value="{{ default_start }}">
+          <label class="active" for="start">Dal</label>
+        </div>
+        <div class="input-field col s6 m3">
+          <input id="end" type="date" value="{{ default_end }}">
+          <label class="active" for="end">Al</label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI -->
+  <div class="row">
+
+    <div class="col s12 m6 l3">
+      <div class="card"><div class="card-content center">
+        <div class="grey-text text-darken-1">Dipendenti assegnati</div>
+        <div id="kpi-emp" style="font-size:2rem;font-weight:600">0</div>
+      </div></div>
+    </div>
+
+    <div class="col s12 m6 l3">
+      <div class="card"><div class="card-content center">
+        <div class="grey-text text-darken-1">N° Assegnazioni turno</div>
+        <div id="kpi-assign-turno" style="font-size:2rem;font-weight:600">0</div>
+      </div></div>
+    </div>
+    <!-- Card KPI generate in tempo reale in base ai KPI originati dallesclusione generata da parole chiavi es.ferie, permessi, congedo -->
+    <div class="row" id="kpi-excluded-row"></div>
+
+  </div>
+
+  <!-- Tabelle -->
+  <div class="row">
+    <div class="col s12 m6">
+      <div class="card">
+        <div class="card-content">
+          <span class="card-title">Tabella per turno</span>
+          <table class="striped responsive-table" id="tbl-shift">
+            <thead><tr><th>Turno</th><th>Assegnazioni</th><th>Dipendenti</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="col s12 m6">
+      <div class="card">
+        <div class="card-content">
+          <span class="card-title">Tabella Preposto</span>
+          <table class="striped responsive-table" id="tbl-preposto">
+            <thead><tr><th>Mansione</th><th>Assegnazioni</th><th>Dipendenti</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+  <!-- Grafici -->
+  <div class="row">
+    <div class="col s12 m6">
+      <div class="card">
+        <div class="card-content">
+          <span class="card-title">Per turno</span>
+          <div style="position:relative;height:320px"><canvas id="ch-shift"></canvas></div>
+        </div>
+      </div>
+    </div>
+    <div class="col s12 m6">
+      <div class="card">
+        <div class="card-content">
+          <span class="card-title">Preposto</span>
+          <div style="position:relative;height:320px"><canvas id="ch-preposto"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_body %}
+<!-- Libreria Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<!-- Script dedicato della pagina -->
+<script src="{% static 'core/analytics_overview.js' %}"></script>
+
+{% endblock %}

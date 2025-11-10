@@ -3,6 +3,7 @@ from collections import defaultdict
 
 from io import BytesIO
 
+from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_POST
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -14,12 +15,12 @@ from django.template.loader import render_to_string
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.db import transaction
+from django.db.models import F, Subquery, Count, Q
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import logout
 from django.contrib import messages
 from django.http import HttpResponse, JsonResponse
-from django.db.models import F, Subquery
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.shortcuts import render, redirect
 
@@ -30,7 +31,7 @@ from openpyxl.utils import get_column_letter
 
 from .forms import PlanCreateForm
 from .forms import TemplateCreateForm
-from .models import Template, TemplateRow, Profession, AssignmentSnapshot, PlanRow
+from .models import Template, TemplateRow, Profession, AssignmentSnapshot, PlanRow, Employee, Company, Assignment
 
 from .serializers import *
 
@@ -140,6 +141,32 @@ def italy_holidays(year: int) -> set[dt.date]:
     hs.add(pasquetta)
     return hs
 
+def _range_from_preset(preset: str) -> tuple[dt.date, dt.date]:
+    today = dt.date.today()
+    if preset == "m1":   # ultimo mese
+        start = (today.replace(day=1) - dt.timedelta(days=1)).replace(day=1)
+        end_last = (today.replace(day=1) - dt.timedelta(days=1))
+        return start, end_last
+    if preset == "q1":   # ultimo trimestre
+        m = ((today.month - 1)//3)*3 + 1
+        q_start = dt.date(today.year, m, 1)
+        prev_q_end = q_start - dt.timedelta(days=1)
+        prev_m = ((prev_q_end.month - 1)//3)*3 + 1
+        prev_q_start = dt.date(prev_q_end.year, prev_m, 1)
+        return prev_q_start, prev_q_end
+    if preset == "h1":   # ultimo semestre
+        m = 1 if today.month <= 6 else 7
+        sem_start = dt.date(today.year, m, 1)
+        prev_sem_end = sem_start - dt.timedelta(days=1)
+        prev_m = 1 if prev_sem_end.month <= 6 else 7
+        prev_sem_start = dt.date(prev_sem_end.year, prev_m, 1)
+        return prev_sem_start, prev_sem_end
+    if preset == "y1":   # ultimo anno solare completo
+        start = dt.date(today.year-1, 1, 1)
+        end   = dt.date(today.year-1, 12, 31)
+        return start, end
+    # default: ultimi 30 giorni rolling
+    return today - dt.timedelta(days=29), today
 
 class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = Employee.objects.all().order_by('last_name','first_name')
@@ -948,3 +975,129 @@ def template_insert_row(request, pk: int):
 @login_required
 def privacy(request):
     return render(request, "privacy/privacy.html")
+
+@login_required
+def analytics_overview(request):
+    # aziende con almeno una assegnazione
+    company_ids = (Assignment.objects
+                   .values_list("employee__company_id", flat=True)
+                   .distinct())
+    companies = Company.objects.filter(id__in=company_ids).order_by("name")
+
+    # default periodo = ultimi 30 giorni
+    start, end = _range_from_preset(None)
+    ctx = {
+        "companies": companies,
+        "default_start": start.isoformat(),
+        "default_end": end.isoformat(),
+    }
+    return render(request, "analytics_overview.html", ctx)
+
+@login_required
+def analytics_summary(request):
+    """
+    GET /analytics/summary/?company_id=ID&start=YYYY-MM-DD&end=YYYY-MM-DD&preset=m1|q1|h1|y1
+    JSON per grafici e tabelle.
+    """
+    company_id = request.GET.get("company_id")
+    preset = request.GET.get("preset")
+    start_s = request.GET.get("start")
+    end_s = request.GET.get("end")
+
+    if preset:
+        start, end = _range_from_preset(preset)
+    else:
+        start = parse_date(start_s) if start_s else None
+        end = parse_date(end_s) if end_s else None
+        if not (start and end):
+            start, end = _range_from_preset(None)
+
+    qs = Assignment.objects.select_related("employee","profession","shift_type","plan") \
+                           .filter(date__range=(start, end))
+    if company_id:
+        qs = qs.filter(employee__company_id=company_id)  # cambia in plan__company_id se l'azienda è sul Plan
+
+    # --- Esclusioni per "assenze/permessi" ---
+    EXCLUDE_WORDS = [
+        "Formazione",
+        "Ferie",
+        "Permessi",
+        "Congedo",
+        "Congedo Matrimoniale",
+        "Permesso 104",
+        "Permesso Sindacale",
+        "Malattia",
+        "Assenza",
+        "Sciopero",
+    ]
+    # filtro OR su profession__name icontains
+    q_or = Q()
+    for kw in EXCLUDE_WORDS:
+        q_or |= Q(profession__name__icontains=kw)
+
+    qs_excluded = qs.filter(q_or)
+    qs_turno = qs.exclude(q_or)
+
+    # KPI
+    total_all = qs.count()
+    total_turno = qs_turno.count()
+
+    # dipendenti assegnati nel periodo (distinti)
+    employees_assigned = qs.values("employee_id").distinct().count()
+
+    # dipendenti totali registrati nel sistema
+    if company_id:
+        employees_total = Employee.objects.filter(company_id=company_id).count()
+        # Se l'azienda è su Plan e NON su Employee, usa:
+        # employees_total = Employee.objects.filter(assignment__plan__company_id=company_id).distinct().count()
+    else:
+        employees_total = Employee.objects.count()
+
+    # breakdown esclusi per parola
+    excluded_breakdown = []
+    excluded_total = 0
+    for kw in EXCLUDE_WORDS:
+        n = qs.filter(profession__name__icontains=kw).count()
+        excluded_breakdown.append({"label": kw, "count": n})
+        excluded_total += n
+
+    # Tabelle già presenti
+    per_shift = (qs.values("shift_type__id","shift_type__code","shift_type__label")
+                   .annotate(assignments=Count("id"),
+                             employees=Count("employee_id", distinct=True))
+                   .order_by("shift_type__id"))
+
+    preposto = (qs.filter(profession__name__icontains="preposto")
+                  .values("profession__name")
+                  .annotate(assignments=Count("id"),
+                            employees=Count("employee_id", distinct=True))
+                  .order_by("-assignments"))
+
+    chart_shift = {
+        "labels": [r["shift_type__label"] or r["shift_type__code"] or "—" for r in per_shift],
+        "datasets": [
+            {"label": "Assegnazioni", "data": [r["assignments"] for r in per_shift]},
+            {"label": "Dipendenti distinti", "data": [r["employees"] for r in per_shift]},
+        ]
+    }
+    chart_preposto = {
+        "labels": [r["profession__name"] for r in preposto] or ["Nessuna"],
+        "datasets": [
+            {"label": "Assegnazioni", "data": [r["assignments"] for r in preposto] or [0]},
+            {"label": "Dipendenti distinti", "data": [r["employees"] for r in preposto] or [0]},
+        ]
+    }
+
+    return JsonResponse({
+        "scope": {"start": start.isoformat(), "end": end.isoformat(), "company_id": company_id},
+        "kpi": {
+            "assignments_all": total_all,
+            "assignments_turno": total_turno,
+            "employees_assigned": employees_assigned,
+            "employees_total": employees_total,
+            "excluded_total": excluded_total,
+            "excluded_breakdown": excluded_breakdown,
+        },
+        "tables": {"per_shift": list(per_shift), "preposto": list(preposto)},
+        "charts": {"per_shift": chart_shift, "preposto": chart_preposto},
+    })
