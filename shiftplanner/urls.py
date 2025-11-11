@@ -54,7 +54,9 @@ urlpatterns = [
     path("piani/", views.plans_area, name="plans_area"),
     path("template-piani/", views.templates_area, name="templates_area"),
     path('api/templates/<int:pk>/insert_row/', core_views.template_insert_row, name='template-insert-row'),
+    path("api/templates/<int:pk>/delete_row/", views.template_delete_row, name="template_delete_row"),
     path("privacy/", views.privacy, name="privacy"),
     path("analytics/", views.analytics_overview, name="analytics-overview"),
     path("analytics/summary/", views.analytics_summary, name="analytics-summary"),
+
 ]

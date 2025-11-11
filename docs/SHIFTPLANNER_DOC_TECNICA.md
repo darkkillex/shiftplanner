@@ -182,5 +182,15 @@ docker compose exec web python manage.py shell_plus
 - Accesso dashboard statistiche limitato a staff.
 
 ---
+## 9. Manutenzione e strumenti di verifica
+- Verificare e riallineare la coerenza tra TemplateRow e PlanRow:
+
+| Comando                                                                                  | Descrizione                                                                                                                                 | Esempio d’uso                                       |
+| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| `python manage.py sync_template_plan_rows --verbose`                                     | Analizza e riallinea automaticamente le righe dei piani rispetto al template (per ordine). Non modifica nulla se non si aggiunge `--apply`. | Da usare dopo interventi manuali o import massivi.  |
+| `python manage.py sync_template_plan_rows --apply --verbose`                             | Applica effettivamente le correzioni: crea, aggiorna o rimuove righe incoerenti.                                                            | Eseguire **solo dopo un backup** del database.      |
+| `python manage.py audit_template_plan_integrity`                                         | Verifica l’integrità di tutti i piani e template, senza modificarli, e genera un file CSV riepilogativo delle differenze.                   | Utile per controllo mensile o prima di una release. |
+| `python manage.py audit_template_plan_integrity --output /app/staticfiles/integrity.csv` | Stessa verifica ma con percorso personalizzato per il report.                                                                               | Per archiviazione o audit automatizzati.            |
+
 
 _Fine documento tecnico._

@@ -973,6 +973,119 @@ def template_insert_row(request, pk: int):
     }, status=201)
 
 @login_required
+@user_passes_test(_is_staff_or_superuser)
+@require_POST
+@transaction.atomic
+def template_delete_row(request, pk: int):
+    """
+    Elimina una riga del Template identificandola per 'order' su TUTTI i piani che usano quel template.
+    Blocca se una delle righe mappate (stesso 'order' nel piano) ha assegnazioni.
+    """
+    import json
+    from django.db.models import Count
+    from .models import Template, TemplateRow, Plan, PlanRow, Assignment, Profession
+
+    try:
+        data = json.loads(request.body.decode("utf-8") or "{}")
+    except Exception:
+        return JsonResponse({"detail": "JSON non valido"}, status=400)
+
+    tr_id = data.get("template_row_id")
+    if not tr_id:
+        return JsonResponse({"detail": "template_row_id obbligatorio."}, status=400)
+
+    # Template + riga
+    try:
+        template = Template.objects.prefetch_related("rows").get(pk=pk)
+    except Template.DoesNotExist:
+        return JsonResponse({"detail": "Template non trovato."}, status=404)
+
+    try:
+        tr = TemplateRow.objects.get(pk=int(tr_id), template=template)
+    except TemplateRow.DoesNotExist:
+        return JsonResponse({"detail": "Riga non trovata nel template."}, status=404)
+
+    target_order = tr.order  # chiave di mappatura tra TemplateRow e PlanRow
+
+    # Se spacer: sempre eliminabile. Si propaga per 'order' nei piani.
+    if tr.is_spacer:
+        tr.delete()
+        # elimina PlanRow alla stessa posizione nei piani
+        for plan in Plan.objects.filter(template=template):
+            pr = PlanRow.objects.filter(plan=plan, order=target_order).first()
+            if pr:
+                pr.delete()
+                _normalize_plan_orders(plan)
+        _normalize_template_orders(template)
+        return JsonResponse({"ok": True, "deleted_spacer": True, "order": target_order}, status=200)
+
+    # Riga con duty: blocca se QUALSIASI piano ha assegnazioni su quella riga (per order)
+    blocking = []
+    affected_plan_ids = []
+    plans = list(Plan.objects.filter(template=template))
+    for plan in plans:
+        pr = PlanRow.objects.filter(plan=plan, order=target_order).first()
+        if not pr:
+            continue  # piano desincronizzato: lo saltiamo, sarà normalizzato dopo
+        affected_plan_ids.append(plan.id)
+
+        duty_name = (pr.duty or "").strip()
+        if not duty_name:
+            continue  # riga vuota nel piano → non blocca
+
+        # check assegnazioni sulla profession del piano
+        has_ass = Assignment.objects.filter(
+            plan=plan, profession__name=duty_name
+        ).select_related("employee", "shift_type").exists()
+
+        if has_ass:
+            # raccogli fino a 20 dettagli per feedback
+            ass_details = list(
+                Assignment.objects.filter(plan=plan, profession__name=duty_name)
+                .select_related("employee", "shift_type")
+                .order_by("date")[:20]
+            )
+            for a in ass_details:
+                blocking.append({
+                    "piano": plan.name,
+                    "data": a.date.strftime("%d/%m/%Y"),
+                    "dipendente": a.employee.full_name() if a.employee_id else "",
+                    "turno": (a.shift_type.label if a.shift_type_id else ""),
+                    "mansione": duty_name,
+                })
+
+    if blocking:
+        # blocca e spiega cosa rimuovere prima
+        return JsonResponse({
+            "ok": False,
+            "detail": (
+                "Impossibile eliminare la riga: esistono assegnazioni attive sulla mansione "
+                f"(posizione #{target_order}) in uno o più piani. Rimuovi prima tali assegnazioni."
+            ),
+            "assegnazioni": blocking
+        }, status=409)
+
+    # Nessun blocco: elimina dal template e dai piani alla stessa 'order'
+    deleted_duty = (tr.duty or "").strip()
+    tr.delete()
+
+    for plan in plans:
+        pr = PlanRow.objects.filter(plan=plan, order=target_order).first()
+        if pr:
+            pr.delete()
+            _normalize_plan_orders(plan)
+
+    _normalize_template_orders(template)
+
+    return JsonResponse({
+        "ok": True,
+        "deleted_duty": deleted_duty,
+        "order": target_order,
+        "propagated_plans": affected_plan_ids,
+    }, status=200)
+
+
+@login_required
 def privacy(request):
     return render(request, "privacy/privacy.html")
 

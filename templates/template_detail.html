@@ -13,23 +13,39 @@
     </h4>
   </div>
 
-  <!-- Lista righe template -->
+<!-- Lista righe template -->
   <div class="col s12 m7">
     <ul class="collection" id="tpl-rows">
       {% for r in template.rows.all|dictsort:"order" %}
-        <li class="collection-item" data-row-id="{{ r.id }}" data-order="{{ r.order }}">
-          <span class="grey-text">#{{ r.order }}</span>
-          {% if r.is_spacer %}
-            <span class="chip grey lighten-3 black-text" style="margin-left:8px">[spazio]</span>
-          {% else %}
-            <span class="chip blue-grey lighten-5 black-text" style="margin-left:8px">{{ r.duty }}</span>
-          {% endif %}
+        <li class="collection-item valign-wrapper"
+            data-row-id="{{ r.id }}"
+            data-duty="{{ r.duty }}"
+            data-template-id="{{ template.id }}">
+          <div class="left">
+            <span class="grey-text">#{{ r.order }}</span>
+            {% if r.is_spacer %}
+              <span class="chip grey lighten-3 black-text" style="margin-left:8px">[spazio]</span>
+            {% else %}
+              <span class="chip blue-grey lighten-5 black-text" style="margin-left:8px">{{ r.duty }}</span>
+            {% endif %}
+          </div>
+
+          <div class="right">
+            <button type="button"
+                    class="btn-flat red-text js-row-delete"
+                    data-template-id="{{ template.id }}"
+                    data-row-id="{{ r.id }}"
+                    title="Elimina riga">
+              <i class="material-icons">delete</i>
+            </button>
+          </div>
         </li>
       {% empty %}
         <li class="collection-item">Nessuna riga nel template.</li>
       {% endfor %}
     </ul>
   </div>
+
 
   <!-- Form inserimento riga -->
   <div class="col s12 m5">
@@ -86,59 +102,6 @@
 {% endblock %}
 
 {% block extra_body %}
-<script>
-(function(){
-  function initMaterialize(){
-    if (!window.M) return;
-    try {
-      M.FormSelect.init(document.querySelectorAll('select'));
-    } catch(e){}
-  }
-  if (document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', initMaterialize, {once:true});
-  } else { initMaterialize(); }
-
-  function getCookie(name){
-    const v = `; ${document.cookie}`;
-    const p = v.split(`; ${name}=`);
-    if (p.length === 2) return p.pop().split(';').shift();
-  }
-
-  const btn = document.getElementById('btn-insert');
-  if (!btn) return;
-
-  btn.addEventListener('click', async ()=>{
-    const ref   = document.getElementById('ref-row').value;
-    const pos   = document.getElementById('position').value || 'after';
-    const duty  = document.getElementById('duty').value.trim();
-    const base  = document.getElementById('base').value.trim();
-    if (!ref){ return M.toast({html:'Seleziona la riga di riferimento', classes:'orange'}); }
-    if (!duty && !base){ return M.toast({html:'Inserisci duty o base', classes:'orange'}); }
-
-    const csrftoken = getCookie('csrftoken');
-    const url = '/api/templates/{{ template.id }}/insert_row/';
-    const body = { position: pos, template_row_id: Number(ref) };
-    if (duty) body.duty = duty; else body.base = base;
-
-    const resp = await fetch(url, {
-      method:'POST',
-      headers: { 'Content-Type':'application/json', ...(csrftoken ? {'X-CSRFToken':csrftoken} : {}) },
-      credentials: 'same-origin',
-      body: JSON.stringify(body)
-    });
-
-    if (!resp.ok){
-      let msg = 'Errore inserimento';
-      try { const j = await resp.json(); if (j.detail) msg = j.detail; } catch(_){}
-      return M.toast({html: msg, classes:'red'});
-    }
-
-    const js = await resp.json();
-    M.toast({html: `Inserita: ${js.duty} in posizione #${js.insert_order}`});
-
-    // ricarica per vedere ordine aggiornato e propagazione
-    location.reload();
-  });
-})();
-</script>
+<script> const templateId = {{ template.id }}; </script>
+<script src="{% static 'core/template_detail.js' %}"></script>
 {% endblock %}
