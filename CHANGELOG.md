@@ -1,3 +1,10 @@
+# v0.7.0
+* Aggiunta la pagina relativa alle Statistiche
+
+# v0.6.1
+* Introduzione del colore rosso nel calendario del PT, per domeniche (già presenti), sabati e festività italiane comandate
+* Snellita e resa più chiara la struttura dell'email di notifica del piano turni, ricevuta dai dipendenti
+
 # v0.6.0
 * Ristrutturata home page - aggiunta di card dedicate alle varie funzioni disponibili
 * Resa materialize pagina Profilo
