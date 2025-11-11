@@ -1,3 +1,7 @@
+# v0.7.1
+* Aggiunto backup DB schedulato
+* Aggiunta documentazione tecnica, utente e runbook operativo (agg. 11/11/2025)
+
 # v0.7.0
 * Aggiunta la pagina relativa alle Statistiche
 
