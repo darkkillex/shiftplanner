@@ -1,105 +1,185 @@
-# v0.7.1
-* Aggiunto backup DB schedulato
-* Aggiunta documentazione tecnica, utente e runbook operativo (agg. 11/11/2025)
+# 📘 Kairos ShiftPlanner — Registro delle versioni
 
-# v0.7.0
-* Aggiunta la pagina relativa alle Statistiche
+**Licenza:** MIT  
+**Tecnologie principali:** Django + DRF, PostgreSQL 15 (Docker), MaterializeCSS, Chart.js  
 
-# v0.6.1
-* Introduzione del colore rosso nel calendario del PT, per domeniche (già presenti), sabati e festività italiane comandate
-* Snellita e resa più chiara la struttura dell'email di notifica del piano turni, ricevuta dai dipendenti
+---
 
-# v0.6.0
-* Ristrutturata home page - aggiunta di card dedicate alle varie funzioni disponibili
-* Resa materialize pagina Profilo
-* Resa materialize pagina cambio password
+ShiftPlanner è un’applicazione web per la **gestione dei piani turni** aziendali, progettata per garantire flessibilità, tracciabilità e automazione.  
+Il presente file documenta in modo cronologico tutte le modifiche, funzionalità e fix introdotti nel tempo, seguendo le convenzioni di Semantic Versioning.  
+> Nota: le versioni elencate non riportano la data di rilascio per scelta progettuale.
 
-# v0.5.3
-* Inserita possibilità di inserimento mansione nel template PT, con conseguente modifica a cascata sui PT legati al template oggetto di modifica
-* Resa obbligatoria la selezione di Turno all'atto dell'assegnazione del lavoratore sul PT
-* Aggiunto footer materialize
-* Aggiunta pagina Informativa privacy
+---
 
-# v0.5.2
-* Le pagine PT e template PT sono state rese materialize e corredate di filtri live
-* Integrata colorazione alle righe mansioni nella tabella PT, per maggiore leggibilità delle righe
+## [v0.7.2]
+### ✨ Nuove funzionalità
+- Rimozione delle **righe mansione** nei template del piano turni, con **propagazione automatica** ai piani collegati.  
+- **Blocco di sicurezza**: impedita l’eliminazione di righe con assegnazioni attive.  
+- Comandi di **verifica e riallineamento** tra `TemplateRow` e `PlanRow`:
+  - `sync_template_plan_rows` per riallineare automaticamente i piani.
+  - `audit_template_plan_integrity` per generare report CSV di integrità.
 
-# v0.5.1
-* Feedback notifica selettiva maggiormente dettagliata
-* Download automatico del report di invio notifiche
+### 🛠️ Miglioramenti
+- Propagazione degli **ordini** fra template e piani più stabile.  
+- Script JS separato (`template_detail.js`) per la gestione delle righe nel template.  
+- Documentazione tecnica aggiornata (manutenzione e strumenti).
 
-# v0.5.0
-* Implementata notifica selettiva solamente per i lavoratori che subiscono modifiche al piano turni del mese
+---
 
-# v0.4.5
-* Bugfix: non veniva mostrato tutto il testo contenuto nel changelog accessibile dall'iperlink della vers.
-* Fissata navbar
-* Cambio del colore navbar a Pantone 308
+## [v0.7.1]
+### ✨ Nuove funzionalità
+- **Backup automatico giornaliero** del database (pg_dump schedulato).  
+- Aggiunta **documentazione tecnica**, **manuale utente** e **runbook operativo**.
 
-# v0.4.4
-* Adeguata pagina "nuovo template PT" al material style
-* Homepage: inserito un calendario che permette di inserire delle note/appunti
-* Menù a tendina PT -Lavoratore-: ordinata lista lavoratori per cognome-nome
-* Menù a tendina PT -Turno- e legenda notifiche: ordinata lista turni per id
+---
 
-# v0.4.3
-* Aggiunto nel lato admin la gestione dei template PT (inclusa la clonazione del template)
-* Aggiunta la possibilità di clonare i Plan (solo struttura/con assegnazioni)
+## [v0.7.0]
+### ✨ Nuove funzionalità
+- Pagina **Statistiche** con filtri per azienda e periodo, grafici (Chart.js) e tabelle riepilogative.  
+- KPI su turni, mansioni “Preposto” e conteggi esclusioni (ferie, permessi, ecc.).
 
-# v0.4.2
-* Corretta la gestione delle mansioni duplicate nei template e nel backend(gestione separata da convenzione '.NUMERO')
-* Visualizzazione Lista dei template in memoria
-* Aggiornamento Seed Professions per base di partenza lista mansioni
+---
 
-# v0.4.1
-* Aggiunto nel footer della notifica email il nome dell'utente che ha generato la revisione del PT ricevuto
-* Aggiunta nel footer dell'app la versione(dinamica) dell'applicazione e la consultazione del changelog
-* Style refactoring layout.html: separato style css e integrato in un sorgente specifico
+## [v0.6.1]
+### 🛠️ Miglioramenti
+- Evidenziazione in rosso nel calendario per **sabati, domeniche e festività italiane**.  
+- Email di notifica piano turni **snellita** e più leggibile.
 
-# v0.4.0
-* Funzionalità di invio del piano turni specifico piano turni a dipendenti in turno 
-* Aggiunto il tracking n° di Rev. del Piano turni generato sulla base degli invii effettuati via email 
-* Aggiunti elementi visivi (icone)
-* Accesso lato admin ristretto ai soli superusers
+---
 
-# v0.3.0
-* Aggiunta azione di download piano turni in formato .xlsx
-* Controllo duplicati assegnazione turno su stesso per il dipendente
-* Griglia piano turni scrollabile tramite DnD
+## [v0.6.0]
+### ✨ Nuove funzionalità
+- **Home page** ristrutturata con card funzionali.  
+- Adozione **Material Design** per Profilo e Cambio password.
 
-# v0.2.0
-* Celle - rimosso cod. Turno e inserita label dedicata
-* Aggiunto Campo Note (opzionale) da poter inserire all'atto dell'applicazione del turno
-* Modifica/rimozione/aggiunta nota su cella, dopo doppio click su cella 
-* Refactoring degli script JS in sorgenti dedicati 
-* Bug fixing non corretta inizializzazione e visualizzazione allo scorrere del mouse, delle note presenti 
-* Inserito blocco inserimento del lavoratore se già presente su altre mansioni lo stesso giorno
-* Inibito lato Area Amministrazione a utenti Staff 
-* Aggiunta azione per estrazione del piano mensile in .csv/.xlsx 
-* Homepage: reso indipendente da sezione admin la funzione +Crea nuovo Piano 
-* Inserito filtro live sulla tabella Dipendenti
-* Riposizionati componenti e tasti secondo logiche più coerenti 
-* Aggiunte icone material sui campi mancanti 
-* Aggiunto scorrimento della tabella tramite click-and-hold del mouse per scorrere e selezionare più giorni (non visibili)
+---
 
-# v0.1.3
-* Inserito filtro live sulla tabella Professioni
-* Inseriti nome e cognome dell'utente connesso nella sezione Profilo
-* Inserito badge privilegi utente connesso nella sezione Profilo
-* Riposizionati i bottoni e i menù nella navbar
+## [v0.5.3]
+### ✨ Nuove funzionalità
+- **Inserimento riga mansione** nel template con propagazione ai piani derivati.  
+- Reso **obbligatorio** il campo **Turno** in fase di assegnazione.  
+- Aggiunti **footer Materialize** e **pagina Informativa Privacy**.
 
-# v0.1.2
-* Aggiunta nella griglia PT, iniziali del giorno (Es. Lun, mar, mer etc.)
-* Aggiunta nella griglia, colorazione intestazioni delle date festive in rosso 
-* Aggiunto material design alla UI 
-* Aggiunta responsività tabella 
-* Aggiunta barra per scorrimento in orizzontale per ovviare al problema di navigazione derivante da grossa quantità di dati (Professioni)
+---
 
-# v0.1.1
-* Aggiunta sulla navbar profilo utente loggato 
-* Aggiunta consultazione profilo utente loggato 
-* Aggiunta funzione di cambio password
+## [v0.5.2]
+### 🖌️ UI/UX
+- Pagine **Piano Turni** e **Template** portate a **Materialize**, con **filtri live**.  
+- Colorazione alternata/tematica delle righe mansioni per migliorare la leggibilità.
 
-# v0.1.0
-* Bugfix: azione logout non funzionante 
-* Creata azione "Rimuovi da celle selezionate" 
+---
+
+## [v0.5.1]
+### 🛠️ Miglioramenti
+- Report notifica selettiva **più dettagliato**.  
+- **Download automatico** del report di invio notifiche.
+
+---
+
+## [v0.5.0]
+### ✨ Nuove funzionalità
+- **Notifica selettiva** ai soli dipendenti con modifiche nel piano mensile.
+
+---
+
+## [v0.4.5]
+### 🐞 Bugfix
+- Corretto il rendering del testo del changelog nel popup versione.
+
+### 🛠️ Miglioramenti
+- Navbar resa **fissa** e aggiornata al colore **Pantone 308**.
+
+---
+
+## [v0.4.4]
+### ✨ Nuove funzionalità
+- **Calendario con note** in homepage.  
+- Ordinamento menu a tendina: **Lavoratori** per cognome-nome, **Turni** per ID.  
+- Pagina “Nuovo Template PT” allineata a **Material Design**.
+
+---
+
+## [v0.4.3]
+### ✨ Nuove funzionalità
+- Gestione **Template PT** lato admin, inclusa **clonazione template**.  
+- Possibilità di **clonare i piani** (solo struttura o con assegnazioni).
+
+---
+
+## [v0.4.2]
+### 🛠️ Miglioramenti
+- Gestione mansioni duplicate via convenzione `.<NUMERO>` in template e backend.  
+- Visualizzazione **lista template** disponibile lato admin.  
+- Aggiornato **seed professioni** per base mansioni.
+
+---
+
+## [v0.4.1]
+### ✨ Nuove funzionalità
+- Nome dell’utente che genera la revisione **incluso nel footer** dell’email.  
+- Footer app con **versione dinamica** e **changelog** consultabile.  
+- Refactoring layout: **CSS separato** in file dedicato.
+
+---
+
+## [v0.4.0]
+### ✨ Nuove funzionalità
+- **Invio piano turni via email** ai dipendenti.  
+- **Tracking revisioni** del PT in base agli invii.  
+- Interfaccia amministrativa **ristretta ai superuser**.
+
+---
+
+## [v0.3.0]
+### ✨ Nuove funzionalità
+- **Export Excel (.xlsx)** del piano turni.  
+- Blocco **duplicati assegnazione** per dipendente.  
+- Scorrimento griglia tramite **drag & drop**.
+
+---
+
+## [v0.2.0]
+### ✨ Nuove funzionalità
+- **Label turno** nelle celle al posto del codice.  
+- Campo **Note** opzionale all’atto dell’assegnazione.  
+- **Modifica/rimozione/aggiunta** nota su doppio click.  
+- Blocco inserimento se il lavoratore è già assegnato altrove nello stesso giorno.  
+- Azione di export piano mensile in **CSV/XLSX**.  
+- Home: azione **Crea nuovo piano** indipendente dalla sezione admin.  
+- Refactoring JS in **sorgenti dedicati**.
+
+### 🖌️ UI/UX
+- Scorrimento tabella tramite **click-and-hold** per selezione su più giorni.  
+- Riposizionamento componenti e tasti per coerenza.  
+- Icone Material aggiunte sui campi mancanti.
+
+---
+
+## [v0.1.3]
+### 🖌️ UI/UX
+- **Filtro live** sulla tabella Professioni.  
+- Mostrati **nome e cognome** dell’utente nel profilo.  
+- Badge **privilegi utente** visibile nel profilo.
+
+---
+
+## [v0.1.2]
+### 🖌️ UI/UX
+- Introdotta colorazione rossa per **date festive**.  
+- Aggiunto **Material Design** e **responsività** alle tabelle.  
+- Barra di scorrimento **orizzontale** per molte professioni.
+
+---
+
+## [v0.1.1]
+### ✨ Nuove funzionalità
+- **Profilo utente loggato** in navbar e pagina dedicata.  
+- Funzione **cambio password**.
+
+---
+
+## [v0.1.0]
+### 🚀 Prima versione
+- Funzionalità base di gestione piani turni.  
+- Azione **“Rimuovi da celle selezionate”**.  
+- Bugfix: **logout** non funzionante.
