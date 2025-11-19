@@ -1,0 +1,16 @@
+  #calendar { background:#fff; padding:12px; border-radius:8px; }
+  /* Lista */
+  .collection .collection-item.due-soon { background:#fff8e1; }   /* giallo chiaro */
+  .collection .collection-item.overdue  { background:#ffebee; }   /* rosso chiaro */
+  .collection .collection-item.done { opacity:.6; text-decoration: line-through; }
+
+  /* Eventi calendario */
+  .fc-daygrid-event.due-soon { background:#ffe082; border-color:#ffe082; }
+  .fc-daygrid-event.overdue  { background:#ef9a9a; border-color:#ef9a9a; }
+  .fc-daygrid-event.done     { background:#cfd8dc; border-color:#cfd8dc; }
+
+  /* Checkbox Materialize spacing */
+  .reminder-row { display:flex; align-items:flex-start; gap:10px; }
+  .reminder-meta { display:flex; flex-direction:column; }
+  .reminder-date { font-weight:600; }
+  .reminder-details { margin-left:28px; }

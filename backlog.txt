@@ -1,4 +1,6 @@
 TIER-1
+Aggiungere l'utente che crea e che chiude la nota
+
 Cancellazione riga template(tutto sincronizzato con il PT)
 Prevedere inserimento riga vuota nel template PT
 Dopo inserimento lavoratore su griglia piano turni, il refresh della grid deve lasciarmi la visualizzazione sulla riga
@@ -8,7 +10,6 @@ Dopo inserimento lavoratore su griglia piano turni, il refresh della grid deve l
 TIER-2
 Refactoring di css/js su sorgenti dedicati:
 -emails/plan_personal.html
--calendar_notes.html
 -layout.html
 -monthly_plan.html
 -password_change.html
