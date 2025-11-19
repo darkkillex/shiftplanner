@@ -1,4 +1,6 @@
 from django.contrib import admin
+from django.utils.html import format_html
+
 from .models import (
     Company, Profession, Employee, ShiftType,
     Plan, Assignment,
@@ -293,19 +295,114 @@ class AssignmentAdmin(admin.ModelAdmin):
     list_filter = ('plan', 'profession', 'date', 'shift_type')
     search_fields = ('employee__first_name', 'employee__last_name', 'profession__name')
 
+
 @admin.register(Reminder)
 class ReminderAdmin(admin.ModelAdmin):
-    list_display = ('id','date','title','completed','created_by','created_at')
-    list_filter = ('completed','date')
-    search_fields = ('title','details')
-    actions = ['segna_completati','segna_da_fare']
+    list_display = (
+        'id',
+        'date',
+        'title',
+        'status_badge',   # badge colorato
+        'created_by',
+        'created_at',
+        'closed_by',
+        'closed_at',
+    )
+    # ordinamento di default: prima da fare/completate, poi per data
+    ordering = ('completed', 'date', 'title')
 
+    list_filter = (
+        'completed',
+        'date',
+        'created_by',
+        'closed_by',
+    )
+    search_fields = ('title', 'details')
+
+    readonly_fields = (
+        'created_by',
+        'created_at',
+        'closed_by',
+        'closed_at',
+    )
+
+    actions = ['segna_completati', 'segna_da_fare']
+
+    # ---------- Azioni ----------
     def segna_completati(self, request, queryset):
         n = queryset.update(completed=True)
         self.message_user(request, f"Segnati completati: {n}")
     segna_completati.short_description = "Segna come completati"
 
     def segna_da_fare(self, request, queryset):
-        n = queryset.update(completed=False)
+        n = queryset.update(completed=False, closed_by=None, closed_at=None)
         self.message_user(request, f"Reimpostati da fare: {n}")
     segna_da_fare.short_description = "Segna come da fare"
+
+    # ---------- Badge colorato ----------
+    def status_badge(self, obj):
+        """
+        Restituisce un badge colorato in base allo stato:
+        - Verde: completata
+        - Rosso: scaduta
+        - Giallo: in scadenza (≤ 3 giorni)
+        - Blu: normale
+        """
+        today = dt.date.today()
+        label = ""
+        color = ""
+        text = ""
+
+        if obj.completed:
+            label = "Completata"
+            color = "#4caf50"   # verde
+            text = "#fff"
+        else:
+            if obj.date < today:
+                label = "Scaduta"
+                color = "#e53935"  # rosso
+                text = "#fff"
+            else:
+                days_diff = (obj.date - today).days
+                if days_diff <= 3:
+                    label = "In scadenza"
+                    color = "#f9a825"  # giallo
+                    text = "#000"
+                else:
+                    label = "Attiva"
+                    color = "#1e88e5"  # blu
+                    text = "#fff"
+
+        return format_html(
+            '<span style="display:inline-block;'
+            'padding:2px 8px;border-radius:12px;'
+            'background:{};color:{};font-size:0.8rem;">{}</span>',
+            color, text, label
+        )
+
+    status_badge.short_description = "Stato"
+    status_badge.admin_order_field = "completed"
+
+    # ---------- Salvataggio ----------
+    def save_model(self, request, obj, form, change):
+        """
+        - Se si crea una nota dall’admin → created_by = utente corrente (se non già impostato)
+        - Se da admin si passa completata = True e non c'è closed_by → chi la salva diventa closed_by
+        - Se si riapre (completed = False) → azzera closed_by/closed_at
+        """
+        if not obj.pk:
+            # Creazione da admin
+            if not obj.created_by:
+                obj.created_by = request.user
+        else:
+            if "completed" in form.cleaned_data:
+                completed_new = form.cleaned_data["completed"]
+                if completed_new and not obj.closed_by:
+                    obj.closed_by = request.user
+                    if not obj.closed_at:
+                        obj.closed_at = dt.datetime.now()
+                if not completed_new:
+                    obj.closed_by = None
+                    obj.closed_at = None
+
+        super().save_model(request, obj, form, change)

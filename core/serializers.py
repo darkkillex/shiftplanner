@@ -39,9 +39,63 @@ class AssignmentSerializer(serializers.ModelSerializer):
 
 
 class ReminderSerializer(serializers.ModelSerializer):
+    created_by_name = serializers.SerializerMethodField()
+    closed_by_name = serializers.SerializerMethodField()
+
     class Meta:
         model = Reminder
-        fields = "__all__"
-        read_only_fields = ("created_by", "created_at")
+        fields = [
+            "id",
+            "date",
+            "title",
+            "details",
+            "completed",
+            "created_by",
+            "created_at",
+            "closed_by",
+            "closed_at",
+            "created_by_name",
+            "closed_by_name",
+        ]
+        read_only_fields = [
+            "created_by",
+            "created_at",
+            "closed_by",
+            "closed_at",
+            "created_by_name",
+            "closed_by_name",
+        ]
 
+    def get_created_by_name(self, obj):
+        if not obj.created_by:
+            return ""
+        return obj.created_by.get_full_name() or obj.created_by.username
 
+    def get_closed_by_name(self, obj):
+        if not obj.closed_by:
+            return ""
+        return obj.closed_by.get_full_name() or obj.closed_by.username
+
+    def create(self, validated_data):
+        request = self.context.get("request")
+        if request and request.user.is_authenticated:
+            validated_data["created_by"] = request.user
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        completed_prev = instance.completed
+        completed_new = validated_data.get("completed", completed_prev)
+
+        if "completed" in validated_data:
+            if completed_new and not completed_prev:
+                # chiusura
+                request = self.context.get("request")
+                if request and request.user.is_authenticated:
+                    instance.closed_by = request.user
+                instance.closed_at = dt.datetime.now()
+            elif not completed_new and completed_prev:
+                # riapertura
+                instance.closed_by = None
+                instance.closed_at = None
+
+        return super().update(instance, validated_data)

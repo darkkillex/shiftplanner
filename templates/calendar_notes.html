@@ -10,37 +10,86 @@
 
 {% block content %}
 <div class="container" style="max-width:1100px;">
-  <div class="card">
-    <div class="card-content">
-      <span class="card-title teal-text text-darken-2" style="margin-bottom:8px;">Scadenze del mese</span>
 
-      <ul id="reminder-list" class="collection" style="margin-bottom:16px;"></ul>
-
-      <div class="divider" style="margin:12px 0;"></div>
-
-      <div id="calendar"></div>
-
-      <p class="grey-text" style="margin-top:8px;">
-        Clicca sulla casella del giorno desiderato per aggiungere una nota. Spunta la nota nella lista in alto per completare.
-      </p>
-
-      <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-top:6px;">
-        <span>Legenda colori:</span>
-        <span style="display:inline-flex; align-items:center; gap:6px;">
-          <i style="width:14px; height:14px; background:#90caf9; border-radius:3px; display:inline-block;"></i>
-          <span style="color:#1e88e5;">blu</span>: nota in validità temporale
-        </span>
-        <span style="display:inline-flex; align-items:center; gap:6px;">
-          <i style="width:14px; height:14px; background:#ffe082; border-radius:3px; display:inline-block;"></i>
-          <span style="color:#f9a825;">giallo</span>: se mancano ≤3 giorni alla scadenza
-        </span>
-        <span style="display:inline-flex; align-items:center; gap:6px;">
-          <i style="width:14px; height:14px; background:#ef9a9a; border-radius:3px; display:inline-block;"></i>
-          <span style="color:#e53935;">rosso</span>: nota scaduta
-        </span>
-      </div>
-
+  <div class="row">
+    <div class="col s12">
+      <h4 class="valign-wrapper teal-text text-darken-2" style="gap:8px; margin-bottom:16px;">
+        <i class="material-icons">event_note</i>
+        Scadenze del mese
+      </h4>
     </div>
+  </div>
+
+  <!-- Calendario: elemento principale, full-width -->
+  <div class="row">
+    <div class="col s12">
+      <div class="card">
+        <div class="card-content">
+          <span class="card-title grey-text text-darken-2" style="font-size:1.4rem; margin-bottom:8px;">
+            Calendario
+          </span>
+          <p class="grey-text text-darken-1" style="margin-bottom:12px;">
+            Clicca su un giorno per aggiungere un nuovo promemoria. Le note attive e completate sono evidenziate anche nel calendario.
+          </p>
+          <div id="calendar"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lista promemoria + legenda sotto il calendario -->
+  <div class="row">
+
+    <!-- Promemoria -->
+    <div class="col s12 m7">
+      <div class="card">
+        <div class="card-content" style="padding-bottom:8px;">
+          <span class="card-title grey-text text-darken-2" style="font-size:1.3rem;">
+            Promemoria
+          </span>
+          <p class="grey-text text-darken-1" style="margin-bottom:12px;">
+            Spunta la nota per segnarla come completata o riaprirla. Le modifiche sono sincronizzate con il calendario.
+          </p>
+
+          <ul id="reminder-list" class="collection" style="margin-bottom:8px;"></ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Legenda -->
+    <div class="col s12 m5">
+      <div class="card">
+        <div class="card-content">
+          <span class="card-title grey-text text-darken-2" style="font-size:1.2rem;">
+            Legenda colori
+          </span>
+
+          <div style="margin-top:6px; display:flex; flex-direction:column; gap:6px; font-size:0.9rem;">
+            <span class="valign-wrapper" style="gap:6px;">
+              <span style="width:14px; height:14px; border-radius:3px; display:inline-block; background:#90caf9;"></span>
+              <span><span class="blue-text text-darken-1">Blu</span>: nota attiva</span>
+            </span>
+            <span class="valign-wrapper" style="gap:6px;">
+              <span style="width:14px; height:14px; border-radius:3px; display:inline-block; background:#ffe082;"></span>
+              <span><span class="amber-text text-darken-2">Giallo</span>: in scadenza (≤3 giorni)</span>
+            </span>
+            <span class="valign-wrapper" style="gap:6px;">
+              <span style="width:14px; height:14px; border-radius:3px; display:inline-block; background:#ef9a9a;"></span>
+              <span><span class="red-text text-darken-1">Rosso</span>: scaduta</span>
+            </span>
+            <span class="valign-wrapper" style="gap:6px;">
+              <span style="width:14px; height:14px; border-radius:3px; display:inline-block; background:#cfd8dc;"></span>
+              <span><span class="grey-text text-darken-2">Grigio</span>: completata</span>
+            </span>
+          </div>
+
+          <p class="grey-text text-darken-1" style="margin-top:12px; font-size:0.85rem;">
+            Le stesse regole di colore si applicano sia alla lista promemoria sia agli eventi nel calendario.
+          </p>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 {% endblock %}

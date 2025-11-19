@@ -126,15 +126,26 @@ class PlanRow(models.Model):
 
 
 class Reminder(models.Model):
-    date = models.DateField()                 # giorno sul calendario
-    title = models.CharField(max_length=160)  # testo breve
+    date = models.DateField()
+    title = models.CharField(max_length=160)
     details = models.TextField(blank=True)
     completed = models.BooleanField(default=False)
+
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    closed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="reminders_closed",
+    )
+    closed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         indexes = [models.Index(fields=["date", "completed"])]
         ordering = ["date", "completed", "title"]
 
-    def __str__(self): return f"{self.date} - {self.title}"
+    def __str__(self):
+        return f"{self.date} - {self.title}"
