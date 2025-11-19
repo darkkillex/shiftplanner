@@ -1,0 +1,32 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Documentazione utente{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'core/markdown_docs.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container" style="padding:20px">
+
+  <div class="valign-wrapper" style="gap:12px; justify-content:space-between;">
+    <h4 class="valign-wrapper" style="gap:8px; margin:0;">
+      <i class="material-icons">description</i> Documentazione utente
+    </h4>
+
+    <!-- Bottone stampa (nascosto in stampa) -->
+    <button class="btn waves-effect waves-light teal darken-1 no-print" onclick="window.print()">
+      <i class="material-icons left">print</i> Stampa
+    </button>
+  </div>
+
+  <div class="card" style="margin-top:20px;">
+    <div class="card-content">
+      <div class="markdown-doc">
+        {{ html|safe }}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -7,7 +7,7 @@ from django.contrib import admin as django_admin
 from rest_framework.routers import DefaultRouter
 
 from core import views as core_views, views
-from core.views_misc import changelog_view
+from core.views_misc import changelog_view, user_manual_view
 
 router = DefaultRouter()
 router.register(r'api/employees', core_views.EmployeeViewSet)
@@ -58,5 +58,6 @@ urlpatterns = [
     path("privacy/", views.privacy, name="privacy"),
     path("analytics/", views.analytics_overview, name="analytics-overview"),
     path("analytics/summary/", views.analytics_summary, name="analytics-summary"),
+    path("manuale-utente/", user_manual_view, name="user-manual"),
 
 ]

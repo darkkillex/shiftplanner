@@ -1,0 +1,154 @@
+/* Wrapper generale per documentazione */
+nav.teal { background-color:#005B81 !important; }
+
+.markdown-doc {
+  font-family: "Courier New", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: #212121;
+}
+
+/* Titoli */
+.markdown-doc h1,
+.markdown-doc h2,
+.markdown-doc h3,
+.markdown-doc h4 {
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.markdown-doc h1 {
+  font-size: 1.6rem;
+  border-bottom: 1px solid #b0bec5;
+  padding-bottom: 0.3rem;
+}
+
+.markdown-doc h2 {
+  font-size: 1.4rem;
+  border-bottom: 1px solid #cfd8dc;
+  padding-bottom: 0.2rem;
+}
+
+.markdown-doc h3 {
+  font-size: 1.2rem;
+}
+
+/* Paragrafi e liste */
+.markdown-doc p {
+  margin: 0 0 0.75rem 0;
+}
+
+.markdown-doc ul,
+.markdown-doc ol {
+  margin: 0 0 0.75rem 1.5rem;
+}
+
+/* Tabelle */
+.markdown-doc table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1rem 0;
+  font-size: 0.9rem;
+}
+
+.markdown-doc th,
+.markdown-doc td {
+  border: 1px solid #cfd8dc;
+  padding: 0.4rem 0.6rem;
+}
+
+.markdown-doc th {
+  background-color: #eceff1;
+  font-weight: 600;
+}
+
+/* Code / blocchi di codice */
+.markdown-doc code {
+  font-family: inherit;
+  background-color: #eceff1;
+  padding: 0.1rem 0.25rem;
+  border-radius: 3px;
+}
+
+.markdown-doc pre {
+  font-family: inherit;
+  background-color: #eceff1;
+  padding: 0.75rem;
+  border-radius: 4px;
+  overflow-x: auto;
+  margin: 0 0 1rem 0;
+}
+
+/* Link */
+.markdown-doc a {
+  color: #00796b;
+  text-decoration: none;
+}
+
+.markdown-doc a:hover {
+  text-decoration: underline;
+}
+
+/* --- Stampa --- */
+@media print {
+  /* Niente navbar, footer, bottoni Materialize, ecc. */
+  .no-print,
+  .navbar,
+  nav,
+  footer,
+  .page-footer,
+  .btn,
+  .btn-floating {
+    display: none !important;
+  }
+
+  /* Pulisci card/ombre e margini per stampa */
+  .container {
+    width: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .card {
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+  }
+
+  .card-content {
+    padding: 0 !important;
+  }
+
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    background: #ffffff !important;
+  }
+
+  .markdown-doc {
+    font-size: 11pt;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Evita stacchi brutti a metà titolo */
+  .markdown-doc h1,
+  .markdown-doc h2 {
+    page-break-after: avoid;
+  }
+
+  .markdown-doc h3,
+  .markdown-doc h4 {
+    page-break-after: avoid;
+  }
+
+  /* Consenti page-break su blocchi lunghi */
+  .markdown-doc p,
+  .markdown-doc ul,
+  .markdown-doc ol,
+  .markdown-doc table,
+  .markdown-doc pre {
+    page-break-inside: avoid;
+  }
+}
