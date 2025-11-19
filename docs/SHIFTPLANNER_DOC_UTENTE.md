@@ -8,7 +8,6 @@ Ultimo aggiornamento: 11/11/2025
 Apri l’indirizzo dell’app (es. `http://localhost:8000` o dominio aziendale).  
 Effettua il **login** con le credenziali assegnate.
 
-> Gli utenti standard vedono solo i propri piani turni.  
 > Lo staff può creare/modificare piani, template, assegnazioni e visualizzare statistiche.
 
 ---
@@ -37,9 +36,9 @@ Permette filtri per **azienda** e **periodo** con aggiornamento automatico (filt
 > Se il piano per quel mese esiste già, l’app apre direttamente il piano esistente.
 
 ### Visualizzazione
-- Ogni riga rappresenta una mansione (es. “Magazzino.4”).  
+- Ogni riga rappresenta una mansione (es. "Ufficio",“Magazzino”).  
 - Ogni colonna corrisponde a un giorno del mese.  
-- Le celle mostrano il nome del dipendente e il turno (es. “Rossi M (Mattino)”).
+- Le celle mostrano il nome del dipendente e il turno (es. “Rossi Mario (Turno D - 5/2)”).
 
 ### Modifiche
 - Clic su una cella → assegna o rimuovi dipendente e turno.  
@@ -61,7 +60,7 @@ Permette filtri per **azienda** e **periodo** con aggiornamento automatico (filt
 
 ### Contenuto email
 - Oggetto: `Piano turni <Mese> <Anno>`  
-- Corpo: saluto personalizzato, tabella turni, legenda codici.  
+- Corpo: saluto personalizzato, tabella turni.  
 - Allegato: calendario personale in HTML e testo.
 
 ---
@@ -97,7 +96,7 @@ Include:
 
 ## 7. Backup e sicurezza dati
 - I backup del database vengono creati **ogni notte alle 03:00**.
-- I file si trovano nella cartella `backups/` (solo accesso staff tecnico).
+- I file si trovano nella cartella `backups/` (solo accesso admin).
 - I backup vecchi di 1 giorno vengono rimossi.
 
 ---
