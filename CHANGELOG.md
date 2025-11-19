@@ -3,6 +3,16 @@
 * Aggiunta card Documentazione
 * Documentazione utente aggiornata(rev. flusso funzionalità)
 
+### 🛠️ Miglioramenti
+* Aggiornamento scadenze:
+  * La pagina Scadenze è stata migliorata e resa più chiara: il calendario ora è il fulcro della schermata.
+  * È possibile vedere chi ha creato una nota e chi l’ha chiusa, con data e ora.
+  * Quando si completa o si riapre una nota viene chiesta conferma per evitare errori.
+  * Le note si aggiornano subito, sia nella lista sia nel calendario.
+  * Aggiunti messaggi visivi per conferma delle azioni.
+  * Migliorata la gestione delle note anche dal pannello admin.
+
+
 # v0.7.2
 ### ✨ Nuove funzionalità
 * Rimozione delle **righe mansione** nei template del piano turni, con **propagazione automatica** ai piani collegati.  
