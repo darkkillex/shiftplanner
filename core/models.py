@@ -39,7 +39,7 @@ class ShiftType(models.Model):
 class Plan(models.Model):
     month = models.PositiveSmallIntegerField()
     year = models.PositiveSmallIntegerField()
-    name = models.CharField(max_length=120, default="", blank=True)
+    name = models.CharField(max_length=120, default="")
     status = models.CharField(max_length=12, choices=[('Draft','Draft'),('Published','Published')], default='Draft')
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
     revision = models.PositiveIntegerField(default=0)

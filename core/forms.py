@@ -9,7 +9,7 @@ class PlanCreateForm(forms.ModelForm):
         widgets = {
             "name": forms.TextInput(attrs={
                 #"class": "browser-default",
-                "placeholder": "Es. Piano Reparto A"
+                "placeholder": "Es. PT Gennaio 2026, Gennaio 2026, 01/2026"
             }),
             # month, year, status li settiamo in __init__ come Select
         }
@@ -44,6 +44,8 @@ class PlanCreateForm(forms.ModelForm):
             choices=[("Draft", "Bozza"), ("Published", "Pubblicato")],
             widget=forms.Select(attrs={"class": "browser-default"})
         )
+        # nome template obbligatorio
+        self.fields["name"].required = True
 
         # iniziali comode
         self.fields["month"].initial = now.month
