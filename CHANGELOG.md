@@ -1,3 +1,16 @@
+# v0.7.4
+### 🛠️ Miglioramenti
+* Aggiunta campo "telefono" al Dipendente
+* Aggiunta nuova pagina “Elenco dipendenti” con:
+  - tabella cognome/nome/azienda/telefono/email
+  - filtro live per nome/cognome/email/telefono
+  - filtro per azienda (select Materialize)
+  - contatore dinamico dei risultati
+  - bottone “Pulisci filtri”
+* Aggiunto file JS dedicato per la gestione dei filtri (employees_directory.js)
+* Inserita card “Elenco dipendenti” nella home
+* Allineato lo stile della pagina agli altri moduli (header, filtri e responsive design)
+
 # v0.7.3
 ### ✨ Nuove funzionalità
 * Aggiunta card Documentazione
