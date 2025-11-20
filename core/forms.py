@@ -6,13 +6,6 @@ class PlanCreateForm(forms.ModelForm):
     class Meta:
         model = Plan
         fields = ["name", "month", "year", "status", "template"]
-        widgets = {
-            "name": forms.TextInput(attrs={
-                #"class": "browser-default",
-                "placeholder": "Es. PT Gennaio 2026, Gennaio 2026, 01/2026"
-            }),
-            # month, year, status li settiamo in __init__ come Select
-        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

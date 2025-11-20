@@ -1,63 +1,149 @@
 {% extends "layout.html" %}
 {% load static %}
 
-{% block title %}Crea nuovo piano — Shift Planner{% endblock %}
+{% block title %}Nuovo piano turni — Kairos Shift Planner{% endblock %}
 
 {% block content %}
-<div class="row">
-  <div class="col s12">
-    <h5 style="margin-top:0;">Crea nuovo piano</h5>
+<div class="container" style="max-width:900px;">
+
+  <!-- Header -->
+  <div class="row" style="margin-top:10px">
+    <div class="col s12">
+      <h4 class="valign-wrapper teal-text text-darken-2" style="gap:8px; margin:0;">
+        <i class="material-icons">calendar_month</i>
+        Nuovo piano turni
+      </h4>
+      <p class="grey-text text-darken-1" style="margin-top:4px;">
+        Seleziona template, mese e anno per creare il piano mensile.
+      </p>
+    </div>
   </div>
 
-  <form method="post" class="col s12 m8 l6">
-    {% csrf_token %}
+  <!-- Card form -->
+  <div class="card">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <div class="card-content">
 
-    <!-- Nome piano -->
-    <div class="input-field">
-      <label class="active" for="{{ form.name.id_for_label }}">Nome piano (testuale)</label>
-      {{ form.name }}
-      {% if form.name.errors %}<div class="red-text">{{ form.name.errors }}</div>{% endif %}
-    </div>
+        <!-- Nome piano (input normale) -->
+        <div class="row">
+          <div class="input-field col s12">
+            <label class="active" for="{{ form.name.id_for_label }}">Nome piano</label>
+            {{ form.name }}
+            {% if form.name.errors %}
+              <span class="red-text text-darken-2">{{ form.name.errors }}</span>
+            {% else %}
+              <span class="helper-text">Es. "Gennaio 2026", "01/2026", ecc.</span>
+            {% endif %}
+          </div>
+        </div>
 
-    <!-- Campo Template piano turni -->
-    <div class="input-field">
-      {{ form.template.label_tag }}
-      {{ form.template }}
-    </div>
+        <!-- Template piano turni (select Materialize) -->
+        <div class="row">
+          <div class="input-field col s12">
+            <select name="{{ form.template.name }}" id="{{ form.template.id_for_label }}" required>
+              <option value="" disabled {% if not form.template.value %}selected{% endif %}>Seleziona template</option>
+              {% for t in form.fields.template.queryset %}
+                <option value="{{ t.id }}"
+                        {% if form.template.value|stringformat:"s" == t.id|stringformat:"s" %}selected{% endif %}>
+                  {{ t.name }}
+                </option>
+              {% endfor %}
+            </select>
+            <label for="{{ form.template.id_for_label }}">Template piano turni</label>
 
-    <div class="row">
-      <!-- Mese (1..12) -->
-      <div class="input-field col s6">
-        <label class="active" for="{{ form.month.id_for_label }}">Mese</label>
-        {{ form.month }}
-        {% if form.month.errors %}<div class="red-text">{{ form.month.errors }}</div>{% endif %}
+            {% if form.template.errors %}
+              <span class="red-text text-darken-2">{{ form.template.errors }}</span>
+            {% else %}
+              <span class="helper-text">Il piano verrà inizializzato sulla base di questo template.
+                Se non viene scelto alcun template, ne verrà associato uno di default.</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Mese / Anno (select Materialize) -->
+        <div class="row">
+
+          <!-- Mese -->
+          <div class="input-field col s12 m6">
+            <select name="{{ form.month.name }}" id="{{ form.month.id_for_label }}" required>
+              {% for value, label in form.month.field.choices %}
+                <option value="{{ value }}"
+                        {% if form.month.value|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>
+                  {{ label }}
+                </option>
+              {% endfor %}
+            </select>
+            <label for="{{ form.month.id_for_label }}">Mese</label>
+            {% if form.month.errors %}
+              <span class="red-text text-darken-2">{{ form.month.errors }}</span>
+            {% endif %}
+          </div>
+
+          <!-- Anno -->
+          <div class="input-field col s12 m6">
+            <select name="{{ form.year.name }}" id="{{ form.year.id_for_label }}" required>
+              {% for value, label in form.year.field.choices %}
+                <option value="{{ value }}"
+                        {% if form.year.value|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>
+                  {{ label }}
+                </option>
+              {% endfor %}
+            </select>
+            <label for="{{ form.year.id_for_label }}">Anno</label>
+            {% if form.year.errors %}
+              <span class="red-text text-darken-2">{{ form.year.errors }}</span>
+            {% endif %}
+          </div>
+
+        </div>
+
+        <!-- Stato (Bozza / Pubblicato, ecc.) -->
+        <div class="row">
+          <div class="input-field col s12">
+            <select name="{{ form.status.name }}" id="{{ form.status.id_for_label }}" required>
+              {% for value, label in form.status.field.choices %}
+                <option value="{{ value }}"
+                        {% if form.status.value|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>
+                  {{ label }}
+                </option>
+              {% endfor %}
+            </select>
+            <label for="{{ form.status.id_for_label }}">Stato</label>
+            {% if form.status.errors %}
+              <span class="red-text text-darken-2">{{ form.status.errors }}</span>
+            {% else %}
+              <span class="helper-text">Puoi lasciarlo in "Bozza" e pubblicarlo in un secondo momento.</span>
+            {% endif %}
+          </div>
+        </div>
+
+        {% if form.non_field_errors %}
+          <div class="card-panel red lighten-4 red-text text-darken-4" style="padding:8px 12px; margin-top:8px;">
+            {{ form.non_field_errors }}
+          </div>
+        {% endif %}
       </div>
 
-      <!-- Anno (>=2025) -->
-      <div class="input-field col s6">
-        <label class="active" for="{{ form.year.id_for_label }}">Anno</label>
-        {{ form.year }}
-        {% if form.year.errors %}<div class="red-text">{{ form.year.errors }}</div>{% endif %}
+      <div class="card-action">
+        <button type="submit" class="btn waves-effect waves-light">
+          <i class="material-icons left">add</i>Crea piano
+        </button>
+        <a href="{% url 'home' %}" class="btn-flat waves-effect">Annulla</a>
       </div>
-    </div>
+    </form>
+  </div>
 
-    <!-- Stato (Bozza/Pubblicato) -->
-    <div class="input-field">
-      <label class="active" for="{{ form.status.id_for_label }}">Stato</label>
-      {{ form.status }}
-      {% if form.status.errors %}<div class="red-text">{{ form.status.errors }}</div>{% endif %}
-    </div>
-
-    {% if form.non_field_errors %}
-      <div class="card-panel red lighten-4 red-text text-darken-4" style="padding:8px 12px;">
-        {{ form.non_field_errors }}
-      </div>
-    {% endif %}
-
-    <button type="submit" class="btn waves-effect waves-light">
-      <i class="material-icons left">add</i>Crea piano
-    </button>
-    <a href="{% url 'home' %}" class="btn-flat waves-effect">Annulla</a>
-  </form>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  if (window.M && M.FormSelect) {
+    const elems = document.querySelectorAll('select');
+    M.FormSelect.init(elems);
+  }
+});
+</script>
 {% endblock %}
