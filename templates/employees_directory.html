@@ -1,0 +1,112 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Elenco dipendenti{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width:1100px;">
+
+  <div class="row valign-wrapper" style="margin-top:10px">
+    <div class="col s12 m6">
+      <h5 class="grey-text text-darken-2" style="margin:0">Elenco dipendenti</h5>
+      <span class="grey-text">Elenco dipendenti con ricerca istantanea</span>
+    </div>
+    <div class="col s12 m6 right-align">
+      <span class="grey-text text-darken-1" id="emp-counter">
+        {{ employees|length }} dipendenti
+      </span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-content">
+
+      <!-- FILTRI -->
+      <div class="row" style="margin-bottom:0">
+
+        <!-- Filtro testo: cognome/nome -->
+        <div class="col s12 m6">
+          <div class="input-field" style="margin-top:0">
+            <i class="material-icons prefix">search</i>
+            <input id="filter-text" type="text" autocomplete="off">
+            <label for="filter-text">Filtra per cognome o nome</label>
+          </div>
+        </div>
+
+        <!-- Filtro azienda -->
+        <div class="col s12 m3">
+          <div class="input-field" style="margin-top:0">
+            <select id="filter-company">
+              <option value="" selected>Tutte le aziende</option>
+              {% for c in companies %}
+                <option value="{{ c.id }}">{{ c.name }}</option>
+              {% endfor %}
+            </select>
+            <label>Azienda</label>
+          </div>
+        </div>
+
+        <!-- Pulsante pulisci + contatore -->
+        <div class="col s12 m3 right-align" style="padding-top:14px">
+          <a id="filter-clear" class="btn-flat waves-effect">
+            <i class="material-icons left">backspace</i>Pulisci filtri
+          </a>
+        </div>
+
+      </div>
+
+      <!-- TABELLA -->
+      <div class="row" style="margin-top:10px;">
+        <div class="col s12">
+          <table class="highlight responsive-table" id="employees-table">
+            <thead>
+              <tr>
+                <th>Cognome</th>
+                <th>Nome</th>
+                <th>Azienda</th>
+                <th>Telefono</th>
+                <th>Email</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for e in employees %}
+                <tr
+                  data-company-id="{{ e.company_id|default:'' }}"
+                  data-search="{{ e.last_name }} {{ e.first_name }} {{ e.email|default_if_none:'' }} {{ e.phone|default_if_none:'' }}">
+                  <td>{{ e.last_name }}</td>
+                  <td>{{ e.first_name }}</td>
+                  <td>
+                    {% if e.company %}
+                      {{ e.company.name }}
+                    {% else %}
+                      -
+                    {% endif %}
+                  </td>
+                  <td>{{ e.phone|default:"-" }}</td>
+                  <td>
+                    {% if e.email %}
+                      <a href="mailto:{{ e.email }}">{{ e.email }}</a>
+                    {% else %}
+                      -
+                    {% endif %}
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="5" class="center-align grey-text">Nessun dipendente presente.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'core/employees_directory.js' %}"></script>
+{% endblock %}

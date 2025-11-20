@@ -761,6 +761,22 @@ def templates_area(request):
     tpls = Template.objects.order_by("name")
     return render(request, "templates_area.html", {"templates": tpls})
 
+@login_required
+def employees_directory(request):
+    """
+    Elenco dipendenti con filtri lato client (azienda + nome/cognome).
+    """
+    employees = (
+        Employee.objects
+        .select_related("company")
+        .order_by("last_name", "first_name")
+    )
+    companies = Company.objects.order_by("name")
+
+    return render(request, "employees_directory.html", {
+        "employees": employees,
+        "companies": companies,
+    })
 
 @login_required
 @user_passes_test(_is_staff_or_superuser)

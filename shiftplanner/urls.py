@@ -59,5 +59,6 @@ urlpatterns = [
     path("analytics/", views.analytics_overview, name="analytics-overview"),
     path("analytics/summary/", views.analytics_summary, name="analytics-summary"),
     path("manuale-utente/", user_manual_view, name="user-manual"),
+    path("employees/", views.employees_directory, name="employees-directory"),
 
 ]
