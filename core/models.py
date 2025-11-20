@@ -14,6 +14,7 @@ class Employee(models.Model):
     last_name = models.CharField(max_length=80)
     company = models.ForeignKey(Company, on_delete=models.PROTECT, null=True, blank=True)
     matricola = models.CharField(max_length=40, unique=True)
+    phone = models.CharField(max_length=20, blank=True, null=True)
     email = models.EmailField(unique=True)
     professions = models.ManyToManyField(Profession, blank=True)
     is_active = models.BooleanField(default=True)

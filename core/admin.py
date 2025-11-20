@@ -28,8 +28,8 @@ class ProfessionAdmin(admin.ModelAdmin):
 
 @admin.register(Employee)
 class EmployeeAdmin(admin.ModelAdmin):
-    list_display = ('id', 'last_name', 'first_name', 'matricola', 'email', 'is_active')
-    search_fields = ('last_name', 'first_name', 'matricola', 'email')
+    list_display = ('id', 'last_name', 'first_name', 'matricola', 'phone', 'email', 'is_active')
+    search_fields = ('last_name', 'first_name', 'matricola', 'phone', 'email')
     filter_horizontal = ('professions',)
 
 @admin.register(ShiftType)
