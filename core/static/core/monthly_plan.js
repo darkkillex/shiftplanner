@@ -73,8 +73,7 @@
     if (parts.length === 2) return parts.pop().split(';').shift();
   }
 
-
-    // --- Scroll persistence tra reload della pagina ---
+  // --- Persistenza scroll tra reload della pagina ---
   const SCROLL_KEY = 'monthly_plan_scroll';
 
   function saveScrollPosition() {
@@ -117,6 +116,30 @@
     }
   }
 
+  // --- Persistenza filtri tra reload ---
+  function saveFilters() {
+    try {
+      localStorage.setItem("filter_prof", document.getElementById("filter-prof")?.value || "");
+      localStorage.setItem("filter_emp", document.getElementById("filter-emp")?.value || "");
+    } catch (e) {
+      console.warn('Impossibile salvare filtri:', e);
+    }
+  }
+
+  function restoreFilters() {
+    try {
+      const fp = document.getElementById("filter-prof");
+      const fe = document.getElementById("filter-emp");
+
+      const savedProf = localStorage.getItem("filter_prof") || "";
+      const savedEmp  = localStorage.getItem("filter_emp")  || "";
+
+      if (fp) fp.value = savedProf;
+      if (fe) fe.value = savedEmp;
+    } catch (e) {
+      console.warn('Impossibile ripristinare filtri:', e);
+    }
+  }
 
   // --- Festività Italia + Pasqua/Lunedì dell'Angelo ---
   function easterDate(year){
@@ -206,6 +229,9 @@
     // bootstrap page
     initGrid(state)
       .then(() => {
+        // Ripristina eventuali filtri salvati prima di inizializzare i filtri
+        restoreFilters();
+
         initScrollSync(state);
         initSelection(state);
         initAutoScroll(state);
@@ -215,6 +241,18 @@
         initClear(state);
         initNotify(state);
         initNoteEditing(state);
+        // 3) Forza l'applicazione dei filtri ripristinati
+        const fp = document.getElementById("filter-prof");
+        if (fp && fp.value) {
+          fp.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+
+        const fe = document.getElementById("filter-emp");
+        if (fe && fe.value) {
+          fe.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+
+        // 4) Ripristina posizione di scroll dopo che la griglia e i filtri sono in stato finale
         restoreScrollPosition();
       })
       .catch(() => {
@@ -447,7 +485,6 @@
     window.addEventListener('blur', stop);
     wrapper.addEventListener('mouseleave', () => {
       // non fermiamo subito: potresti voler uscire di poco mentre scorri
-      // lasciamo step proseguire se active === true
     });
   }
 
@@ -536,7 +573,7 @@
         const tr = rows[i];
         let match = false;
 
-          // scorri TUTTE le celle dati (salta la 1a che è la professione)
+        // scorri TUTTE le celle dati (salta la 1a che è la professione)
         for (let c = 1; c < tr.cells.length; c++) {
           const td = tr.cells[c];
           // usiamo il dataset.name messo a render, più robusto del textContent
@@ -605,23 +642,20 @@
         const js = await resp.json().catch(() => ({}));
         const conflicts = js.conflicts || [];
 
-          if (conflicts.length) {
-            // prendiamo il nome del lavoratore selezionato dalla tendina
-            const employeeName = $("#employee")?.selectedOptions?.[0]?.textContent || "Lavoratore";
+        if (conflicts.length) {
+          const employeeName = $("#employee")?.selectedOptions?.[0]?.textContent || "Lavoratore";
+          const dateFmt = new Intl.DateTimeFormat("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" });
 
-            // formatter per data in italiano (es. 5 ottobre 2025)
-            const dateFmt = new Intl.DateTimeFormat("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" });
+          let html = `<br>Conflitti:</br>${employeeName}<br>`;
+          conflicts.forEach(c => {
+            const d = new Date(c.date);
+            const dStr = dateFmt.format(d);
+            const shift = c.shift_label ? `${c.shift_label}` : "(nessun turno indicato)";
+            html += `${c.profession}<br>${shift}<br>${dStr}<br><br>`;
+          });
 
-            let html = `<br>Conflitti:</br>${employeeName}<br>`;
-            conflicts.forEach(c => {
-              const d = new Date(c.date); // c.date è ISO
-              const dStr = dateFmt.format(d);
-              const shift = c.shift_label ? `${c.shift_label}` : "(nessun turno indicato)";
-              html += `${c.profession}<br>${shift}<br>${dStr}<br><br>`;
-            });
-
-            return M.toast({ html, classes: "red", displayLength: 8000 });
-          }
+          return M.toast({ html, classes: "red", displayLength: 8000 });
+        }
 
         return M.toast({ html: "Conflitto su date selezionate.", classes: "red" });
       }
@@ -642,7 +676,10 @@
         } catch (_) {}
         return M.toast({ html: msg, classes: "red", displayLength: 8000 });
       }
+
+      // Salva posizione di scroll e filtri prima del reload
       saveScrollPosition();
+      saveFilters();
       location.reload();
     });
   }
@@ -672,7 +709,10 @@
         body: JSON.stringify({ cells }),
       });
       if (!resp.ok) return M.toast({ html: "Errore rimozione", classes: "red" });
-      saveScrollPosition()
+
+      // Salva posizione di scroll e filtri prima del reload
+      saveScrollPosition();
+      saveFilters();
       location.reload();
     });
   }
@@ -681,17 +721,15 @@
   // EXPORT CSV destinatari notify (Europe/Rome)
   // -------------------------------
   function downloadNotifyRecipientsCSV(js, planId) {
-    // 1) timestamp in fuso Europe/Rome con offset
     function zonedIso(ts = new Date(), timeZone = 'Europe/Rome') {
       const dtf = new Intl.DateTimeFormat('it-IT', {
         timeZone,
         year: 'numeric', month: '2-digit', day: '2-digit',
         hour: '2-digit', minute: '2-digit', second: '2-digit',
         hour12: false,
-        timeZoneName: 'shortOffset' // es. GMT+1, GMT+2
+        timeZoneName: 'shortOffset'
       });
       const parts = Object.fromEntries(dtf.formatToParts(ts).map(p => [p.type, p.value]));
-      // offset normalizzato a +HH:MM
       let off = (parts.timeZoneName || '').replace('GMT', '').replace('UTC', '');
       const m = off.match(/^([+-])?(\d{1,2})(?::?(\d{2}))?$/);
       if (m) {
@@ -700,7 +738,7 @@
         const mm = String(m[3] || '0').padStart(2, '0');
         off = `${sign}${hh}:${mm}`;
       } else {
-        off = '+00:00'; // fallback
+        off = '+00:00';
       }
       const Y = parts.year, M = parts.month, D = parts.day;
       const h = parts.hour, i = parts.minute, s = parts.second;
@@ -709,7 +747,6 @@
 
     const sentAt = zonedIso(new Date(), 'Europe/Rome');
 
-    // 2) righe CSV
     const rows = [
       ['sent_at_europe_rome'],
       [sentAt],
@@ -718,12 +755,11 @@
     ];
     (js.recipients || []).forEach(name => rows.push([name]));
 
-    // 3) serializza e scarica
     const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    const safeTs = sentAt.slice(0,19).replace(/[:T]/g, '-'); // yyyy-mm-dd-hh-mm-ss
+    const safeTs = sentAt.slice(0,19).replace(/[:T]/g, '-');
     a.href = url;
     a.download = `notify_recipients_planID_${planId}_date_${safeTs}.csv`;
     document.body.appendChild(a);
