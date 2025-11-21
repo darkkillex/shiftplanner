@@ -1,3 +1,12 @@
+# v0.7.5
+### 🛠️ Miglioramenti
+* Aumentato il limite di caratteri per mappare il nome di professioni fino a 200 caratteri.
+* Reso obbligatorio il campo "Nome piano" all'atto di creazione di un nuovo PT
+* Resa materialize la pagina di creazione di un nuovo PT
+
+### 🐞 Bugfix
+* Corretto script di generazione del suffisso (.#) professioni che non risultava essere sequenziale.
+
 # v0.7.4
 ### 🛠️ Miglioramenti
 * Aggiunta campo "telefono" al Dipendente
