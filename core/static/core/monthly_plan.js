@@ -186,10 +186,17 @@
   // Config/refs bootstrap
   // -------------------------------
   document.addEventListener("DOMContentLoaded", () => {
-    // Modal
-    const modalElem = $("#noteModal");
-    if (modalElem && window.M && M.Modal) {
-      M.Modal.init(modalElem, { dismissible: true });
+    // Modal note
+    if (window.M && M.Modal) {
+      const noteModalElem = $("#noteModal");
+      if (noteModalElem) {
+        M.Modal.init(noteModalElem, { dismissible: true });
+      }
+
+      const notifyModalElem = $("#notifyConfirmModal");
+      if (notifyModalElem) {
+        M.Modal.init(notifyModalElem, { dismissible: true });
+      }
     }
 
     const wrapper = $(".grid-wrapper");
@@ -774,14 +781,25 @@
   function initNotify(state) {
     const { notifyBtn, csrftoken, planId } = state;
     if (!notifyBtn) return;
-    notifyBtn.addEventListener("click", async () => {
-      if (!confirm("Inviare email a TUTTI i dipendenti con assegnazioni in questo piano?")) return;
+
+    const modalElem = document.getElementById("notifyConfirmModal");
+    const confirmBtn = document.getElementById("notifyConfirmBtn");
+    const cancelBtn  = document.getElementById("notifyCancelBtn");
+
+    if (!modalElem || !confirmBtn) return;
+
+    const modal = M.Modal.getInstance(modalElem) || M.Modal.init(modalElem, { dismissible: true });
+
+    async function doNotify() {
       const resp = await fetch(`/api/plans/${planId}/notify/`, {
         method: "POST",
         headers: csrftoken ? { "X-CSRFToken": csrftoken } : {},
         credentials: "same-origin",
       });
-      if (!resp.ok) return M.toast({ html: "Errore invio notifiche", classes: "red" });
+      if (!resp.ok) {
+        M.toast({ html: "Errore invio notifiche", classes: "red" });
+        return;
+      }
       const js = await resp.json().catch(() => ({}));
 
       M.toast({
@@ -797,8 +815,21 @@
       });
 
       downloadNotifyRecipientsCSV(js, planId);
+    }
+
+    // Click su "Invia notifiche" → apri modal
+    notifyBtn.addEventListener("click", () => {
+      modal.open();
     });
+
+    // Conferma nel modal → chiude modal e fa notify
+    confirmBtn.addEventListener("click", async () => {
+      modal.close();
+      await doNotify();
+    });
+
   }
+
 
   // -------------------------------
   // NOTE editing (dblclick + modal + salvataggio)

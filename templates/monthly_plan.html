@@ -152,6 +152,36 @@
     </div>
   </div>
 
+    <!-- Modal conferma invio notifiche -->
+  <div id="notifyConfirmModal" class="modal">
+    <div class="modal-content">
+      <h5 class="red-text text-darken-2">
+        <i class="material-icons left">warning</i>
+        ATTENZIONE
+      </h5>
+      <p>
+        Stai per inviare una notifica email a <strong>tutti i dipendenti</strong>
+        che hanno assegnazioni in questo piano turni (primo INVIO del nuovo piano turni del mese) o a tutti
+        coloro che hanno subito delle variazioni.
+      </p>
+      <p>
+        L'operazione può generare un numero elevato di email e non è annullabile.
+      </p>
+      <p class="grey-text">
+        Verifica di aver completato e controllato il piano prima di procedere.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <a href="#!" id="notifyCancelBtn" class="modal-close btn-flat">
+        Annulla
+      </a>
+      <a href="#!" id="notifyConfirmBtn" class="btn red darken-1">
+        Conferma invio
+      </a>
+    </div>
+  </div>
+
+
 </div><!-- /row principale -->
 {% endblock %}
 
