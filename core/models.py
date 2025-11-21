@@ -6,7 +6,7 @@ class Company(models.Model):
     def __str__(self): return self.name
 
 class Profession(models.Model):
-    name = models.CharField(max_length=120, unique=True)
+    name = models.CharField(max_length=200, unique=True)
     def __str__(self): return self.name
 
 class Employee(models.Model):
@@ -98,7 +98,7 @@ class Template(models.Model):
 class TemplateRow(models.Model):
     template = models.ForeignKey(Template, on_delete=models.CASCADE, related_name="rows")
     order = models.PositiveIntegerField(db_column='row_order')
-    duty = models.CharField(max_length=120, blank=True) # mansione, può essere vuota
+    duty = models.CharField(max_length=200, blank=True) # mansione, può essere vuota
     is_spacer = models.BooleanField(default=False)      # riga vuota / separatore
     notes = models.CharField(max_length=200, blank=True)
 
@@ -114,7 +114,7 @@ class TemplateRow(models.Model):
 class PlanRow(models.Model):
     plan = models.ForeignKey('Plan', on_delete=models.CASCADE, related_name='rows')
     order = models.PositiveIntegerField(db_column='row_order')  # evita parola riservata
-    duty = models.CharField(max_length=120, blank=True)
+    duty = models.CharField(max_length=200, blank=True)
     is_spacer = models.BooleanField(default=False)
     notes = models.CharField(max_length=200, blank=True)
 
