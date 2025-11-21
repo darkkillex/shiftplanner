@@ -878,12 +878,13 @@ def template_create(request):
                 r.template = template
 
             # --- ACCREDITO PROFESSION in base alle righe inserite ---
-            from .models import Profession, TemplateRow  # import locale per chiarezza
             base_counters = defaultdict(int)  # occorrenze per base nel SOLO template
+            base_max_cache = {}  # max suffisso esistente per base (calcolato una volta sola)
 
             for r in rows:
                 if r.is_spacer:
                     continue
+
                 base, num = _split_slot(r.duty)
                 if not base:
                     continue
@@ -896,8 +897,13 @@ def template_create(request):
                     # senza suffisso: usa il prossimo disponibile considerando DB + occorrenze nel template
                     base_counters[base] += 1
                     idx_in_template = base_counters[base]
-                    start = _existing_max_suffix(base)       # max già presente in DB
-                    target_num = start + idx_in_template     # continua la sequenza
+
+                    # calcola il max esistente UNA VOLTA sola per quella base
+                    if base not in base_max_cache:
+                        base_max_cache[base] = _existing_max_suffix(base)
+
+                    start = base_max_cache[base]  # fisso per tutto il template per quella base
+                    target_num = start + idx_in_template
                     desired = f"{base}.{target_num}"
                     Profession.objects.get_or_create(name=desired)
 
