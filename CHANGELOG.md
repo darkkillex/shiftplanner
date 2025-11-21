@@ -1,3 +1,9 @@
+# v0.7.6
+### 🛠️ Miglioramenti
+* Salvata la posizione di ultimo scroll delle righe della grid PT dopo assegnazione/rimozione personale su turno
+* Salvati eventuali filtri applicati dopo assegnazione/rimozione personale su turno
+* Aggiunta conferma invio notifiche: introdotto un modal di avviso prima dell’invio massivo delle email, per evitare invii accidentali e rendere l’azione più sicura.
+
 # v0.7.5
 ### 🛠️ Miglioramenti
 * Aumentato il limite di caratteri per mappare il nome di professioni fino a 200 caratteri.
