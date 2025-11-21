@@ -73,6 +73,51 @@
     if (parts.length === 2) return parts.pop().split(';').shift();
   }
 
+
+    // --- Scroll persistence tra reload della pagina ---
+  const SCROLL_KEY = 'monthly_plan_scroll';
+
+  function saveScrollPosition() {
+    try {
+      const wrapper = document.querySelector('.grid-wrapper');
+      const payload = {
+        windowY: window.scrollY || window.pageYOffset || 0,
+        wrapperY: wrapper ? wrapper.scrollTop : null,
+        wrapperX: wrapper ? wrapper.scrollLeft : null,
+      };
+      sessionStorage.setItem(SCROLL_KEY, JSON.stringify(payload));
+    } catch (e) {
+      console.warn('Impossibile salvare scroll:', e);
+    }
+  }
+
+  function restoreScrollPosition() {
+    try {
+      const raw = sessionStorage.getItem(SCROLL_KEY);
+      if (!raw) return;
+      sessionStorage.removeItem(SCROLL_KEY);
+
+      const data = JSON.parse(raw);
+      requestAnimationFrame(() => {
+        if (typeof data.windowY === 'number') {
+          window.scrollTo(0, data.windowY);
+        }
+        const wrapper = document.querySelector('.grid-wrapper');
+        if (wrapper && typeof data.wrapperY === 'number') {
+          wrapper.scrollTop = data.wrapperY;
+        }
+        if (wrapper && typeof data.wrapperX === 'number') {
+          wrapper.scrollLeft = data.wrapperX;
+          const topScroll = document.getElementById('grid-scroll-top');
+          if (topScroll) topScroll.scrollLeft = data.wrapperX;
+        }
+      });
+    } catch (e) {
+      console.warn('Impossibile ripristinare scroll:', e);
+    }
+  }
+
+
   // --- Festività Italia + Pasqua/Lunedì dell'Angelo ---
   function easterDate(year){
     // Algoritmo Meeus/Jones/Butcher
@@ -170,6 +215,7 @@
         initClear(state);
         initNotify(state);
         initNoteEditing(state);
+        restoreScrollPosition();
       })
       .catch(() => {
         if (window.M?.toast) M.toast({ html: "Errore inizializzazione", classes: "red" });
@@ -596,7 +642,7 @@
         } catch (_) {}
         return M.toast({ html: msg, classes: "red", displayLength: 8000 });
       }
-
+      saveScrollPosition();
       location.reload();
     });
   }
@@ -626,6 +672,7 @@
         body: JSON.stringify({ cells }),
       });
       if (!resp.ok) return M.toast({ html: "Errore rimozione", classes: "red" });
+      saveScrollPosition()
       location.reload();
     });
   }
