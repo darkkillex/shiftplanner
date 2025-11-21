@@ -385,6 +385,32 @@ class PlanViewSet(viewsets.ModelViewSet):
 
         return Response({'updated': updated, 'skipped': skipped}, status=200)
 
+
+    @action(detail=True, methods=['post'])
+    def bulk_clear(self, request, pk=None):
+        plan = self.get_object()
+        cells = request.data.get('cells', [])
+        if not isinstance(cells, list) or not cells:
+            return Response({'detail': 'cells obbligatorio'}, status=status.HTTP_400_BAD_REQUEST)
+
+        deleted = 0
+        for c in cells:
+            try:
+                prof_id = int(c['profession_id'])
+                day = dt.date.fromisoformat(c['date'])  # forza tipo date, niente ambiguità
+            except Exception:
+                return Response({'detail': f"Formato cella non valido: {c}"}, status=status.HTTP_400_BAD_REQUEST)
+
+            n, _ = Assignment.objects.filter(
+                plan=plan,
+                profession_id=prof_id,
+                date=day,
+            ).delete()
+            deleted += n
+
+        return Response({'deleted': deleted}, status=status.HTTP_200_OK)
+
+
     @action(detail=True, methods=['post'])
     @transaction.atomic
     def notify(self, request, pk=None):
@@ -536,29 +562,7 @@ class PlanViewSet(viewsets.ModelViewSet):
             "recipients": recipients_list  # nomi destinatari
         }, status=200)
 
-    @action(detail=True, methods=['post'])
-    def bulk_clear(self, request, pk=None):
-        plan = self.get_object()
-        cells = request.data.get('cells', [])
-        if not isinstance(cells, list) or not cells:
-            return Response({'detail': 'cells obbligatorio'}, status=status.HTTP_400_BAD_REQUEST)
 
-        deleted = 0
-        for c in cells:
-            try:
-                prof_id = int(c['profession_id'])
-                day = dt.date.fromisoformat(c['date'])  # forza tipo date, niente ambiguità
-            except Exception:
-                return Response({'detail': f"Formato cella non valido: {c}"}, status=status.HTTP_400_BAD_REQUEST)
-
-            n, _ = Assignment.objects.filter(
-                plan=plan,
-                profession_id=prof_id,
-                date=day,
-            ).delete()
-            deleted += n
-
-        return Response({'deleted': deleted}, status=status.HTTP_200_OK)
 
 
     @action(detail=True, methods=['post'])
