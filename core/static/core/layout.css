@@ -185,3 +185,39 @@ tr.spacer-row td.spacer-cell .material-icons { color:#fff !important; }
   border-radius:8px;
 }
 .btn-compact .material-icons{ font-size:1em; margin-right:.35em; }
+
+/* Pagina Changelog */
+.changelog-content {
+  margin-top: 12px;
+  font-size: 13px;
+  line-height: 1.45;
+  font-family: 'Courier New', monospace;
+  background: #fafafa;
+  border-radius: 6px;
+  padding: 14px;
+}
+
+/* Titoli versioni (v0.x.x) */
+.changelog-content h1,
+.changelog-content h2,
+.changelog-content h3 {
+  font-size: 0.9em !important;
+  color: #1e88e5; /* blu tenue Material */
+  margin-top: 1.2em;
+  margin-bottom: 0.4em;
+}
+
+/* Testo normale */
+.changelog-content p,
+.changelog-content ul,
+.changelog-content li {
+  font-size: 0.95em;
+  color: #333;
+}
+
+/* Separatore fra versioni */
+.changelog-content h1:not(:first-child),
+.changelog-content h2:not(:first-child) {
+  border-top: 1px solid #e0e0e0;
+  padding-top: 0.6em;
+}

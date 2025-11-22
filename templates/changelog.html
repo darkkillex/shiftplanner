@@ -3,11 +3,26 @@
 
 {% block title %}Changelog{% endblock %}
 
-{% block extra_head %}
-<link rel="stylesheet" href="{% static 'core/changelog.css' %}">
-{% endblock %}
-
 {% block content %}
+
+
+<div class="col s12" style="margin-top: -8px; margin-bottom: 32px;">
+  <h4 class="valign-wrapper" style="gap:8px">
+    <i class="material-icons" style="margin-left:4px;">commit</i>
+    Kairos ShiftPlanner ATI RINA/Sivam — Registro delle versioni
+  </h4>
+  <span class="black-text">
+    Kairos è un'applicazione web per la gestione dei piani turni aziendali, progettata per garantire flessibilità, tracciabilità e automazione.
+    <br>
+    Il presente registro documenta tutte le modifiche, funzionalità e fix introdotti nel tempo, seguendo le convenzioni di Semantic Versioning.
+    <br><br>
+  </span>
+  <span class="grey-text">
+    > Nota: le versioni elencate non riportano la data di rilascio per scelta progettuale.
+  </span>
+</div>
+
+
 <div class="changelog-content">
   {{ html|safe }}
 </div>
