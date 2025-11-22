@@ -101,7 +101,6 @@ def _normalize_plan_orders(plan):
             r.order = i
             r.save(update_fields=['order'])
 
-
 def _easter_sunday(year: int) -> dt.date:
     # algoritmo gregoriano (Anonymous Gregorian)
     a = year % 19
@@ -563,8 +562,6 @@ class PlanViewSet(viewsets.ModelViewSet):
         }, status=200)
 
 
-
-
     @action(detail=True, methods=['post'])
     def set_note(self, request, pk=None):
         """
@@ -713,6 +710,7 @@ class PlanViewSet(viewsets.ModelViewSet):
         resp['Content-Disposition'] = f'attachment; filename="{fname}"'
         return resp
 
+
 @login_required
 def home(request):
     return render(request, 'home.html')
@@ -850,7 +848,6 @@ def plan_create(request):
 
     return render(request, "plan_create.html", {"form": form})
 
-
 def _parse_rows(text: str):
     """Ritorna un elenco di TemplateRow da testo multilinea."""
     lines = text.replace("\r\n", "\n").split("\n")
@@ -882,9 +879,11 @@ def template_create(request):
                 r.template = template
 
             # --- ACCREDITO PROFESSION in base alle righe inserite ---
-            base_counters = defaultdict(int)  # occorrenze per base nel SOLO template
-            base_max_cache = {}  # max suffisso esistente per base (calcolato una volta sola)
+            # 1) Conta, per questo template, quante volte compare ogni "base" SENZA suffisso
+            #    es.: 'Ufficio' -> 4 significa che servono almeno 4 slot totali (Ufficio.1..4)
+            base_unsuffixed_counts = defaultdict(int)
 
+            # Prima passata: gestisci i suffissi espliciti e conta gli unsuffixed
             for r in rows:
                 if r.is_spacer:
                     continue
@@ -895,20 +894,29 @@ def template_create(request):
 
                 if num > 0:
                     # suffisso esplicito: crea esattamente base.num se manca
+                    # (non influisce sul conteggio "minimo" per le righe senza suffisso)
                     desired = f"{base}.{num}"
                     Profession.objects.get_or_create(name=desired)
                 else:
-                    # senza suffisso: usa il prossimo disponibile considerando DB + occorrenze nel template
-                    base_counters[base] += 1
-                    idx_in_template = base_counters[base]
+                    # senza suffisso: solo conteggio, non creiamo subito
+                    base_unsuffixed_counts[base] += 1
 
-                    # calcola il max esistente UNA VOLTA sola per quella base
-                    if base not in base_max_cache:
-                        base_max_cache[base] = _existing_max_suffix(base)
+            # Seconda passata: per ogni base, garantisci che esistano
+            # ALMENO N slot globali, dove N = max(esistenti, richiesti_in_questo_template)
+            for base, required_in_template in base_unsuffixed_counts.items():
+                # max suffisso esistente per quella base (es.: Ufficio.1..4 -> 4)
+                current_max_num = _existing_max_suffix(base)  # 0 se nessuno
 
-                    start = base_max_cache[base]  # fisso per tutto il template per quella base
-                    target_num = start + idx_in_template
-                    desired = f"{base}.{target_num}"
+                # numero totale di slot che vogliamo avere dopo questa operazione
+                required_total = max(current_max_num, required_in_template)
+
+                # se abbiamo già abbastanza slot, non creiamo nulla
+                if current_max_num >= required_total:
+                    continue
+
+                # crea SOLO gli slot mancanti, senza avanzare
+                for i in range(current_max_num + 1, required_total + 1):
+                    desired = f"{base}.{i}"
                     Profession.objects.get_or_create(name=desired)
 
             # --- Salvataggio righe template così come inserite dall’utente ---
@@ -921,14 +929,12 @@ def template_create(request):
         form = TemplateCreateForm()
     return render(request, "template_create.html", {"form": form})
 
-
 @login_required
 @user_passes_test(_is_staff_or_superuser)
 def template_detail(request, pk):
     """Visualizza un template e le sue righe."""
     template = get_object_or_404(Template.objects.prefetch_related("rows"), pk=pk)
     return render(request, "template_detail.html", {"template": template})
-
 
 @login_required
 @user_passes_test(_is_staff_or_superuser)
