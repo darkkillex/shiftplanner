@@ -1,14 +1,22 @@
+# v0.7.7
+### 🐞 Bugfix
+* Corretto il sistema di generazione delle Profession dai template: eliminata la creazione eccessiva di suffissi (es. Ufficio.5+.6+.7…). Ora il numero di slot per mansione cresce solo quando serve realmente.
+* Risolto problema di visualizzazione del logo navbar dalla pagina del registro delle versioni.
+
+### 🛠️ Miglioramenti
+* Riorganizzate le interazioni di stile e il testo contenuto nel registro delle versioni.
+
 # v0.7.6
 ### 🛠️ Miglioramenti
 * Salvata la posizione di ultimo scroll delle righe della grid PT dopo assegnazione/rimozione personale su turno
-* Salvati eventuali filtri applicati dopo assegnazione/rimozione personale su turno
+* Salvati eventuali filtri applicati dopo assegnazione/rimozione personale su turno.
 * Aggiunta conferma invio notifiche: introdotto un modal di avviso prima dell’invio massivo delle email, per evitare invii accidentali e rendere l’azione più sicura.
 
 # v0.7.5
 ### 🛠️ Miglioramenti
 * Aumentato il limite di caratteri per mappare il nome di professioni fino a 200 caratteri.
-* Reso obbligatorio il campo "Nome piano" all'atto di creazione di un nuovo PT
-* Resa materialize la pagina di creazione di un nuovo PT
+* Reso obbligatorio il campo "Nome piano" all'atto di creazione di un nuovo PT.
+* Resa materialize la pagina di creazione di un nuovo PT.
 
 ### 🐞 Bugfix
 * Corretto script di generazione del suffisso (.#) professioni che non risultava essere sequenziale.
@@ -22,14 +30,14 @@
   - filtro per azienda (select Materialize)
   - contatore dinamico dei risultati
   - bottone “Pulisci filtri”
-* Aggiunto file JS dedicato per la gestione dei filtri (employees_directory.js)
-* Inserita card “Elenco dipendenti” nella home
-* Allineato lo stile della pagina agli altri moduli (header, filtri e responsive design)
+* Aggiunto file JS dedicato per la gestione dei filtri (employees_directory.js).
+* Inserita card “Elenco dipendenti” nella home.
+* Allineato lo stile della pagina agli altri moduli (header, filtri e responsive design).
 
 # v0.7.3
 ### ✨ Nuove funzionalità
-* Aggiunta card Documentazione
-* Documentazione utente aggiornata(rev. flusso funzionalità)
+* Aggiunta card Documentazione.
+* Documentazione utente aggiornata(rev. flusso funzionalità).
 
 ### 🛠️ Miglioramenti
 * Aggiornamento scadenze:
@@ -213,18 +221,5 @@
 * Funzionalità base di gestione piani turni.  
 * Azione **“Rimuovi da celle selezionate”**.  
 * Bugfix: **logout** non funzionante.
-
----
-
-# 📘 Kairos ShiftPlanner — Registro delle versioni
-
-**Licenza:** MIT  
-**Tecnologie principali:** Django + DRF, PostgreSQL 15 (Docker), MaterializeCSS, Chart.js  
-
----
-
-ShiftPlanner è un’applicazione web per la **gestione dei piani turni** aziendali, progettata per garantire flessibilità, tracciabilità e automazione.  
-Il presente file documenta in modo cronologico tutte le modifiche, funzionalità e fix introdotti nel tempo, seguendo le convenzioni di Semantic Versioning.  
-> Nota: le versioni elencate non riportano la data di rilascio per scelta progettuale.
 
 ---
