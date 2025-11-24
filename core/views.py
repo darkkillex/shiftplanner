@@ -438,7 +438,7 @@ class PlanViewSet(viewsets.ModelViewSet):
         # Firma corrente: (emp_id, date) -> signature
         cur_sig = {}
         for a in cur_qs:
-            cur_sig[(a.employee_id, a.date)] = _assign_signature(a)  # funzione esistente nel tuo codice
+            cur_sig[(a.employee_id, a.date)] = _assign_signature(a)
 
         # --- Snapshot mese ---
         snap_qs = AssignmentSnapshot.objects.filter(year=plan.year, month=plan.month)
@@ -461,11 +461,15 @@ class PlanViewSet(viewsets.ModelViewSet):
         # Nessun destinatario: rispondi comunque coi totali
         if not changed_emp_ids:
             return Response({
+                "plan_id": plan.id,
+                "plan_month": plan.month,
+                "plan_year": plan.year,
                 "total_employees_registered": total_employees_registered,
                 "total_in_plan": total_in_plan,
                 "with_email": with_email,
                 "prepared": 0,
                 "sent": 0,
+                "errors": 0,
                 "recipients": [],
                 "detail": "Nessuna variazione rispetto all’ultimo invio."
             }, status=200)
@@ -474,7 +478,6 @@ class PlanViewSet(viewsets.ModelViewSet):
         by_emp = defaultdict(list)
         for a in cur_qs.filter(employee_id__in=changed_emp_ids):
             by_emp[a.employee].append(a)
-
 
         ITALIAN_MONTHS = [
             "", "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
@@ -490,6 +493,9 @@ class PlanViewSet(viewsets.ModelViewSet):
 
         prepared = len(by_emp)
         sent = 0
+        errors = 0
+
+        recipients_results = []  # log per JSON/CSV
 
         for emp, items in by_emp.items():
             items.sort(key=lambda x: x.date)
@@ -507,7 +513,6 @@ class PlanViewSet(viewsets.ModelViewSet):
 
             ctx = {
                 'employee_name': emp.full_name(),
-                # 'month_number': month_number,
                 'month_name': month_name,
                 'year': plan.year,
                 'legend': legend,
@@ -533,9 +538,34 @@ class PlanViewSet(viewsets.ModelViewSet):
 
             try:
                 n = msg.send(fail_silently=False)
-                sent += (1 if n else 0)
+                if n:
+                    sent += 1
+                    recipients_results.append({
+                        "employee_id": emp.id,
+                        "full_name": emp.full_name(),
+                        "email": emp.email,
+                        "status": "sent",
+                        "error": "",
+                    })
+                else:
+                    errors += 1
+                    recipients_results.append({
+                        "employee_id": emp.id,
+                        "full_name": emp.full_name(),
+                        "email": emp.email,
+                        "status": "error",
+                        "error": "send() ha restituito 0 (nessun destinatario accettato)",
+                    })
             except Exception as e:
+                errors += 1
                 logger.exception("Errore invio a %s <%s>: %s", emp.full_name(), emp.email, e)
+                recipients_results.append({
+                    "employee_id": emp.id,
+                    "full_name": emp.full_name(),
+                    "email": emp.email,
+                    "status": "error",
+                    "error": str(e)[:500],
+                })
 
         # --- Aggiorna snapshot SOLO per gli employee notificati ---
         if prepared:
@@ -551,14 +581,17 @@ class PlanViewSet(viewsets.ModelViewSet):
             if snaps:
                 AssignmentSnapshot.objects.bulk_create(snaps, ignore_conflicts=True)
 
-        recipients_list = [e.full_name() for e in by_emp.keys()]
         return Response({
-            "total_employees_registered": total_employees_registered, # totale dipendenti registrati su Kairos
-            "total_in_plan": total_in_plan,  # distinti presenti nel piano
-            "with_email": with_email,  # di quelli, con email valida
-            "prepared": prepared,  # cambiati e notificabili ora
-            "sent": sent,  # invii effettivi
-            "recipients": recipients_list  # nomi destinatari
+            "plan_id": plan.id,
+            "plan_month": plan.month,
+            "plan_year": plan.year,
+            "total_employees_registered": total_employees_registered,
+            "total_in_plan": total_in_plan,
+            "with_email": with_email,
+            "prepared": prepared,   # dipendenti per cui hai tentato invio (changed + email)
+            "sent": sent,           # invii con send() OK
+            "errors": errors,       # invii con errore / send()==0
+            "recipients": recipients_results
         }, status=200)
 
 

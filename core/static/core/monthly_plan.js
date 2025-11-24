@@ -754,21 +754,47 @@
 
     const sentAt = zonedIso(new Date(), 'Europe/Rome');
 
-    const rows = [
-      ['sent_at_europe_rome'],
-      [sentAt],
-      [],
-      ['recipient_full_name']
-    ];
-    (js.recipients || []).forEach(name => rows.push([name]));
+    const planMonth = js.plan_month ?? '';
+    const planYear  = js.plan_year ?? '';
 
-    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const rows = [
+      ['sent_at_europe_rome', sentAt],
+      ['plan_id', planId],
+      ['plan_month', planMonth],
+      ['plan_year', planYear],
+      [],
+      ['total_employees_registered', js.total_employees_registered ?? 0],
+      ['total_in_plan', js.total_in_plan ?? 0],
+      ['with_email', js.with_email ?? 0],
+      ['prepared', js.prepared ?? 0],
+      ['sent', js.sent ?? 0],
+      ['errors', js.errors ?? 0],
+      [],
+      ['employee_id', 'full_name', 'email', 'status', 'error']
+    ];
+
+    (js.recipients || []).forEach(r => {
+      rows.push([
+        r.employee_id ?? '',
+        r.full_name ?? '',
+        r.email ?? '',
+        r.status ?? '',
+        (r.error || '')
+      ]);
+    });
+
+    const csv = rows
+      .map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    const safeTs = sentAt.slice(0,19).replace(/[:T]/g, '-');
+
+    const safeTs = sentAt.slice(0, 19).replace(/[:T]/g, '-'); // yyyy-mm-dd-hh-mm-ss
     a.href = url;
     a.download = `notify_recipients_planID_${planId}_date_${safeTs}.csv`;
+
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -796,20 +822,44 @@
         headers: csrftoken ? { "X-CSRFToken": csrftoken } : {},
         credentials: "same-origin",
       });
+
       if (!resp.ok) {
         M.toast({ html: "Errore invio notifiche", classes: "red" });
         return;
       }
+
       const js = await resp.json().catch(() => ({}));
+
+      // estrai liste nomi per successo / errore
+      const recipients = js.recipients || [];
+
+      const namesSent = recipients
+        .filter(r => r.status === "sent")
+        .map(r => r.full_name)
+        .join(", ");
+
+      const namesError = recipients
+        .filter(r => r.status === "error")
+        .map(r => r.full_name)
+        .join(", ");
+
+      let extra = "";
+      if (namesSent) {
+        extra += `<br><strong>Inviate a:</strong> ${namesSent}`;
+      }
+      if (namesError) {
+        extra += `<br><strong>Errori su:</strong> ${namesError}`;
+      }
 
       M.toast({
         html: `
           Dipendenti registrati: ${js.total_employees_registered ?? 0}<br>
           Dipendenti totali nel piano: ${js.total_in_plan ?? 0}<br>
           Con email valida: ${js.with_email ?? 0}<br>
-          Da notificare ora: ${js.prepared ?? 0}<br>
-          Email inviate: ${js.sent ?? 0}<br>
-          ${js.recipients?.length ? "<hr>" + js.recipients.join(", ") : ""}
+          Tentativi di invio (prepared): ${js.prepared ?? 0}<br>
+          Email inviate (send OK): ${js.sent ?? 0}<br>
+          Errori invio: ${js.errors ?? 0}
+          ${extra}
         `,
         displayLength: 8000
       });
@@ -828,6 +878,12 @@
       await doNotify();
     });
 
+    // opzionale: bottone Annulla se lo usi
+    if (cancelBtn) {
+      cancelBtn.addEventListener("click", () => {
+        modal.close();
+      });
+    }
   }
 
 
