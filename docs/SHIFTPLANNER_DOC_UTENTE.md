@@ -55,10 +55,60 @@ Permette filtri per **azienda** e **periodo** con aggiornamento automatico (filt
 
 ### Invio notifiche
 - Accessibile dalla pagina del piano → **“Invia notifiche”**
-- Il sistema confronta le assegnazioni correnti con l’ultimo invio.  
-- Solo i dipendenti con variazioni ricevono un’email.
+- La funzione Invia Notifiche permette di inviare automaticamente, tramite email, il piano turni aggiornato ai dipendenti che hanno una variazione rispetto all’ultimo invio.
+- L’obiettivo è notificare solo chi ha realmente modifiche, evitando invii inutili e riducendo il rischio di confusione.
 
-### Contenuto email
+### Come funziona
+
+- Quando l’utente Staff preme il pulsante “Invia Notifiche”:
+  - Viene aperta una finestra di conferma, che avvisa l’utente del carattere potenzialmente impattante dell’azione.
+  - Alla conferma, il sistema:
+    - analizza il piano turni corrente
+    - confronta ogni assegnazione con l’ultimo “snapshot” salvato
+    - individua quali dipendenti hanno almeno una variazione 
+    - prepara le email da inviare solo a questi destinatari
+  - Per ogni dipendente con modifiche:
+    - il sistema genera una email personalizzata con:
+      - riepilogo dei turni
+      - note associate alle giornate
+    - invia la comunicazione all'indirizzo email registrato
+  - A invio concluso:
+    - viene aggiornato lo snapshot del piano per i soli dipendenti notificati
+    - viene mostrato un riepilogo dei risultati tramite toast
+
+### Cosa vede l'utente Staff dopo l'invio
+
+- Un riepilogo che indica:
+  - numero totale di dipendenti registrati in Kairos
+  - numero di dipendenti coinvolti nel piano
+  - quanti hanno un indirizzo email valido
+  - quanti presentano modifiche reali da notificare
+  - quante email sono state effettivamente inviate
+  - elenco dei destinatari notificati
+- In caso di errori SMTP, questi vengono inclusi nel report.
+
+### Report CSV
+- Dopo ogni invio viene scaricato automaticamente un file CSV contenente:
+  - timestamp dell’invio (Europa/Roma)
+  - nome del piano/mese
+  - totale dipendenti con variazioni
+  - lista dei destinatari coinvolti
+  - per ciascun destinatario:
+    - nome completo
+    - email
+    - esito invio (successo / errore)
+    - eventuale messaggio di errore
+- Questo file funge da log locale dell’invio effettuato.
+
+### Quando viene inviata una notifica
+- Una notifica viene inviata solo se:
+  - il dipendente è presente nel piano con almeno un’assegnazione
+  - l’indirizzo email è valido
+  - almeno una sua giornata rispetto allo snapshot precedente è cambiata 
+    (turno diverso, note cambiate, assegnazione aggiunta o rimossa)
+- Se non ci sono modifiche, nessuna email viene generata.
+
+### Contenuto email ricevuta dal lavoratore
 - Oggetto: `Piano turni <Mese> <Anno>`  
 - Corpo: saluto personalizzato, tabella turni.  
 - Allegato: calendario personale in HTML e testo.
