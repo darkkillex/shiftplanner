@@ -1,3 +1,11 @@
+# v0.7.8
+### 🛠️ Miglioramenti
+* Nuovo report CSV completo (timestamp, metadati del piano, stato per destinatario, errori SMTP).
+* Toast di notifica migliorato con dettagli su invii riusciti ed errori.
+* Modal di conferma invio più sicuro e chiaro.
+* Backend notify() reso più robusto con log per destinatario.
+
+
 # v0.7.7
 ### 🐞 Bugfix
 * Corretto il sistema di generazione delle Profession dai template: eliminata la creazione eccessiva di suffissi (es. Ufficio.5+.6+.7…). Ora il numero di slot per mansione cresce solo quando serve realmente.
