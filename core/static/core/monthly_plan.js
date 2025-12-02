@@ -318,11 +318,8 @@
         tdShift.textContent = "";
       } else {
         const code  = row.row_shift_code || "";
-        const label = row.row_shift_label || "";
-        // es. "A — Mattina"
-        tdShift.textContent = code
-          ? (label ? `${code} — ${label}` : code)
-          : "";
+        // solo codice turno es. "A,12H-D,FOR etc."
+        tdShift.textContent = code || "";
       }
 
       // colonna 1: mansione (base, senza suffisso)
