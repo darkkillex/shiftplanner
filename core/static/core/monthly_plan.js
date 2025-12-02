@@ -224,7 +224,7 @@
       noteCellLabel: $("#noteCellLabel"),
       noteSaveBtn: $("#noteSaveBtn"),
       employeeSel: $("#employee"),
-      shiftSel: $("#shift"),
+      //shiftSel: $("#shift"),
       noteToolbarInput: $("#note"),
       applyBtn: $("#apply"),
       clearBtn: $("#clear"),
@@ -280,7 +280,8 @@
     const data = await res.json();
     state.days = data.days;
 
-    // Header con flag giorno
+    // Header con flag giorno (le prime colonne "Turno" e "Professione"
+    // sono già nel template HTML, qui aggiungiamo solo i giorni)
     const dayFlags = {}; // i -> { saturday, sunday, holiday }
     const weekdayFmt = new Intl.DateTimeFormat("it-IT", { weekday: "short" });
     for (let i = 1; i <= state.days; i++) {
@@ -305,36 +306,57 @@
     data.rows.forEach((row) => {
       const tr = document.createElement("tr");
 
-      const th = document.createElement("th");
-      th.textContent = row.profession;
-      tr.appendChild(th);
-
-      // Colore riga per mansione
       const isSpacer = !!row.spacer;
       const rowKey = row.profession || "";
       const rowBg  = isSpacer ? null : colorForProfession(rowKey);
 
+      // colonna 0: turno strutturale della riga
+      const tdShift = document.createElement("td");
+      tdShift.className = "row-shift";
+
       if (isSpacer) {
-        tr.classList.add("spacer-row");
-        th.classList.add("spacer-head");
-      } else if (rowBg) {
-        th.style.backgroundColor = rowBg;
+        tdShift.textContent = "";
+      } else {
+        const code  = row.row_shift_code || "";
+        const label = row.row_shift_label || "";
+        // es. "A — Mattina"
+        tdShift.textContent = code
+          ? (label ? `${code} — ${label}` : code)
+          : "";
       }
 
+      // colonna 1: mansione (base, senza suffisso)
+      const tdProf = document.createElement("td");
+      tdProf.className = "row-prof";
+      tdProf.textContent = row.profession || "";
+
+      tr.appendChild(tdShift);
+      tr.appendChild(tdProf);
+
+      if (isSpacer) {
+        tr.classList.add("spacer-row");
+        tdShift.classList.add("spacer-head");
+        tdProf.classList.add("spacer-head");
+      } else if (rowBg) {
+        tdShift.style.backgroundColor = rowBg;
+        tdProf.style.backgroundColor = rowBg;
+      }
+
+      // celle giorno per giorno
       for (let i = 1; i <= state.days; i++) {
         const cellData = row[String(i)] || {};
         const td = document.createElement("td");
         td.className = "cell";
-        td.dataset.professionId = row.profession_id;
+        td.dataset.professionId = row.profession_id ?? "";
+        td.dataset.planRowId    = row.plan_row_id ?? "";
         td.dataset.day = i;
 
-        // Sabato/Domenica/Festività: SOLO sulle celle del giorno
+        // Sabato/Domenica/Festività
         const f = dayFlags[i];
         if (f?.saturday) td.classList.add("saturday");
         if (f?.sunday)   td.classList.add("sunday");
         if (f?.holiday)  td.classList.add("holiday");
 
-        // Colore riga per mansione
         if (isSpacer) {
           td.classList.add("spacer-cell");
         } else if (rowBg) {
@@ -365,6 +387,7 @@
 
         tr.appendChild(td);
       }
+
       gridBody.appendChild(tr);
     });
 
@@ -412,17 +435,31 @@
       td.addEventListener("mousedown", (e) => {
         selected.clear();
         $$("#grid td.cell.selected").forEach((x) => x.classList.remove("selected"));
-        selected.add(`${td.dataset.professionId}#${td.dataset.day}`);
+
+        const planRowId    = td.dataset.planRowId || "";
+        const professionId = td.dataset.professionId || "";
+        const day          = td.dataset.day;
+
+        const key = `${planRowId}:${professionId}#${day}`;
+        selected.add(key);
         td.classList.add("selected");
         e.preventDefault();
       });
+
       td.addEventListener("mouseenter", () => {
         if (!state.isMouseDown) return;
-        selected.add(`${td.dataset.professionId}#${td.dataset.day}`);
+
+        const planRowId    = td.dataset.planRowId || "";
+        const professionId = td.dataset.professionId || "";
+        const day          = td.dataset.day;
+
+        const key = `${planRowId}:${professionId}#${day}`;
+        selected.add(key);
         td.classList.add("selected");
       });
     });
   }
+
 
   // -------------------------------
   // Contenitore scrollabile (auto-scroll durante drag)
@@ -526,7 +563,7 @@
 
       for (let i = 0; i < rows.length; i++) {
         const tr = rows[i];
-        const firstCell = tr.cells[0];
+        const firstCell = tr.cells[1] || tr.cells[0];  // mansione in colonna 1
         const text = firstCell ? firstCell.textContent : "";
         const ok = normalize(text).includes(q);
         tr.style.display = ok ? "" : "none";
@@ -615,23 +652,36 @@
   // APPLY (assegnazione)
   // -------------------------------
   function initApply(state) {
-    const { applyBtn, employeeSel, shiftSel, noteToolbarInput, selected, csrftoken, planId, year, month } = state;
+    const { applyBtn, employeeSel, noteToolbarInput, selected, csrftoken, planId, year, month } = state;
     if (!applyBtn) return;
 
     applyBtn.addEventListener("click", async () => {
       const employeeId = employeeSel.value;
-      if (!employeeId) return M.toast({ html: "Seleziona un lavoratore", classes: "orange" });
-      const shiftId = shiftSel.value || null;
-      if (!shiftId) return M.toast({ html: "Seleziona un turno", classes: "orange" });
+      if (!employeeId) {
+        return M.toast({ html: "Seleziona un lavoratore", classes: "orange" });
+      }
+
       const note = (noteToolbarInput?.value || "").trim();
 
       const cells = Array.from(selected).map((k) => {
-        const [p, d] = k.split("#");
-        const dd = String(Number(d)).padStart(2, "0");
+        // k = "planRowId:professionId#day"
+        const [rowPart, dayStr] = k.split("#");
+        const [planRowId, professionId] = rowPart.split(":");
+
+        const dd = String(Number(dayStr)).padStart(2, "0");
         const mm = String(month).padStart(2, "0");
-        return { profession_id: Number(p), date: `${year}-${mm}-${dd}` };
+
+        const cell = {
+          date: `${year}-${mm}-${dd}`,
+        };
+        if (professionId) cell.profession_id = Number(professionId);
+        if (planRowId)    cell.plan_row_id  = Number(planRowId);
+        return cell;
       });
-      if (!cells.length) return M.toast({ html: "Seleziona almeno una cella", classes: "orange" });
+
+      if (!cells.length) {
+        return M.toast({ html: "Seleziona almeno una cella", classes: "orange" });
+      }
 
       const resp = await fetch(`/api/plans/${planId}/bulk_assign/`, {
         method: 'POST',
@@ -639,7 +689,7 @@
         credentials: 'same-origin',
         body: JSON.stringify({
           employee_id: Number(employeeId),
-          shift_type_id: shiftId ? Number(shiftId) : null,
+          // shift_type_id: non più inviato: il turno è legato alla riga
           cells,
           note,
         })
@@ -691,6 +741,7 @@
     });
   }
 
+
   // -------------------------------
   // CLEAR (rimozione assegnazioni)
   // -------------------------------
@@ -699,15 +750,28 @@
     if (!clearBtn) return;
 
     clearBtn.addEventListener("click", async () => {
-      if (!selected.size) return M.toast({ html: "Seleziona almeno una cella", classes: "orange" });
+      if (!selected.size) {
+        return M.toast({ html: "Seleziona almeno una cella", classes: "orange" });
+      }
       if (!confirm("Rimuovere le assegnazioni dalle celle selezionate?")) return;
 
       const cells = Array.from(selected).map((k) => {
-        const [p, d] = k.split("#");
-        const dd = String(Number(d)).padStart(2, "0");
+        // k = "planRowId:professionId#day"
+        const [rowPart, dayStr] = k.split("#");
+        const [, professionId] = rowPart.split(":"); // il primo è planRowId, qui non serve
+
+        const dd = String(Number(dayStr)).padStart(2, "0");
         const mm = String(month).padStart(2, "0");
-        return { profession_id: Number(p), date: `${year}-${mm}-${dd}` };
-      });
+
+        return {
+          profession_id: professionId ? Number(professionId) : null,
+          date: `${year}-${mm}-${dd}`,
+        };
+      }).filter(c => c.profession_id); // scarta eventuali celle senza professione
+
+      if (!cells.length) {
+        return M.toast({ html: "Nessuna cella valida selezionata per la rimozione", classes: "orange" });
+      }
 
       const resp = await fetch(`/api/plans/${planId}/bulk_clear/`, {
         method: "POST",
@@ -715,7 +779,9 @@
         credentials: "same-origin",
         body: JSON.stringify({ cells }),
       });
-      if (!resp.ok) return M.toast({ html: "Errore rimozione", classes: "red" });
+      if (!resp.ok) {
+        return M.toast({ html: "Errore rimozione", classes: "red" });
+      }
 
       // Salva posizione di scroll e filtri prima del reload
       saveScrollPosition();
@@ -723,6 +789,7 @@
       location.reload();
     });
   }
+
 
   // -------------------------------
   // EXPORT CSV destinatari notify (Europe/Rome)

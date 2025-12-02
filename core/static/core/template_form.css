@@ -14,3 +14,37 @@
   }
   /* Colonna numeri semplice via CSS counter usando ::before su contenitore (fallback non perfetto ma utile) */
   .input-field textarea.materialize-textarea::placeholder { opacity: .5; }
+
+    .template-rows-panel {
+    margin-top: 16px;
+    padding: 12px;
+    border-radius: 6px;
+    background: #fafafa;
+    border: 1px solid #e0e0e0;
+  }
+  .template-rows-panel h6 {
+    margin-top: 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+  table.template-rows-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+  table.template-rows-table th,
+  table.template-rows-table td {
+    padding: 4px 6px;
+    border-bottom: 1px solid #eee;
+  }
+  table.template-rows-table th {
+    background: #f0f0f0;
+    font-weight: 600;
+  }
+  table.template-rows-table tr.template-spacer-row td {
+    font-style: italic;
+    color: #888;
+  }
+  table.template-rows-table select {
+    font-size: 0.85rem;
+  }

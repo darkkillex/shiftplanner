@@ -48,7 +48,7 @@
           </select>
         </div>
 
-        <div class="input-field">
+<!--        <div class="input-field">
           <i class="material-icons prefix">edit_calendar</i>
           <label class="active" for="shift">Turno</label>
           <select id="shift">
@@ -57,7 +57,7 @@
               <option value="{{ s.id }}">{{ s.code }} — {{ s.label }}</option>
             {% endfor %}
           </select>
-        </div>
+        </div>-->
 
         <div class="input-field">
           <i class="material-icons prefix">sticky_note_2</i>
@@ -119,7 +119,10 @@
        data-month="{{ plan.month }}">
     <table id="grid">
       <thead>
-        <tr id="grid-head"><th>Professione</th></tr>
+        <tr id="grid-head">
+          <th>Turno</th>
+          <th>Professione</th>
+        </tr>
       </thead>
       <tbody></tbody>
     </table>

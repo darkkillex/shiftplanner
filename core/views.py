@@ -35,6 +35,7 @@ from .models import Template, TemplateRow, Profession, AssignmentSnapshot, PlanR
 
 from .serializers import *
 
+
 _SLOT_RE = re.compile(r'^(.*?)(?:\.(\d+))?$')
 
 def _split_slot(name: str):
@@ -215,28 +216,39 @@ class PlanViewSet(viewsets.ModelViewSet):
 
         rows = []
         if plan.rows.exists():
+            # Usa PlanRow + turno di riga
             for r in plan.rows.all().order_by('order'):
                 if r.is_spacer:
                     duty_full = ''
                     base = ''
                     prof = None
+                    row_shift = None
                 else:
                     duty_full = (r.duty or '').strip()  # es. "Magazzino.4"
                     base = duty_full.split('.', 1)[0] if duty_full else ''
                     prof = Profession.objects.filter(name=duty_full).first()  # match ESATTO
+                    row_shift = r.shift_type  # turno legato alla riga del piano
 
                 row = {
                     'plan_row_id': r.id,
                     'profession_id': getattr(prof, 'id', None),
                     'profession': base,  # UI senza suffisso
                     'spacer': bool(r.is_spacer),
+                    'row_shift_code': row_shift.code if row_shift else '',
+                    'row_shift_label': row_shift.label if row_shift else '',
                 }
 
                 for d in range(1, days + 1):
                     day = dt.date(plan.year, plan.month, d)
                     if not prof:
-                        row[str(d)] = {'employee_id': None, 'employee_name': '', 'shift_code': '', 'shift_label': '',
-                                       'notes': '', 'has_note': False}
+                        row[str(d)] = {
+                            'employee_id': None,
+                            'employee_name': '',
+                            'shift_code': '',
+                            'shift_label': '',
+                            'notes': '',
+                            'has_note': False,
+                        }
                     else:
                         a = idx.get((prof.id, day))
                         row[str(d)] = {
@@ -249,9 +261,17 @@ class PlanViewSet(viewsets.ModelViewSet):
                         }
                 rows.append(row)
         else:
+            # Fallback legacy: nessuna PlanRow -> costruisci da Profession
             for p in Profession.objects.order_by('name'):
                 base = p.name.split('.', 1)[0]
-                row = {'profession_id': p.id, 'profession': base, 'spacer': False}
+                row = {
+                    'plan_row_id': None,
+                    'profession_id': p.id,
+                    'profession': base,
+                    'spacer': False,
+                    'row_shift_code': '',
+                    'row_shift_label': '',
+                }
                 for d in range(1, days + 1):
                     day = dt.date(plan.year, plan.month, d)
                     a = idx.get((p.id, day))
@@ -261,17 +281,18 @@ class PlanViewSet(viewsets.ModelViewSet):
                         'shift_code': a.shift_type.code if (a and a.shift_type) else '',
                         'shift_label': a.shift_type.label if (a and a.shift_type) else '',
                         'notes': a.notes if a and a.notes else '',
-                        'has_note': bool(a and a.notes)
+                        'has_note': bool(a and a.notes),
                     }
                 rows.append(row)
 
         return Response({'year': plan.year, 'month': plan.month, 'days': days, 'rows': rows})
 
+
     @action(detail=True, methods=['post'])
     def bulk_assign(self, request, pk=None):
         plan = self.get_object()
         employee_id = request.data.get('employee_id')
-        shift_id = request.data.get('shift_type_id')
+        payload_shift_id = request.data.get('shift_type_id')  # usato solo come fallback
         cells = request.data.get('cells', [])
         note = (request.data.get('note') or '').strip()
 
@@ -281,9 +302,10 @@ class PlanViewSet(viewsets.ModelViewSet):
         # mappa professioni per nome (tollerante)
         prof_by_name = {p.name.strip().casefold(): p for p in Profession.objects.all()}
 
-        valid_targets = []  # [(profession_id:int, date:date)]
+        # [(profession_id:int, date:date, row_shift_id:Optional[int])]
+        valid_targets = []
         skipped = []  # [{'date':iso, 'reason': str}]
-        errors = []  # hard errors di formato
+        errors = []   # hard errors di formato
 
         # normalizza celle
         for c in cells:
@@ -294,34 +316,49 @@ class PlanViewSet(viewsets.ModelViewSet):
                 errors.append({'cell': c, 'reason': 'date non valida'})
                 continue
 
+            row_shift_id = None  # turno strutturale legato alla riga (se presente)
+
+            # 1) Se arriva plan_row_id, usalo come fonte “autorevole” sia per duty che per shift
+            pr_id = c.get('plan_row_id')
+            if pr_id:
+                try:
+                    r = PlanRow.objects.select_related(None).get(pk=pr_id, plan=plan)
+                except Exception:
+                    skipped.append({'date': d_iso, 'reason': 'plan_row inesistente o di altro piano'})
+                    continue
+
+                if r.is_spacer or not (r.duty or '').strip():
+                    skipped.append({'date': d_iso, 'reason': 'riga spacer/non mappabile'})
+                    continue
+
+                key = r.duty.strip().casefold()
+                p = prof_by_name.get(key)
+                if not p:
+                    skipped.append({'date': d_iso, 'reason': f"mansione '{r.duty}' non mappata a Profession"})
+                    continue
+
+                row_shift_id = getattr(r, 'shift_type_id', None)
+                valid_targets.append((p.id, day, row_shift_id))
+                continue  # abbiamo già tutto, passa alla prossima cella
+
+            # 2) Fallback legacy: usa solo profession_id come fai oggi
             prof_id = c.get('profession_id')
             if prof_id:
-                # verifica che la professione esista
                 if Profession.objects.filter(pk=prof_id).exists():
-                    valid_targets.append((int(prof_id), day))
+                    # opzionale: prova a risalire alla PlanRow per recuperare il turno strutturale
+                    try:
+                        prof_obj = Profession.objects.get(pk=prof_id)
+                        duty_name = (prof_obj.name or '').strip()
+                        pr = PlanRow.objects.filter(plan=plan, duty=duty_name).first()
+                        if pr and not pr.is_spacer:
+                            row_shift_id = getattr(pr, 'shift_type_id', None)
+                    except Exception:
+                        pass
+
+                    valid_targets.append((int(prof_id), day, row_shift_id))
                     continue
                 else:
                     skipped.append({'date': d_iso, 'reason': 'profession_id inesistente'})
-                    continue
-
-            # fallback: plan_row_id -> mappa duty->Profession
-            pr_id = c.get('plan_row_id')
-            if pr_id:
-                from .models import PlanRow  # import locale, nessuna hard dep se il modello manca
-                try:
-                    r = PlanRow.objects.select_related(None).get(pk=pr_id, plan=plan)
-                    if r.is_spacer or not (r.duty or '').strip():
-                        skipped.append({'date': d_iso, 'reason': 'riga spacer/non mappabile'})
-                        continue
-                    key = r.duty.strip().casefold()
-                    p = prof_by_name.get(key)
-                    if not p:
-                        skipped.append({'date': d_iso, 'reason': f"mansione '{r.duty}' non mappata a Profession"})
-                        continue
-                    valid_targets.append((p.id, day))
-                    continue
-                except Exception:
-                    skipped.append({'date': d_iso, 'reason': 'plan_row inesistente o di altro piano'})
                     continue
 
             # nessun id utile
@@ -329,28 +366,32 @@ class PlanViewSet(viewsets.ModelViewSet):
             continue
 
         if errors:
-            # formato celle non valido
             return Response(
                 {'detail': 'formato celle non valido', 'errors': errors, 'skipped': []},
                 status=400
             )
 
         if not valid_targets:
-            # nessuna cella mappabile
             return Response(
-                {'detail': 'nessuna cella valida',
-                 'skipped': skipped,  # <-- motivi per ogni data
-                 'hint': 'verifica plan_row_id/profession_id e corrispondenza mansione->Profession'},
+                {
+                    'detail': 'nessuna cella valida',
+                    'skipped': skipped,
+                    'hint': 'verifica plan_row_id/profession_id e corrispondenza mansione->Profession'
+                },
                 status=400
             )
+
         log = logging.getLogger(__name__)
         log.info("bulk_assign plan=%s employee=%s cells=%s", plan.id, employee_id, cells[:5])
+
         # conflitti: stesso dipendente già assegnato in quelle date su ALTRE professioni
-        dates = list({d for _, d in valid_targets})
-        conflicts_qs = (Assignment.objects
-                        .filter(plan=plan, date__in=dates, employee_id=employee_id)
-                        .select_related('profession', 'shift_type'))
-        target_set = set(valid_targets)  # confronto su (profession_id, date)
+        dates = list({d for _, d, _ in valid_targets})
+        conflicts_qs = (
+            Assignment.objects
+            .filter(plan=plan, date__in=dates, employee_id=employee_id)
+            .select_related('profession', 'shift_type')
+        )
+        target_set = {(p_id, day) for (p_id, day, _) in valid_targets}
 
         conflicts = []
         for a in conflicts_qs:
@@ -372,17 +413,31 @@ class PlanViewSet(viewsets.ModelViewSet):
         # write
         updated = 0
         with transaction.atomic():
-            for prof_id, day in valid_targets:
+            for prof_id, day, row_shift_id in valid_targets:
+                defaults = {
+                    'employee_id': employee_id,
+                }
+
+                # PRIORITÀ: turno legato alla riga; in mancanza, fallback al vecchio shift_id da payload
+                effective_shift_id = row_shift_id if row_shift_id is not None else payload_shift_id
+                if effective_shift_id:
+                    defaults['shift_type_id'] = effective_shift_id
+
                 obj, _ = Assignment.objects.update_or_create(
-                    plan=plan, profession_id=prof_id, date=day,
-                    defaults={'employee_id': employee_id, 'shift_type_id': shift_id}
+                    plan=plan,
+                    profession_id=prof_id,
+                    date=day,
+                    defaults=defaults,
                 )
+
                 if obj.notes != note:
                     obj.notes = note
                     obj.save(update_fields=['notes'])
+
                 updated += 1
 
         return Response({'updated': updated, 'skipped': skipped}, status=200)
+
 
 
     @action(detail=True, methods=['post'])
@@ -834,23 +889,30 @@ def plan_create(request):
             # --- Clona righe dal template, se selezionato ---
             template = form.cleaned_data.get("template")
             if template:
-                from collections import defaultdict
-                from .models import TemplateRow, PlanRow, Profession
-
                 occ = defaultdict(int)  # contatore per base NEL SOLO PIANO
                 rows_to_create = []
 
                 for r in template.rows.all().order_by('order'):
                     if r.is_spacer:
                         rows_to_create.append(PlanRow(
-                            plan=plan, order=r.order, duty="", is_spacer=True, notes=r.notes
+                            plan=plan,
+                            order=r.order,
+                            duty="",
+                            is_spacer=True,
+                            notes=r.notes,
+                            shift_type=None, # spacer, nessun turno
                         ))
                         continue
 
                     raw = (r.duty or "").strip()
                     if not raw:
                         rows_to_create.append(PlanRow(
-                            plan=plan, order=r.order, duty="", is_spacer=False, notes=r.notes
+                            plan=plan,
+                            order=r.order,
+                            duty="",
+                            is_spacer=False,
+                            notes=r.notes,
+                            shift_type=r.shift_type, # può essere None
                         ))
                         continue
 
@@ -868,7 +930,12 @@ def plan_create(request):
                     Profession.objects.get_or_create(name=duty_full)  # accredita se manca
 
                     rows_to_create.append(PlanRow(
-                        plan=plan, order=r.order, duty=duty_full, is_spacer=False, notes=r.notes
+                        plan=plan,
+                        order=r.order,
+                        duty=duty_full,
+                        is_spacer=False,
+                        notes=r.notes,
+                        shift_type=r.shift_type,
                     ))
 
                 if rows_to_create:
@@ -881,21 +948,44 @@ def plan_create(request):
 
     return render(request, "plan_create.html", {"form": form})
 
-def _parse_rows(text: str):
-    """Ritorna un elenco di TemplateRow da testo multilinea."""
+def _parse_rows(text: str, post_data=None):
+    """
+    Ritorna un elenco di TemplateRow da testo multilinea.
+    Se post_data è fornito, legge per ogni riga il turno associato dal campo:
+      row_shift_<order>
+    """
     lines = text.replace("\r\n", "\n").split("\n")
     rows = []
     order = 1
     for ln in lines:
         stripped = ln.strip()
-        if stripped == "":
-            rows.append(TemplateRow(order=order, duty="", is_spacer=True))
-        else:
-            rows.append(TemplateRow(order=order, duty=stripped, is_spacer=False))
+        is_spacer = (stripped == "")
+        duty = "" if is_spacer else stripped
+
+        tr = TemplateRow(
+            order=order,
+            duty=duty,
+            is_spacer=is_spacer,
+        )
+
+        # turno per riga, se presente e se non è spacer
+        if post_data is not None and not is_spacer:
+            key = f"row_shift_{order}"
+            shift_id = post_data.get(key)
+            if shift_id:
+                try:
+                    from .models import ShiftType
+                    tr.shift_type = ShiftType.objects.get(pk=int(shift_id))
+                except (ValueError, ShiftType.DoesNotExist):
+                    pass
+
+        rows.append(tr)
         order += 1
+
     # elimina eventuali spazi finali consecutivi
     while rows and rows[-1].is_spacer:
         rows.pop()
+
     return rows
 
 @login_required
@@ -907,7 +997,8 @@ def template_create(request):
         form = TemplateCreateForm(request.POST)
         if form.is_valid():
             template = form.save()
-            rows = _parse_rows(form.cleaned_data["rows_text"])
+            # ora passiamo anche request.POST a _parse_rows
+            rows = _parse_rows(form.cleaned_data["rows_text"], post_data=request.POST)
             for r in rows:
                 r.template = template
 
@@ -960,7 +1051,12 @@ def template_create(request):
             return redirect("template_detail", pk=template.pk)
     else:
         form = TemplateCreateForm()
-    return render(request, "template_create.html", {"form": form})
+
+    shift_types = ShiftType.objects.order_by("id")
+    return render(request, "template_create.html", {
+        "form": form,
+        "shift_types": shift_types,
+    })
 
 @login_required
 @user_passes_test(_is_staff_or_superuser)

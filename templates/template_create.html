@@ -6,15 +6,8 @@
 <link rel="stylesheet" href="{% static 'core/template_form.css' %}">
 {% endblock %}
 
-<!-- auto-resize Materialize -->
 {% block extra_js %}
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-    // auto-resize Materialize
-    var ta = document.querySelector('textarea.materialize-textarea');
-    if (ta && M && M.textareaAutoResize) { M.textareaAutoResize(ta); }
-  });
-</script>
+  <script src="{% static 'core/template_create.js' %}"></script>
 {% endblock %}
 
 {% block content %}
@@ -51,6 +44,41 @@
         </div>
       </div>
 
+      <!-- Pannello mansioni + turni strutturali -->
+      <div class="template-rows-panel">
+        <h6>Mansioni e turni strutturali</h6>
+        <p class="grey-text text-darken-1" style="margin-bottom:6px;">
+          Per ogni riga non vuota del template puoi associare un turno “strutturale”.
+          Le righe vuote vengono considerate come separatori e non hanno turno.
+        </p>
+
+        <table class="template-rows-table">
+          <thead>
+            <tr>
+              <th style="width:60px;">Ordine</th>
+              <th>Mansione (testo riga)</th>
+              <th>Turno associato</th>
+            </tr>
+          </thead>
+          <tbody id="tpl-rows-tbody">
+            <!-- riempito via JS in base al contenuto della textarea -->
+          </tbody>
+        </table>
+
+        <p class="grey-text" style="margin-top:6px;">
+          La selezione del turno per riga verrà collegata ai piani generati da questo template
+          negli step successivi lato backend.
+        </p>
+      </div>
+
+            <!-- TEMPLATE NASCOSTO PER LE OPTION DEI TURNI -->
+      <select id="row-shift-template" class="browser-default" style="display:none;">
+        <option value="">— Nessun turno associato —</option>
+        {% for s in shift_types %}
+          <option value="{{ s.id }}">{{ s.code }} — {{ s.label }}</option>
+        {% endfor %}
+      </select>
+
       <ul class="browser-default" style="margin-top:8px;">
         <li>Il sistema accredita automaticamente le mansioni mancanti.</li>
       </ul>
@@ -65,4 +93,3 @@
   </form>
 </div>
 {% endblock %}
-

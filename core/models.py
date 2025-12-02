@@ -98,9 +98,16 @@ class Template(models.Model):
 class TemplateRow(models.Model):
     template = models.ForeignKey(Template, on_delete=models.CASCADE, related_name="rows")
     order = models.PositiveIntegerField(db_column='row_order')
-    duty = models.CharField(max_length=200, blank=True) # mansione, può essere vuota
-    is_spacer = models.BooleanField(default=False)      # riga vuota / separatore
+    duty = models.CharField(max_length=200, blank=True)  # mansione, può essere vuota
+    is_spacer = models.BooleanField(default=False)       # riga vuota / separatore
     notes = models.CharField(max_length=200, blank=True)
+    shift_type = models.ForeignKey(
+        'ShiftType',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='template_rows'
+    )
 
     class Meta:
         ordering = ["order"]
@@ -111,12 +118,20 @@ class TemplateRow(models.Model):
     def __str__(self):
         return self.duty or "(spazio)"
 
+
 class PlanRow(models.Model):
     plan = models.ForeignKey('Plan', on_delete=models.CASCADE, related_name='rows')
     order = models.PositiveIntegerField(db_column='row_order')  # evita parola riservata
     duty = models.CharField(max_length=200, blank=True)
     is_spacer = models.BooleanField(default=False)
     notes = models.CharField(max_length=200, blank=True)
+    shift_type = models.ForeignKey(
+        'ShiftType',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='plan_rows'
+    )
 
     class Meta:
         ordering = ['order']
@@ -124,6 +139,7 @@ class PlanRow(models.Model):
             models.UniqueConstraint(fields=['plan', 'order'], name='uniq_plan_order'),
         ]
         indexes = [models.Index(fields=['plan', 'order'])]
+
 
 
 class Reminder(models.Model):
