@@ -363,11 +363,13 @@
         // contenuto + dataset utili
         const name = cellData.employee_name || "";
         const shiftLabel = cellData.shift_label || "";
-        const text = name ? name + (shiftLabel ? ` (${shiftLabel})` : "") : "";
+        // NIENTE turno nel testo, solo nome lavoratore
+        const text = name || "";
 
         td.dataset.employeeId = cellData.employee_id || "";
         td.dataset.notes = cellData.notes || "";
         td.dataset.name = name;
+        // manteniamo comunque il label nel dataset se in futuro serve
         td.dataset.shiftLabel = shiftLabel;
 
         if (cellData.has_note) {
