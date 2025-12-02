@@ -1,3 +1,13 @@
+# v0.8.0
+### 🛠️ Modifiche strutturali
+* Introdotto il concetto di turno strutturale associato direttamente alla mansione.
+* Aggiunto nuovo campo shift_type a TemplateRow e PlanRow.
+* Estesa la pagina di creazione template con pannello dinamico per selezione turno per ogni riga.
+* Aggiornato bulk assign: il turno della cella non è più scelto nel menu ma ereditato dalla riga.
+* Aggiornato layout griglia mensile con colonna “Turno” + colonna “Mansione”.
+* Aggiornata API grid per includere informazioni su turno di riga.
+* Aggiornati filtri e funzioni JS al nuovo modello dati.
+
 # v0.7.8
 ### 🛠️ Miglioramenti
 * Nuovo report CSV completo (timestamp, metadati del piano, stato per destinatario, errori SMTP).
