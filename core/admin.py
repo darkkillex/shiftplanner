@@ -43,12 +43,17 @@ class InsertRowForm(forms.Form):
     duty = forms.CharField(required=False, label="Mansione")
     is_spacer = forms.BooleanField(required=False, initial=False, label="Spacer")
     notes = forms.CharField(required=False, widget=forms.Textarea, label="Note")
+    shift_type = forms.ModelChoiceField(
+        queryset=ShiftType.objects.all().order_by("code"),
+        required=False,
+        label="Turno strutturale",
+    )
 
 
 class TemplateRowInline(admin.TabularInline):
     model = TemplateRow
     extra = 0
-    fields = ('order', 'duty', 'is_spacer', 'notes')
+    fields = ('order', 'duty', 'is_spacer', 'shift_type', 'notes')
     ordering = ('order',)
     sortable_field_name = 'order'  # drag&drop se supportato dal tema admin
 
@@ -77,7 +82,8 @@ class TemplateAdmin(admin.ModelAdmin):
                     order=r.order,
                     duty=r.duty,
                     is_spacer=r.is_spacer,
-                    notes=r.notes
+                    notes=r.notes,
+                    shift_type=r.shift_type,
                 )
                 for r in tpl.rows.all().order_by('order', 'id')
             ]
@@ -97,7 +103,6 @@ class TemplateAdmin(admin.ModelAdmin):
 
     @admin.action(description="Propaga layout ai piani che usano il template")
     def propagate_layout(self, request, queryset):
-        from .models import PlanRow, Plan, Profession
         created_rows = 0
         updated_rows = 0
 
@@ -115,7 +120,7 @@ class TemplateAdmin(admin.ModelAdmin):
 
                 tpl_rows = list(
                     tpl.rows.order_by("order", "id")
-                           .values("order", "duty", "is_spacer", "notes")
+                           .values("order", "duty", "is_spacer", "notes", "shift_type_id")
                 )
 
                 plans = Plan.objects.filter(template=tpl).prefetch_related("rows")
@@ -127,6 +132,7 @@ class TemplateAdmin(admin.ModelAdmin):
                         duty = (tr["duty"] or "").strip()
                         is_spacer = bool(tr["is_spacer"])
                         notes = tr["notes"]
+                        shift_type_id = tr["shift_type_id"]
 
                         pr = existing_by_order.get(order)
                         if pr:
@@ -137,13 +143,19 @@ class TemplateAdmin(admin.ModelAdmin):
                                 pr.duty = duty; changed_pr = True
                             if pr.notes != notes:
                                 pr.notes = notes; changed_pr = True
+                            if pr.shift_type_id != shift_type_id:
+                                pr.shift_type_id = shift_type_id; changed_pr = True
                             if changed_pr:
-                                pr.save(update_fields=["is_spacer", "duty", "notes"])
+                                pr.save(update_fields=["is_spacer", "duty", "notes", "shift_type"])
                                 updated_rows += 1
                         else:
                             PlanRow.objects.create(
-                                plan=plan, order=order, duty=duty,
-                                is_spacer=is_spacer, notes=notes
+                                plan=plan,
+                                order=order,
+                                duty=duty,
+                                is_spacer=is_spacer,
+                                notes=notes,
+                                shift_type_id=shift_type_id,
                             )
                             created_rows += 1
 
@@ -169,6 +181,7 @@ class TemplateAdmin(admin.ModelAdmin):
                 duty = (form.cleaned_data['duty'] or '').strip()
                 is_spacer = bool(form.cleaned_data['is_spacer'])
                 notes = form.cleaned_data['notes'] or ''
+                shift_type = form.cleaned_data['shift_type']
 
                 max_pos = tpl.rows.count() + 1
                 if k > max_pos: k = max_pos
@@ -183,7 +196,8 @@ class TemplateAdmin(admin.ModelAdmin):
                         order=k,
                         duty='' if is_spacer else duty,
                         is_spacer=is_spacer,
-                        notes=notes
+                        notes=notes,
+                        shift_type=shift_type,
                     )
                     # normalizza e propaga
                     self.normalize_orders(request, Template.objects.filter(pk=tpl.pk))
@@ -208,7 +222,7 @@ class TemplateAdmin(admin.ModelAdmin):
 class PlanRowInline(admin.TabularInline):
     model = PlanRow
     extra = 0
-    fields = ('order', 'duty', 'is_spacer', 'notes')
+    fields = ('order', 'duty', 'is_spacer', 'shift_type', 'notes')
     ordering = ('order',)
 
 @admin.register(Plan)
@@ -232,8 +246,12 @@ class PlanAdmin(admin.ModelAdmin):
     def _clone_rows(self, src_plan, dst_plan):
         rows = [
             PlanRow(
-                plan=dst_plan, order=r.order, duty=r.duty,
-                is_spacer=r.is_spacer, notes=r.notes
+                plan=dst_plan,
+                order=r.order,
+                duty=r.duty,
+                is_spacer=r.is_spacer,
+                notes=r.notes,
+                shift_type=r.shift_type,
             ) for r in src_plan.rows.all().order_by('order')
         ]
         if rows:
