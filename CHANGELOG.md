@@ -1,3 +1,23 @@
+# v0.8.1
+### 🛠️ Miglioramenti
+* Aggiunto nel report di notifica il calendario completo del mese, con visualizzazione anche delle giornate non assegnate.
+* Aggiornato design email notifica turni: migliore leggibilità delle colonne, layout ottimizzato per mobile e client desktop.
+
+### 🛠️ Modifiche strutturali - Integrazione backend in Admin
+* Il campo Turno strutturale (shift_type) è ora gestibile direttamente nell’interfaccia admin:
+  - nelle righe del template (TemplateRow)
+  - nelle righe dei piani (PlanRow)
+* Le operazioni di admin rispettano il nuovo dato del turno:
+  - Clonazione Template → mantiene i turni strutturali per riga 
+  - Propagazione template → plan → aggiorna o crea righe mantenendo i turni
+  - Inserisci riga a posizione K → permette di assegnare un turno direttamente in fase di creazione
+  - Clonazione Piano → i nuovi piani ereditano i turni strutturali del piano sorgente
+
+### 🖌️ UI/UX
+* Piano turno: 
+  - aggiunta colonna che mostra il turno legato alla mansione
+  - rimossa etichetta turno dal nominativo lavoratore assegnato in cella
+
 # v0.8.0
 ### 🛠️ Modifiche strutturali
 * Introdotto il concetto di turno strutturale associato direttamente alla mansione.
