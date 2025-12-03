@@ -553,17 +553,34 @@ class PlanViewSet(viewsets.ModelViewSet):
         recipients_results = []  # log per JSON/CSV
 
         for emp, items in by_emp.items():
+            # mappiamo le assegnazioni per data
             items.sort(key=lambda x: x.date)
+            assign_by_date = {a.date: a for a in items}
+
+            # costruiamo una riga per OGNI giorno del mese
+            days_in_month = calendar.monthrange(plan.year, plan.month)[1]
             rows = []
-            for a in items:
-                full_name = a.profession.name if a.profession else ''
-                base_name, _ = _split_slot(full_name)
+            for d in range(1, days_in_month + 1):
+                day = dt.date(plan.year, plan.month, d)
+                a = assign_by_date.get(day)
+
+                if a:
+                    full_name = a.profession.name if a.profession else ''
+                    base_name, _ = _split_slot(full_name)
+                    profession_name = base_name
+                    shift_label = a.shift_type.label if a.shift_type else ''
+                    notes = a.notes or ''
+                else:
+                    profession_name = ''
+                    shift_label = ''
+                    notes = ''
+
                 rows.append({
-                    'weekday': ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'][a.date.weekday()],
-                    'date': a.date.strftime('%d/%m/%Y'),
-                    'profession_name': base_name,
-                    'shift_label': a.shift_type.label if a.shift_type else '',
-                    'notes': a.notes or '',
+                    'weekday': ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'][day.weekday()],
+                    'date': day.strftime('%d/%m/%Y'),
+                    'profession_name': profession_name,
+                    'shift_label': shift_label,
+                    'notes': notes,
                 })
 
             ctx = {
