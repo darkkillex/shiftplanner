@@ -1,3 +1,13 @@
+# v0.8.2
+### 🛠️ Miglioramenti gestione Template turni
+* Il turno può ora essere modificato direttamente nella pagina di dettaglio del template
+* Aggiornamento immediato di tutti i piani associati e delle relative assegnazioni
+* La nuova configurazione viene rispettata in:
+  - griglia del piano turni
+  - export Excel
+  - email di notifica ai lavoratori
+* UX migliorata con select inline e aggiornamento in tempo reale
+
 # v0.8.1
 ### 🛠️ Miglioramenti
 * Aggiunto nel report di notifica il calendario completo del mese, con visualizzazione anche delle giornate non assegnate.

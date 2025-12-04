@@ -1,10 +1,19 @@
 TIER-1
-Aggiungere l'utente che crea e che chiude la nota
 
-Cancellazione riga template(tutto sincronizzato con il PT)
+Salvare stato ultimo utente selezionato e inserito (come la gestine dei filtri)
+Card «Simulazione Piano Turni Annuale»
+Lista lavoratori, lista turni (no mansione), associazione primo giorno utile, generazione PT su turno indicato (4/2 – 5/2 etc.)
+
+Tasto invio piano turno completo a tutti i dipendenti (xlsx) rimuovendo idati sensibili (ferie, permessi etc.)
+Colori righe turno come piano turni excel attuale
+
+
+
+Problema insert righe template, sminchiata la numerazione suffisso, non effettua controllo di professioni già presenti
+
+
 Prevedere inserimento riga vuota nel template PT
-Dopo inserimento lavoratore su griglia piano turni, il refresh della grid deve lasciarmi la visualizzazione sulla riga
-    dell'ultiumo inserimento, non nuovamente dalla prima riga
+
 
 
 TIER-2
