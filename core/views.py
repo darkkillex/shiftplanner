@@ -1077,10 +1077,106 @@ def template_create(request):
 
 @login_required
 @user_passes_test(_is_staff_or_superuser)
+@transaction.atomic
 def template_detail(request, pk):
-    """Visualizza un template e le sue righe."""
-    template = get_object_or_404(Template.objects.prefetch_related("rows"), pk=pk)
-    return render(request, "template_detail.html", {"template": template})
+    """
+    Dettaglio template + associazione turno strutturale per ciascuna mansione.
+
+    - Per ogni riga NON spacer è obbligatorio scegliere un turno al salvataggio.
+    - Salva su TemplateRow.shift_type.
+    - Propaga su PlanRow.shift_type per tutti i piani che usano il template.
+    - Allinea anche Assignment.shift_type per le assegnazioni delle righe interessate.
+    """
+    template = get_object_or_404(
+        Template.objects.prefetch_related("rows"),
+        pk=pk
+    )
+
+    shift_types = list(ShiftType.objects.order_by("id"))
+
+    if request.method == "POST":
+        # 1) validazione: tutte le mansioni devono avere un turno
+        missing_rows = []
+        for row in template.rows.all().order_by("order", "id"):
+            if row.is_spacer:
+                continue
+            field_name = f"row_shift_{row.id}"
+            shift_id = (request.POST.get(field_name) or "").strip()
+            if not shift_id:
+                missing_rows.append(row)
+
+        if missing_rows:
+            messages.error(
+                request,
+                "Ogni mansione deve avere un turno associato prima di salvare."
+            )
+            return render(request, "template_detail.html", {
+                "template": template,
+                "shift_types": shift_types,
+                "missing_rows": missing_rows,
+            })
+
+        # 2) salva i turni sulle TemplateRow
+        for row in template.rows.all().order_by("order", "id"):
+            if row.is_spacer:
+                # per sicurezza: nessun turno sui separatori
+                if row.shift_type_id is not None:
+                    row.shift_type = None
+                    row.save(update_fields=["shift_type"])
+                continue
+
+            field_name = f"row_shift_{row.id}"
+            shift_id = int(request.POST.get(field_name))
+            if row.shift_type_id != shift_id:
+                row.shift_type_id = shift_id
+                row.save(update_fields=["shift_type"])
+
+        # 3) propaga sui PlanRow
+        plans = list(Plan.objects.filter(template=template).prefetch_related("rows"))
+
+        for plan in plans:
+            rows_by_order = {pr.order: pr for pr in plan.rows.all()}
+            for tr in template.rows.all().order_by("order", "id"):
+                pr = rows_by_order.get(tr.order)
+                if not pr:
+                    continue
+
+                # sugli spacer non mettiamo turno
+                new_shift_id = tr.shift_type_id if not tr.is_spacer else None
+
+                if pr.shift_type_id != new_shift_id:
+                    pr.shift_type_id = new_shift_id
+                    pr.save(update_fields=["shift_type_id"])
+
+        # 4) allinea anche Assignment.shift_type in base al turno strutturale della riga
+        for plan in plans:
+            # ricalcola le righe dopo l'update
+            for pr in plan.rows.all():
+                if pr.is_spacer:
+                    continue
+                duty_name = (pr.duty or "").strip()
+                if not duty_name:
+                    continue
+                # aggiorna tutte le assignment di quella mansione nel piano
+                Assignment.objects.filter(
+                    plan=plan,
+                    profession__name=duty_name
+                ).update(shift_type_id=pr.shift_type_id)
+
+        messages.success(
+            request,
+            "Turni associati alle mansioni, propagati ai piani e aggiornate le assegnazioni."
+        )
+        return redirect("template_detail", pk=template.pk)
+
+    # GET
+    return render(request, "template_detail.html", {
+        "template": template,
+        "shift_types": shift_types,
+        "missing_rows": [],
+    })
+
+
 
 @login_required
 @user_passes_test(_is_staff_or_superuser)

@@ -13,41 +13,89 @@
     </h4>
   </div>
 
-<!-- Lista righe template -->
-  <div class="col s12 m7">
-    <ul class="collection" id="tpl-rows">
-      {% for r in template.rows.all|dictsort:"order" %}
-        <li class="collection-item valign-wrapper"
-            data-row-id="{{ r.id }}"
-            data-duty="{{ r.duty }}"
-            data-template-id="{{ template.id }}">
-          <div class="left">
-            <span class="grey-text">#{{ r.order }}</span>
-            {% if r.is_spacer %}
-              <span class="chip grey lighten-3 black-text" style="margin-left:8px">[spazio]</span>
-            {% else %}
-              <span class="chip blue-grey lighten-5 black-text" style="margin-left:8px">{{ r.duty }}</span>
-            {% endif %}
-          </div>
-
-          <div class="right">
-            <button type="button"
-                    class="btn-flat red-text js-row-delete"
-                    data-template-id="{{ template.id }}"
-                    data-row-id="{{ r.id }}"
-                    title="Elimina riga">
-              <i class="material-icons">delete</i>
-            </button>
-          </div>
-        </li>
-      {% empty %}
-        <li class="collection-item">Nessuna riga nel template.</li>
+  {% if messages %}
+    <div class="col s12">
+      {% for message in messages %}
+        <div class="card-panel {% if message.tags == 'error' %}red lighten-4 red-text text-darken-4{% elif message.tags == 'success' %}green lighten-4 green-text text-darken-4{% else %}grey lighten-4{% endif %}">
+          {{ message }}
+        </div>
       {% endfor %}
-    </ul>
+    </div>
+  {% endif %}
+
+  {% if missing_rows %}
+    <div class="col s12">
+      <div class="card-panel red lighten-4 red-text text-darken-4">
+        <strong>Attenzione:</strong> alcune mansioni non hanno un turno selezionato.
+        Seleziona un turno per ogni mansione prima di salvare.
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Lista righe template + select turni -->
+  <div class="col s12 m7">
+    <form method="post">
+      {% csrf_token %}
+      <ul class="collection" id="tpl-rows">
+        {% for r in template.rows.all|dictsort:"order" %}
+          <li class="collection-item valign-wrapper"
+              data-row-id="{{ r.id }}"
+              data-duty="{{ r.duty }}"
+              data-template-id="{{ template.id }}">
+
+            <!-- parte sinistra: numero + mansione/spazio -->
+            <div class="left" style="flex:1 1 auto;">
+              <span class="grey-text">#{{ r.order }}</span>
+              {% if r.is_spacer %}
+                <span class="chip grey lighten-3 black-text" style="margin-left:8px">[spazio]</span>
+              {% else %}
+                <span class="chip blue-grey lighten-5 black-text" style="margin-left:8px">{{ r.duty }}</span>
+              {% endif %}
+            </div>
+
+            <!-- select turno strutturale (solo se non spacer) -->
+            <div style="flex:0 0 260px; margin-right:8px;">
+              {% if r.is_spacer %}
+                <span class="grey-text">—</span>
+              {% else %}
+                <select class="browser-default"
+                        name="row_shift_{{ r.id }}">
+                  <option value="">-- seleziona turno --</option>
+                  {% for s in shift_types %}
+                    <option value="{{ s.id }}"
+                            {% if r.shift_type_id == s.id %}selected{% endif %}>
+                      {{ s.code }} — {{ s.label }}
+                    </option>
+                  {% endfor %}
+                </select>
+              {% endif %}
+            </div>
+
+            <!-- pulsante elimina (JS) -->
+            <div class="right" style="flex:0 0 auto;">
+              <button type="button"
+                      class="btn-flat red-text js-row-delete"
+                      data-template-id="{{ template.id }}"
+                      data-row-id="{{ r.id }}"
+                      title="Elimina riga">
+                <i class="material-icons">delete</i>
+              </button>
+            </div>
+          </li>
+        {% empty %}
+          <li class="collection-item">Nessuna riga nel template.</li>
+        {% endfor %}
+      </ul>
+
+      <div class="right-align" style="margin-top:10px;">
+        <button type="submit" class="btn waves-effect teal">
+          <i class="material-icons left">save</i>Salva turni
+        </button>
+      </div>
+    </form>
   </div>
 
-
-  <!-- Form inserimento riga -->
+  <!-- Form inserimento riga (resta invariato, usa ancora template_detail.js) -->
   <div class="col s12 m5">
     <div class="card">
       <div class="card-content">
@@ -92,7 +140,7 @@
         <a class="btn grey lighten-3 black-text" href="{% url 'templates_area' %}">
           <i class="material-icons left">chevron_left</i>Indietro
         </a>
-        <button id="btn-insert" class="btn waves-effect">
+        <button id="btn-insert" type="button" class="btn waves-effect">
           <i class="material-icons left">add</i>Inserisci
         </button>
       </div>
