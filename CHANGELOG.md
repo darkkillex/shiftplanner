@@ -1,3 +1,12 @@
+# v0.9.0
+### ✨ Nuove funzionalità
+* Funzionalità di previsione turnazione:
+  - Selezione dipendente, turno e pattern lavoro/riposo
+  - Generazione automatica calendario turni fino a fine anno selezionato
+  - PDF mensili generati e allegati alla notifica email
+  - Email automatica al dipendente con riepilogo configurazione e allegati
+  - Accesso diretto tramite nuova card in dashboard
+
 # v0.8.2
 ### 🛠️ Miglioramenti gestione Template turni
 * Il turno può ora essere modificato direttamente nella pagina di dettaglio del template
