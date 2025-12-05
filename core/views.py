@@ -171,62 +171,92 @@ def _range_from_preset(preset: str) -> tuple[dt.date, dt.date]:
     return today - dt.timedelta(days=29), today
 
 
-def build_pattern_map(start_date: dt.date,
-                      end_year: int,
-                      work_days: int,
-                      rest_days: int) -> dict[dt.date, bool]:
+def build_pattern_map(start_date, end_year, work_days, rest_days, shift_cycle):
     """
-    Ritorna {date: True/False} dove True = giorno di lavoro, False = riposo,
-    dal giorno 'start_date' fino al 31/12/end_year, applicando pattern (work_days / rest_days)
-    in ciclo continuo.
+    Ritorna un dict:
+      { date: ShiftType | None }
+
+    - per i giorni di lavoro: ShiftType del blocco corrente
+    - per i riposi: None
     """
-    if work_days <= 0 or rest_days <= 0:
-        raise ValueError("work_days e rest_days devono essere > 0")
+    if not shift_cycle:
+        shift_cycle = []
 
     end_date = dt.date(end_year, 12, 31)
-    pattern_len = work_days + rest_days
+    one_day = dt.timedelta(days=1)
 
-    result = {}
-    curr = start_date
-    idx = 0  # posizione nel ciclo
+    pattern = {}
+    current = start_date
+    cycle_idx = 0
+    cycle_len = len(shift_cycle) if shift_cycle else 0
 
-    while curr <= end_date:
-        in_work = idx < work_days
-        result[curr] = in_work
+    while current <= end_date:
+        # turno corrente del blocco di lavoro
+        current_shift = shift_cycle[cycle_idx] if cycle_len else None
 
-        idx = (idx + 1) % pattern_len
-        curr += dt.timedelta(days=1)
+        # blocco di lavoro
+        for _ in range(work_days):
+            if current > end_date:
+                break
+            pattern[current] = current_shift  # giorno lavorativo
+            current += one_day
 
-    return result
+        # blocco di riposo
+        for _ in range(rest_days):
+            if current > end_date:
+                break
+            pattern[current] = None  # riposo
+            current += one_day
+
+        # passa al turno successivo nel ciclo (se esiste un ciclo)
+        if cycle_len > 0:
+            cycle_idx = (cycle_idx + 1) % cycle_len
+
+    return pattern
 
 
-def build_month_calendar_rows(pattern_map: dict,
-                              employee,
-                              shift_type,
-                              year: int,
-                              month: int) -> list[dict]:
+
+def build_month_calendar_rows(pattern_map, employee, default_shift_type, year, month):
     """
-    Prepara le righe per il PDF mensile:
-    una riga per ogni giorno del mese.
-    """
-    days_in_month = calendar.monthrange(year, month)[1]
-    weekdays = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
+    Costruisce le righe per il calendario PDF/HTML:
+    ogni giorno del mese, con turno derivato da pattern_map.
 
+    pattern_map[date] = ShiftType | None
+    """
+    last_day = calendar.monthrange(year, month)[1]
     rows = []
-    for day in range(1, days_in_month + 1):
+
+    IT_WEEKDAYS = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
+
+    for day in range(1, last_day + 1):
         d = dt.date(year, month, day)
-        in_work = pattern_map.get(d, False)
+        weekday_label = IT_WEEKDAYS[d.weekday()]  # 0=Mon
+
+        shift_for_day = pattern_map.get(d, None)
+        is_work = shift_for_day is not None
+
+        # fallback al default_shift_type se per qualche motivo manca
+        use_shift = shift_for_day or default_shift_type
+
+        if is_work and use_shift:
+            shift_code = use_shift.code or ""
+            shift_label = use_shift.label or ""
+        else:
+            shift_code = ""
+            shift_label = ""
 
         rows.append({
-            "weekday": weekdays[d.weekday()],
             "date": d.strftime("%d/%m/%Y"),
-            "shift_code": shift_type.code if in_work else "—",
-            "shift_label": shift_type.label if in_work else "",
-            "profession_name": "",  # opzionale, lasciamo vuoto
-            "notes": "",            # opzionale
+            "weekday": weekday_label,
+            "shift_code": shift_code,
+            "shift_label": shift_label,
+            # se vuoi, qui potresti in futuro mettere mansione / note
+            "profession_name": "",
+            "notes": "",
         })
 
     return rows
+
 
 
 def render_forecast_pdf(employee, shift_type, year: int, month: int, rows: list[dict]) -> bytes:
@@ -253,6 +283,73 @@ def render_forecast_pdf(employee, shift_type, year: int, month: int, rows: list[
     pdf_io = BytesIO()
     HTML(string=html).write_pdf(target=pdf_io)
     return pdf_io.getvalue()
+
+def _get_shift_by_code(code):
+    code = (code or "").strip()
+    if not code:
+        return None
+    return ShiftType.objects.filter(code=code).first()
+
+
+def get_shift_cycle(initial_shift, work_days, rest_days):
+    """
+    Restituisce la lista di ShiftType che compongono il ciclo
+    dei blocchi di lavoro, in base a:
+    - turno iniziale (code)
+    - work_days / rest_days
+
+    Se il pattern non è uno di quelli “speciali” descritti,
+    ritorna [initial_shift] e quindi il turno resta fisso.
+    """
+    if not initial_shift:
+        return []
+
+    code = (initial_shift.code or "").strip().upper()
+
+    # Caso 4/2: A, C, B in rotazione
+    if work_days == 4 and rest_days == 2:
+        if code == "A":
+            cycle_codes = ["A", "C", "B"]
+        elif code == "B":
+            cycle_codes = ["B", "A", "C"]
+        elif code == "C":
+            cycle_codes = ["C", "B", "A"]
+        else:
+            return [initial_shift]
+
+    # Caso 5/2: A <-> B
+    elif work_days == 5 and rest_days == 2:
+        if code == "A":
+            cycle_codes = ["A", "B"]
+        elif code == "B":
+            cycle_codes = ["B", "A"]
+        else:
+            return [initial_shift]
+
+    # Caso 7/7: 12H-D <-> 12H-N
+    elif work_days == 7 and rest_days == 7:
+        if code == "12H-D":
+            cycle_codes = ["12H-D", "12H-N"]
+        elif code == "12H-N":
+            cycle_codes = ["12H-N", "12H-D"]
+        else:
+            return [initial_shift]
+
+    else:
+        # Pattern non gestito: turno fisso
+        return [initial_shift]
+
+    # Risolvi i codici in ShiftType reali
+    cycle = []
+    for c in cycle_codes:
+        st = _get_shift_by_code(c)
+        if not st:
+            # se manca qualche turno, ripieghiamo su quello iniziale
+            return [initial_shift]
+        cycle.append(st)
+
+    return cycle or [initial_shift]
+
 
 
 class EmployeeViewSet(viewsets.ModelViewSet):
@@ -1580,31 +1677,27 @@ def analytics_summary(request):
 @login_required
 @user_passes_test(_is_staff_or_superuser)
 def turn_pattern_forecast(request):
-    """
-    Configura e genera una previsione di turnazione per un dipendente:
-    - pattern work/rest
-    - da start_date a 31/12/end_year
-    - genera PDF mensili
-    - invia email al dipendente con tutti i PDF allegati
-    """
     if request.method == "POST":
         form = TurnPatternForecastForm(request.POST)
         if form.is_valid():
-            employee = form.cleaned_data["employee"]
+            employee   = form.cleaned_data["employee"]
             shift_type = form.cleaned_data["shift_type"]
-            work_days = form.cleaned_data["work_days"]
-            rest_days = form.cleaned_data["rest_days"]
+            work_days  = form.cleaned_data["work_days"]
+            rest_days  = form.cleaned_data["rest_days"]
             start_date = form.cleaned_data["start_date"]
-            end_year = form.cleaned_data["end_year"]
+            end_year   = form.cleaned_data["end_year"]
 
             if not employee.email:
                 messages.error(request, "Il dipendente selezionato non ha un indirizzo email impostato.")
                 return render(request, "turn_pattern_forecast.html", {"form": form})
 
-            # 1) Costruisci mappa pattern
-            pattern_map = build_pattern_map(start_date, end_year, work_days, rest_days)
+            # 1) determina il ciclo dei turni in base a pattern e turno iniziale
+            shift_cycle = get_shift_cycle(shift_type, work_days, rest_days)
 
-            # 2) Genera PDF per ogni mese coinvolto
+            # 2) costruisci il pattern (data -> ShiftType | None)
+            pattern_map = build_pattern_map(start_date, end_year, work_days, rest_days, shift_cycle)
+
+            # 3) Genera PDF per ogni mese
             attachments = []
             start_year = start_date.year
             for year in range(start_year, end_year + 1):
@@ -1620,14 +1713,16 @@ def turn_pattern_forecast(request):
                     fname = f"turni_{employee.last_name}_{employee.first_name}_{year}_{month:02d}.pdf"
                     attachments.append((fname, pdf_bytes, "application/pdf"))
 
-            # 3) Prepara email
+            # resto della view (email) invariato...
             ITALIAN_MONTHS = [
                 "", "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
                 "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"
             ]
-            # Oggetto: "Previsione turnazione MESE ANNO - COGNOME NOME dipendente"
             first_month_name = ITALIAN_MONTHS[start_date.month]
-            subject = f"Previsione turnazione {first_month_name} {start_date.year} - {employee.last_name} {employee.first_name}"
+            subject = (
+                f"Previsione turnazione {first_month_name} {start_date.year} - "
+                f"{employee.last_name} {employee.first_name}"
+            )
 
             from_email = settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER
             reply_to = [settings.REPLY_TO_EMAIL] if getattr(settings, "REPLY_TO_EMAIL", None) else None
@@ -1643,7 +1738,6 @@ def turn_pattern_forecast(request):
                 "shift_label": shift_type.label,
                 "sender_name": sender_name,
                 "reply_to_email": getattr(settings, "REPLY_TO_EMAIL", from_email),
-                # per compatibilità eventuale
                 "month_name": first_month_name,
                 "year": start_date.year,
             }
@@ -1668,7 +1762,8 @@ def turn_pattern_forecast(request):
                 if sent:
                     messages.success(
                         request,
-                        f"Previsione generata e inviata a {employee.full_name()} ({len(attachments)} PDF allegati)."
+                        f"Previsione generata e inviata a {employee.full_name()} "
+                        f"({len(attachments)} PDF allegati)."
                     )
                 else:
                     messages.error(request, "Invio email fallito (send() ha restituito 0).")
@@ -1677,9 +1772,9 @@ def turn_pattern_forecast(request):
 
             return render(request, "turn_pattern_forecast.html", {"form": form})
 
-        # form non valido
         return render(request, "turn_pattern_forecast.html", {"form": form})
 
     else:
         form = TurnPatternForecastForm()
         return render(request, "turn_pattern_forecast.html", {"form": form})
+
