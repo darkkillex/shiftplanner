@@ -1,5 +1,5 @@
 from django import forms
-from .models import Plan, Template
+from .models import Plan, Template, Employee, ShiftType
 import datetime as dt
 
 class PlanCreateForm(forms.ModelForm):
@@ -87,3 +87,58 @@ class TemplateCreateForm(forms.ModelForm):
     class Meta:
         model = Template
         fields = ["name", "is_active"]
+
+
+class TurnPatternForecastForm(forms.Form):
+    employee = forms.ModelChoiceField(
+        queryset=Employee.objects.order_by("last_name", "first_name"),
+        label="Dipendente",
+    )
+    shift_type = forms.ModelChoiceField(
+        queryset=ShiftType.objects.order_by("code"),
+        label="Turno (ShiftType)",
+    )
+    work_days = forms.IntegerField(
+        min_value=1,
+        max_value=31,
+        label="Giorni lavorativi consecutivi",
+        help_text="Es. 4 per pattern 4/2 (4 lavoro, 2 riposo)",
+    )
+    rest_days = forms.IntegerField(
+        min_value=1,
+        max_value=31,
+        label="Giorni di riposo consecutivi",
+        help_text="Es. 2 per pattern 4/2 (4 lavoro, 2 riposo)",
+    )
+    start_date = forms.DateField(
+        label="Data di partenza",
+        widget=forms.DateInput(attrs={"type": "date"})
+    )
+    end_year = forms.IntegerField(
+        min_value=2024,
+        max_value=2100,
+        label="Anno fino al quale generare",
+        help_text="La turnazione verrà generata fino al 31/12 di questo anno",
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # garantiamo che in GET/POST il queryset sia aggiornato
+        self.fields["employee"].queryset = (
+            Employee.objects.filter(is_active=True)
+            .order_by("last_name", "first_name")
+        )
+        self.fields["shift_type"].queryset = ShiftType.objects.order_by("code")
+
+        # opzionale: se vuoi usare la select “normale” ed evitare problemi con Materialize,
+        # scommenta queste due righe per avere le dropdown standard del browser:
+        self.fields["employee"].widget.attrs.setdefault("class", "browser-default")
+        self.fields["shift_type"].widget.attrs.setdefault("class", "browser-default")
+
+    def clean(self):
+        data = super().clean()
+        start = data.get("start_date")
+        end_year = data.get("end_year")
+        if start and end_year and end_year < start.year:
+            raise forms.ValidationError("L'anno finale deve essere >= anno della data di partenza.")
+        return data

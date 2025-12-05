@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <title>Turnazione {{ month_name }} {{ year }} - {{ employee_name }}</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      font-size: 11px;
+      margin: 0;
+      padding: 16px;
+    }
+    h1 {
+      font-size: 16px;
+      margin: 0 0 4px;
+    }
+    .subtitle {
+      font-size: 11px;
+      color: #555;
+      margin-bottom: 10px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10px;
+    }
+    th, td {
+      padding: 4px 3px;
+      border: 1px solid #cccccc;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background: #f3f6fa;
+      font-weight: 600;
+    }
+    .day-cell div:first-child {
+      font-weight: 600;
+    }
+    .day-cell div:last-child {
+      font-size: 9px;
+      margin-top: 2px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Turnazione {{ month_name }} {{ year }}</h1>
+  <div class="subtitle">
+    Dipendente: <strong>{{ employee_name }}</strong><br>
+    Turno: <strong>{{ shift_code }}</strong> – {{ shift_label }}
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:80px;">Data</th>
+        <th style="width:80px;">Turno</th>
+        <th>Mansione</th>
+        <th>Note</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in rows %}
+        <tr>
+          <td class="day-cell">
+            <div>{{ item.weekday }}</div>
+            <div>{{ item.date }}</div>
+          </td>
+          <td>
+            {% if item.shift_code != "—" %}
+              {{ item.shift_code }}{% if item.shift_label %} – {{ item.shift_label }}{% endif %}
+            {% else %}—{% endif %}
+          </td>
+          <td>{{ item.profession_name|default:"" }}</td>
+          <td>{{ item.notes|default:"" }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>

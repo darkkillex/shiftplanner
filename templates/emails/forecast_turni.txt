@@ -1,0 +1,14 @@
+{{ month_name }} {{ year }}
+
+Salve {{ employee_name }},
+
+di seguito trova in allegato la previsione della sua turnazione
+a partire da {{ start_date }} fino al {{ end_date }} per il turno {{ shift_code }} - {{ shift_label }}.
+
+Per ogni mese generato è presente un file PDF con il calendario completo.
+
+Cordialmente,
+{{ sender_name }}
+
+Nota: questa è una notifica automatica inviata da {{ sender_name }} tramite la piattaforma Kairos - ATI RINA/Sivam.
+Per dubbi o segnalazioni si prega di rispondere a {{ reply_to_email }} o telefonare al +39 340 324 7641.

@@ -1,5 +1,6 @@
 TIER-1
 
+Controllare inserimento mansione riga, se mansione già presente, non aggiungerne una nuova con suffisso nelle professions
 Salvare stato ultimo utente selezionato e inserito (come la gestine dei filtri)
 Card «Simulazione Piano Turni Annuale»
 Lista lavoratori, lista turni (no mansione), associazione primo giorno utile, generazione PT su turno indicato (4/2 – 5/2 etc.)

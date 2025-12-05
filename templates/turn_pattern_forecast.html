@@ -1,0 +1,108 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Previsione turnazione{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width:820px;">
+  <h4 class="teal-text text-darken-2 valign-wrapper" style="margin-bottom:18px;">
+    <i class="material-icons left">timeline</i>
+    Previsione turnazione
+  </h4>
+
+  {% if messages %}
+    <div>
+      {% for message in messages %}
+        <div class="card-panel {% if message.tags == 'error' %}red lighten-4 red-text text-darken-4{% elif message.tags == 'success' %}green lighten-4 green-text text-darken-4{% else %}blue-grey lighten-5{% endif %}">
+          {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <form method="post" class="card">
+    <div class="card-content">
+      {% csrf_token %}
+
+      <div class="row">
+        <div class="input-field col s12 m6">
+          {{ form.employee }}
+          <label class="active" for="{{ form.employee.id_for_label }}">Dipendente</label>
+          {% for e in form.employee.errors %}<span class="helper-text red-text">{{ e }}</span>{% endfor %}
+        </div>
+
+        <div class="input-field col s12 m6">
+          {{ form.shift_type }}
+          <label class="active" for="{{ form.shift_type.id_for_label }}">Turno</label>
+          {% for e in form.shift_type.errors %}<span class="helper-text red-text">{{ e }}</span>{% endfor %}
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="input-field col s6 m3">
+          {{ form.work_days }}
+          <label class="active" for="{{ form.work_days.id_for_label }}">Giorni lavoro</label>
+          {% if form.work_days.help_text %}
+            <span class="helper-text">{{ form.work_days.help_text }}</span>
+          {% endif %}
+          {% for e in form.work_days.errors %}<span class="helper-text red-text">{{ e }}</span>{% endfor %}
+        </div>
+
+        <div class="input-field col s6 m3">
+          {{ form.rest_days }}
+          <label class="active" for="{{ form.rest_days.id_for_label }}">Giorni riposo</label>
+          {% if form.rest_days.help_text %}
+            <span class="helper-text">{{ form.rest_days.help_text }}</span>
+          {% endif %}
+          {% for e in form.rest_days.errors %}<span class="helper-text red-text">{{ e }}</span>{% endfor %}
+        </div>
+
+        <div class="input-field col s6 m3">
+          {{ form.start_date }}
+          <label class="active" for="{{ form.start_date.id_for_label }}">Data di partenza</label>
+          {% for e in form.start_date.errors %}<span class="helper-text red-text">{{ e }}</span>{% endfor %}
+        </div>
+
+        <div class="input-field col s6 m3">
+          {{ form.end_year }}
+          <label class="active" for="{{ form.end_year.id_for_label }}">Anno finale</label>
+          {% if form.end_year.help_text %}
+            <span class="helper-text">{{ form.end_year.help_text }}</span>
+          {% endif %}
+          {% for e in form.end_year.errors %}<span class="helper-text red-text">{{ e }}</span>{% endfor %}
+        </div>
+      </div>
+
+      {% if form.non_field_errors %}
+        <div class="red-text" style="margin-top:8px;">
+          {% for e in form.non_field_errors %}{{ e }}<br>{% endfor %}
+        </div>
+      {% endif %}
+
+      <p class="grey-text" style="margin-top:12px;">
+        Verrà generata una turnazione continua dal giorno indicato fino al 31/12 dell'anno selezionato,
+        applicando il pattern lavoro/riposo. Per ciascun mese verrà creato un PDF con il calendario completo,
+        allegato alla mail inviata al dipendente.
+      </p>
+    </div>
+
+    <div class="card-action right-align">
+      <a href="{% url 'home' %}" class="btn-flat">Annulla</a>
+      <button type="submit" class="btn waves-effect waves-light teal">
+        <i class="material-icons left">send</i>Genera e invia
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_body %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    var selects = document.querySelectorAll('select');
+    if (window.M && M.FormSelect) {
+      M.FormSelect.init(selects);
+    }
+  });
+</script>
+{% endblock %}

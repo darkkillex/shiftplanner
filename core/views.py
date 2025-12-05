@@ -29,11 +29,13 @@ from openpyxl.styles import Font, Alignment, PatternFill
 from openpyxl.comments import Comment
 from openpyxl.utils import get_column_letter
 
-from .forms import PlanCreateForm
+from .forms import PlanCreateForm, TurnPatternForecastForm
 from .forms import TemplateCreateForm
 from .models import Template, TemplateRow, Profession, AssignmentSnapshot, PlanRow, Employee, Company, Assignment
 
 from .serializers import *
+
+from weasyprint import HTML
 
 
 _SLOT_RE = re.compile(r'^(.*?)(?:\.(\d+))?$')
@@ -167,6 +169,91 @@ def _range_from_preset(preset: str) -> tuple[dt.date, dt.date]:
         return start, end
     # default: ultimi 30 giorni rolling
     return today - dt.timedelta(days=29), today
+
+
+def build_pattern_map(start_date: dt.date,
+                      end_year: int,
+                      work_days: int,
+                      rest_days: int) -> dict[dt.date, bool]:
+    """
+    Ritorna {date: True/False} dove True = giorno di lavoro, False = riposo,
+    dal giorno 'start_date' fino al 31/12/end_year, applicando pattern (work_days / rest_days)
+    in ciclo continuo.
+    """
+    if work_days <= 0 or rest_days <= 0:
+        raise ValueError("work_days e rest_days devono essere > 0")
+
+    end_date = dt.date(end_year, 12, 31)
+    pattern_len = work_days + rest_days
+
+    result = {}
+    curr = start_date
+    idx = 0  # posizione nel ciclo
+
+    while curr <= end_date:
+        in_work = idx < work_days
+        result[curr] = in_work
+
+        idx = (idx + 1) % pattern_len
+        curr += dt.timedelta(days=1)
+
+    return result
+
+
+def build_month_calendar_rows(pattern_map: dict,
+                              employee,
+                              shift_type,
+                              year: int,
+                              month: int) -> list[dict]:
+    """
+    Prepara le righe per il PDF mensile:
+    una riga per ogni giorno del mese.
+    """
+    days_in_month = calendar.monthrange(year, month)[1]
+    weekdays = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
+
+    rows = []
+    for day in range(1, days_in_month + 1):
+        d = dt.date(year, month, day)
+        in_work = pattern_map.get(d, False)
+
+        rows.append({
+            "weekday": weekdays[d.weekday()],
+            "date": d.strftime("%d/%m/%Y"),
+            "shift_code": shift_type.code if in_work else "—",
+            "shift_label": shift_type.label if in_work else "",
+            "profession_name": "",  # opzionale, lasciamo vuoto
+            "notes": "",            # opzionale
+        })
+
+    return rows
+
+
+def render_forecast_pdf(employee, shift_type, year: int, month: int, rows: list[dict]) -> bytes:
+    """
+    Genera un PDF (bytes) con il calendario mensile del pattern.
+    """
+    ITALIAN_MONTHS = [
+        "", "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
+        "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"
+    ]
+    month_name = ITALIAN_MONTHS[month]
+
+    ctx = {
+        "employee_name": employee.full_name(),
+        "year": year,
+        "month": month,
+        "month_name": month_name,
+        "shift_code": shift_type.code,
+        "shift_label": shift_type.label,
+        "rows": rows,
+    }
+
+    html = render_to_string("reports/forecast_turni_month.html", ctx)
+    pdf_io = BytesIO()
+    HTML(string=html).write_pdf(target=pdf_io)
+    return pdf_io.getvalue()
+
 
 class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = Employee.objects.all().order_by('last_name','first_name')
@@ -1488,3 +1575,111 @@ def analytics_summary(request):
         "tables": {"per_shift": list(per_shift), "preposto": list(preposto)},
         "charts": {"per_shift": chart_shift, "preposto": chart_preposto},
     })
+
+
+@login_required
+@user_passes_test(_is_staff_or_superuser)
+def turn_pattern_forecast(request):
+    """
+    Configura e genera una previsione di turnazione per un dipendente:
+    - pattern work/rest
+    - da start_date a 31/12/end_year
+    - genera PDF mensili
+    - invia email al dipendente con tutti i PDF allegati
+    """
+    if request.method == "POST":
+        form = TurnPatternForecastForm(request.POST)
+        if form.is_valid():
+            employee = form.cleaned_data["employee"]
+            shift_type = form.cleaned_data["shift_type"]
+            work_days = form.cleaned_data["work_days"]
+            rest_days = form.cleaned_data["rest_days"]
+            start_date = form.cleaned_data["start_date"]
+            end_year = form.cleaned_data["end_year"]
+
+            if not employee.email:
+                messages.error(request, "Il dipendente selezionato non ha un indirizzo email impostato.")
+                return render(request, "turn_pattern_forecast.html", {"form": form})
+
+            # 1) Costruisci mappa pattern
+            pattern_map = build_pattern_map(start_date, end_year, work_days, rest_days)
+
+            # 2) Genera PDF per ogni mese coinvolto
+            attachments = []
+            start_year = start_date.year
+            for year in range(start_year, end_year + 1):
+                first_month = 1
+                last_month = 12
+                if year == start_year:
+                    first_month = start_date.month
+
+                for month in range(first_month, last_month + 1):
+                    rows = build_month_calendar_rows(pattern_map, employee, shift_type, year, month)
+                    pdf_bytes = render_forecast_pdf(employee, shift_type, year, month, rows)
+
+                    fname = f"turni_{employee.last_name}_{employee.first_name}_{year}_{month:02d}.pdf"
+                    attachments.append((fname, pdf_bytes, "application/pdf"))
+
+            # 3) Prepara email
+            ITALIAN_MONTHS = [
+                "", "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
+                "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"
+            ]
+            # Oggetto: "Previsione turnazione MESE ANNO - COGNOME NOME dipendente"
+            first_month_name = ITALIAN_MONTHS[start_date.month]
+            subject = f"Previsione turnazione {first_month_name} {start_date.year} - {employee.last_name} {employee.first_name}"
+
+            from_email = settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER
+            reply_to = [settings.REPLY_TO_EMAIL] if getattr(settings, "REPLY_TO_EMAIL", None) else None
+            sender_name = request.user.get_full_name() or request.user.username
+
+            ctx = {
+                "employee_name": employee.full_name(),
+                "start_date": start_date.strftime("%d/%m/%Y"),
+                "end_date": dt.date(end_year, 12, 31).strftime("%d/%m/%Y"),
+                "work_days": work_days,
+                "rest_days": rest_days,
+                "shift_code": shift_type.code,
+                "shift_label": shift_type.label,
+                "sender_name": sender_name,
+                "reply_to_email": getattr(settings, "REPLY_TO_EMAIL", from_email),
+                # per compatibilità eventuale
+                "month_name": first_month_name,
+                "year": start_date.year,
+            }
+
+            text_body = render_to_string("emails/forecast_turni.txt", ctx)
+            html_body = render_to_string("emails/forecast_turni.html", ctx)
+
+            msg = EmailMultiAlternatives(
+                subject=subject,
+                body=text_body,
+                from_email=from_email,
+                to=[f"{employee.full_name()} <{employee.email}>"],
+                reply_to=reply_to,
+            )
+            msg.attach_alternative(html_body, "text/html")
+
+            for fname, content, ctype in attachments:
+                msg.attach(fname, content, ctype)
+
+            try:
+                sent = msg.send(fail_silently=False)
+                if sent:
+                    messages.success(
+                        request,
+                        f"Previsione generata e inviata a {employee.full_name()} ({len(attachments)} PDF allegati)."
+                    )
+                else:
+                    messages.error(request, "Invio email fallito (send() ha restituito 0).")
+            except Exception as e:
+                messages.error(request, f"Errore durante l'invio email: {e}")
+
+            return render(request, "turn_pattern_forecast.html", {"form": form})
+
+        # form non valido
+        return render(request, "turn_pattern_forecast.html", {"form": form})
+
+    else:
+        form = TurnPatternForecastForm()
+        return render(request, "turn_pattern_forecast.html", {"form": form})

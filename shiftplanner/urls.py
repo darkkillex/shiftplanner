@@ -60,5 +60,6 @@ urlpatterns = [
     path("analytics/summary/", views.analytics_summary, name="analytics-summary"),
     path("manuale-utente/", user_manual_view, name="user-manual"),
     path("employees/", views.employees_directory, name="employees-directory"),
+    path("turni/previsione/", views.turn_pattern_forecast, name="turn_pattern_forecast"),
 
 ]
