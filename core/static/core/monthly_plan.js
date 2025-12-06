@@ -116,30 +116,53 @@
     }
   }
 
-  // --- Persistenza filtri tra reload ---
-  function saveFilters() {
-    try {
-      localStorage.setItem("filter_prof", document.getElementById("filter-prof")?.value || "");
-      localStorage.setItem("filter_emp", document.getElementById("filter-emp")?.value || "");
-    } catch (e) {
-      console.warn('Impossibile salvare filtri:', e);
-    }
-  }
+  // --- Persistenza filtri + ultimo lavoratore selezionato ---
+   function saveFilters() {
+     try {
+       const fp = document.getElementById("filter-prof");
+       const fe = document.getElementById("filter-emp");
+       const empSel = document.getElementById("employee"); // select lavoratore usata per assegnazione
 
-  function restoreFilters() {
-    try {
-      const fp = document.getElementById("filter-prof");
-      const fe = document.getElementById("filter-emp");
+       localStorage.setItem("filter_prof", fp?.value || "");
+       localStorage.setItem("filter_emp", fe?.value || "");
 
-      const savedProf = localStorage.getItem("filter_prof") || "";
-      const savedEmp  = localStorage.getItem("filter_emp")  || "";
+       // salva anche ultimo lavoratore selezionato
+       localStorage.setItem("assign_employee", empSel?.value || "");
 
-      if (fp) fp.value = savedProf;
-      if (fe) fe.value = savedEmp;
-    } catch (e) {
-      console.warn('Impossibile ripristinare filtri:', e);
-    }
-  }
+     } catch (e) {
+       console.warn('Impossibile salvare filtri/assegnazione:', e);
+     }
+   }
+
+
+   function restoreFilters() {
+     try {
+       const fp = document.getElementById("filter-prof");
+       const fe = document.getElementById("filter-emp");
+       const empSel = document.getElementById("employee");
+
+       const savedProf = localStorage.getItem("filter_prof") || "";
+       const savedEmp  = localStorage.getItem("filter_emp")  || "";
+       const savedAssignEmp = localStorage.getItem("assign_employee") || "";
+
+       if (fp) fp.value = savedProf;
+       if (fe) fe.value = savedEmp;
+       if (empSel && savedAssignEmp) {
+         empSel.value = savedAssignEmp;
+
+         // Re-init Materialize select, se presente
+         if (window.M && M.FormSelect) {
+           const inst = M.FormSelect.getInstance(empSel);
+           if (inst) inst.destroy();
+           M.FormSelect.init(empSel);
+         }
+       }
+
+     } catch (e) {
+       console.warn('Impossibile ripristinare filtri/assegnazione:', e);
+     }
+   }
+
 
   // --- Festività Italia + Pasqua/Lunedì dell'Angelo ---
   function easterDate(year){
