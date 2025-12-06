@@ -37,9 +37,9 @@ Permette filtri per **azienda** e **periodo** con aggiornamento automatico (filt
 > Se il piano per quel mese esiste già, l’app apre direttamente il piano esistente.
 
 ### Visualizzazione
-- Ogni riga rappresenta una mansione (es. "Ufficio",“Magazzino”).  
+- Ogni riga rappresenta una mansione (es. "Ufficio",“Magazzino”) e un turno al quale è legato
 - Ogni colonna corrisponde a un giorno del mese.  
-- Le celle mostrano il nome del dipendente e il turno (es. “Rossi Mario (Turno D - 5/2)”).
+- Le celle mostrano il nome del dipendente (es. “Rossi Mario” - assegnato a mansione Ufficio ricadente nel Turno D -).
 
 ### Modifiche
 - Clic su una cella → assegna o rimuovi dipendente e turno.  
