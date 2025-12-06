@@ -1,17 +1,34 @@
+# v0.9.2
+### ✨ Nuove funzionalità
+* Previsione turnazione:
+  - Dopo l’invio email al dipendente viene ora scaricato automaticamente
+    un archivio ZIP denominato `Previsione_turni_COGNOME_NOME_ANNO.zip`.
+  - Lo ZIP contiene tutti i PDF mensili generati e un file `README.txt`
+    con riepilogo parametri (turno iniziale, pattern lavoro/riposo,
+    intervallo date, flag skip festività) e timestamp Europe/Rome.
+
+### ✨ Aggiornamento 
+* Guida Utente
+
+### 🖌️ UI/UX
+* modificato ordine card Previsione turnazione per rispettare l'ordine di coerenza delle funzioni disponibili
+
+---
+
 # v0.9.1
 ### 🛠️ Miglioramenti Previsione turnazione
 * Rotazione automatica dei turni nei pattern forecast:
   - Turni A/B/C: rotazione ciclica su pattern 4/2 in base al turno iniziale
   - Turni 12H-D / 12H-N: switch automatico 7/7
-  - Comportamento invariato per gli altri turni non mappati nel sistema di rotazione
-  
- 
+  - Comportamento invariato per gli altri turni non mappati nel sistema di rotazione   
 * Aggiunto punto "7. Previsione turnazione annuale" nella documentazione utente(staff)
 
 ### 🐞 Bugfix
 * Turnazione previsionale: corretto comportamento del pattern in presenza di festività italiane
   - Ora la selezione “Salta festività” mantiene invariato il conteggio dei blocchi lavoro/riposo,
   - evitando slittamenti del pattern (es. 5/2) dopo Capodanno, Epifania o Pasquetta.
+
+---
 
 # v0.9.0
 ### ✨ Nuove funzionalità
@@ -22,6 +39,8 @@
   - Email automatica al dipendente con riepilogo configurazione e allegati
   - Accesso diretto tramite nuova card in dashboard
 
+---
+
 # v0.8.2
 ### 🛠️ Miglioramenti gestione Template turni
 * Il turno può ora essere modificato direttamente nella pagina di dettaglio del template
@@ -31,6 +50,8 @@
   - export Excel
   - email di notifica ai lavoratori
 * UX migliorata con select inline e aggiornamento in tempo reale
+
+---
 
 # v0.8.1
 ### 🛠️ Miglioramenti
@@ -52,6 +73,8 @@
   - aggiunta colonna che mostra il turno legato alla mansione
   - rimossa etichetta turno dal nominativo lavoratore assegnato in cella
 
+---
+
 # v0.8.0
 ### 🛠️ Modifiche strutturali
 * Introdotto il concetto di turno strutturale associato direttamente alla mansione.
@@ -62,6 +85,8 @@
 * Aggiornata API grid per includere informazioni su turno di riga.
 * Aggiornati filtri e funzioni JS al nuovo modello dati.
 
+---
+
 # v0.7.8
 ### 🛠️ Miglioramenti
 * Nuovo report CSV completo (timestamp, metadati del piano, stato per destinatario, errori SMTP).
@@ -69,6 +94,7 @@
 * Modal di conferma invio più sicuro e chiaro.
 * Backend notify() reso più robusto con log per destinatario.
 
+---
 
 # v0.7.7
 ### 🐞 Bugfix
@@ -78,11 +104,15 @@
 ### 🛠️ Miglioramenti
 * Riorganizzate le interazioni di stile e il testo contenuto nel registro delle versioni.
 
+---
+
 # v0.7.6
 ### 🛠️ Miglioramenti
 * Salvata la posizione di ultimo scroll delle righe della grid PT dopo assegnazione/rimozione personale su turno
 * Salvati eventuali filtri applicati dopo assegnazione/rimozione personale su turno.
 * Aggiunta conferma invio notifiche: introdotto un modal di avviso prima dell’invio massivo delle email, per evitare invii accidentali e rendere l’azione più sicura.
+
+---
 
 # v0.7.5
 ### 🛠️ Miglioramenti
@@ -92,6 +122,8 @@
 
 ### 🐞 Bugfix
 * Corretto script di generazione del suffisso (.#) professioni che non risultava essere sequenziale.
+
+---
 
 # v0.7.4
 ### 🛠️ Miglioramenti
@@ -105,6 +137,8 @@
 * Aggiunto file JS dedicato per la gestione dei filtri (employees_directory.js).
 * Inserita card “Elenco dipendenti” nella home.
 * Allineato lo stile della pagina agli altri moduli (header, filtri e responsive design).
+
+---
 
 # v0.7.3
 ### ✨ Nuove funzionalità
@@ -120,6 +154,7 @@
   * Aggiunti messaggi visivi per conferma delle azioni.
   * Migliorata la gestione delle note anche dal pannello admin.
 
+---
 
 # v0.7.2
 ### ✨ Nuove funzionalità
