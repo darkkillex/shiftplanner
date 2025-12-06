@@ -120,6 +120,11 @@ class TurnPatternForecastForm(forms.Form):
         label="Anno fino al quale generare",
         help_text="La turnazione verrà generata fino al 31/12 di questo anno",
     )
+    skip_holidays = forms.BooleanField(
+        required=False,
+        label="Escludi festività italiane dal conteggio del pattern",
+        help_text="Se attivo, i festivi diventano sempre giorni di riposo e non consumano i giorni di lavoro del pattern.",
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

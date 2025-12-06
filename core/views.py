@@ -171,13 +171,17 @@ def _range_from_preset(preset: str) -> tuple[dt.date, dt.date]:
     return today - dt.timedelta(days=29), today
 
 
-def build_pattern_map(start_date, end_year, work_days, rest_days, shift_cycle):
+def build_pattern_map(start_date, end_year, work_days, rest_days, shift_cycle, *, skip_holidays=False):
     """
-    Ritorna un dict:
-      { date: ShiftType | None }
+    Ritorna un dict: { date: ShiftType | None }
 
-    - per i giorni di lavoro: ShiftType del blocco corrente
-    - per i riposi: None
+    Logica:
+    - pattern puro work/rest sui giorni di calendario (5/2, 4/2, 7/7, ecc.)
+    - se skip_holidays=True:
+        * se la data è festiva (italy_holidays) -> forziamo a riposo (None)
+        * MA il contatore work/rest va avanti lo stesso
+        * quindi il pattern 5/2 resta allineato sul calendario
+    - weekend NON hanno logica speciale: seguono il pattern.
     """
     if not shift_cycle:
         shift_cycle = []
@@ -185,35 +189,53 @@ def build_pattern_map(start_date, end_year, work_days, rest_days, shift_cycle):
     end_date = dt.date(end_year, 12, 31)
     one_day = dt.timedelta(days=1)
 
-    pattern = {}
-    current = start_date
-    cycle_idx = 0
-    cycle_len = len(shift_cycle) if shift_cycle else 0
+    pattern: dict[dt.date, ShiftType | None] = {}
 
+    cycle_len = len(shift_cycle)
+    cycle_idx = 0  # indice nel ciclo dei turni (A → C → B, ecc.)
+
+    # stato interno del pattern
+    mode = "work"   # "work" oppure "rest"
+    work_done = 0
+    rest_done = 0
+
+    def is_holiday(d: dt.date) -> bool:
+        # usa direttamente la tua italy_holidays(d.year)
+        return d in italy_holidays(d.year)
+
+    current = start_date
     while current <= end_date:
         # turno corrente del blocco di lavoro
         current_shift = shift_cycle[cycle_idx] if cycle_len else None
 
-        # blocco di lavoro
-        for _ in range(work_days):
-            if current > end_date:
-                break
-            pattern[current] = current_shift  # giorno lavorativo
-            current += one_day
+        # 1) calcola il valore di pattern (prima di considerare le festività)
+        if mode == "work":
+            value = current_shift
+            work_done += 1
 
-        # blocco di riposo
-        for _ in range(rest_days):
-            if current > end_date:
-                break
-            pattern[current] = None  # riposo
-            current += one_day
+            if work_done >= work_days:
+                work_done = 0
+                mode = "rest"
+        else:
+            value = None
+            rest_done += 1
 
-        # passa al turno successivo nel ciclo (se esiste un ciclo)
-        if cycle_len > 0:
-            cycle_idx = (cycle_idx + 1) % cycle_len
+            if rest_done >= rest_days:
+                rest_done = 0
+                mode = "work"
+                # chiuso un ciclo work+rest → passa al turno successivo della sequenza
+                if cycle_len > 0:
+                    cycle_idx = (cycle_idx + 1) % cycle_len
+
+        # 2) se devo saltare le festività, le forzo a riposo,
+        #    ma NON tocco work_done/rest_done né cycle_idx
+        if skip_holidays and is_holiday(current):
+            value = None
+
+        pattern[current] = value
+        current += one_day
 
     return pattern
-
 
 
 def build_month_calendar_rows(pattern_map, employee, default_shift_type, year, month):
@@ -1680,12 +1702,13 @@ def turn_pattern_forecast(request):
     if request.method == "POST":
         form = TurnPatternForecastForm(request.POST)
         if form.is_valid():
-            employee   = form.cleaned_data["employee"]
-            shift_type = form.cleaned_data["shift_type"]
-            work_days  = form.cleaned_data["work_days"]
-            rest_days  = form.cleaned_data["rest_days"]
-            start_date = form.cleaned_data["start_date"]
-            end_year   = form.cleaned_data["end_year"]
+            employee       = form.cleaned_data["employee"]
+            shift_type     = form.cleaned_data["shift_type"]
+            work_days      = form.cleaned_data["work_days"]
+            rest_days      = form.cleaned_data["rest_days"]
+            start_date     = form.cleaned_data["start_date"]
+            end_year       = form.cleaned_data["end_year"]
+            skip_holidays  = form.cleaned_data.get("skip_holidays", False)
 
             if not employee.email:
                 messages.error(request, "Il dipendente selezionato non ha un indirizzo email impostato.")
@@ -1695,7 +1718,15 @@ def turn_pattern_forecast(request):
             shift_cycle = get_shift_cycle(shift_type, work_days, rest_days)
 
             # 2) costruisci il pattern (data -> ShiftType | None)
-            pattern_map = build_pattern_map(start_date, end_year, work_days, rest_days, shift_cycle)
+            skip_holidays = form.cleaned_data.get("skip_holidays", False)
+            pattern_map = build_pattern_map(
+                start_date,
+                end_year,
+                work_days,
+                rest_days,
+                shift_cycle,
+                skip_holidays=skip_holidays,
+            )
 
             # 3) Genera PDF per ogni mese
             attachments = []
@@ -1713,7 +1744,6 @@ def turn_pattern_forecast(request):
                     fname = f"turni_{employee.last_name}_{employee.first_name}_{year}_{month:02d}.pdf"
                     attachments.append((fname, pdf_bytes, "application/pdf"))
 
-            # resto della view (email) invariato...
             ITALIAN_MONTHS = [
                 "", "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
                 "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"
@@ -1772,9 +1802,12 @@ def turn_pattern_forecast(request):
 
             return render(request, "turn_pattern_forecast.html", {"form": form})
 
+        # form non valido
         return render(request, "turn_pattern_forecast.html", {"form": form})
 
-    else:
-        form = TurnPatternForecastForm()
-        return render(request, "turn_pattern_forecast.html", {"form": form})
+    # GET
+    form = TurnPatternForecastForm()
+    return render(request, "turn_pattern_forecast.html", {"form": form})
+
+
 

@@ -71,6 +71,17 @@
           {% endif %}
           {% for e in form.end_year.errors %}<span class="helper-text red-text">{{ e }}</span>{% endfor %}
         </div>
+
+        <div class="col s12 m6" style="margin-top:18px;">
+          <label>
+            {{ form.skip_holidays }}
+            <span>{{ form.skip_holidays.label }}</span>
+          </label>
+          {% if form.skip_holidays.help_text %}
+            <div class="helper-text">{{ form.skip_holidays.help_text }}</div>
+          {% endif %}
+          {% for e in form.skip_holidays.errors %}<span class="helper-text red-text">{{ e }}</span>{% endfor %}
+        </div>
       </div>
 
       {% if form.non_field_errors %}
