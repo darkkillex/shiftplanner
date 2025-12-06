@@ -194,6 +194,24 @@ I PDF includono:
 N.B. La funzione è completamente indipendente dai piani turni attivi:
 - non modifica il sistema reale di turnazione.
 
+Output
+
+Email al lavoratore che contiene:
+- Oggetto: Previsione turnazione <Mese Inizio> <Anno> - Cognome Nome
+- Testo descrittivo
+- Allegati tutti i PDF, uno per mese
+
+Download automatico ZIP
+
+Contestualmente, lo Staff riceve il download di un archivio che contiene:
+- tutti i PDF mensili generati
+- README.txt con:
+- anagrafica dipendente
+- parametri usati per la generazione
+- pattern lavoro/riposo
+- turnazione di partenza
+- flag festività
+- timestamp della generazione (fuso Italia)
 
 ---
 
