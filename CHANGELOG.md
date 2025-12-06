@@ -1,3 +1,11 @@
+# v0.9.3
+### ✨ Nuove funzionalità
+* Piano turno mensile:
+  - Migliorata l’esperienza d’uso nell’assegnazione dei turni:
+  - ora l’ultimo dipendente selezionato rimane impostato dopo ogni salvataggio/refresh
+  - mantenuta la persistenza dei filtri mansione/dipendente
+  - re-inizializzata correttamente la select in caso di Materialize UI
+
 # v0.9.2
 ### ✨ Nuove funzionalità
 * Previsione turnazione:

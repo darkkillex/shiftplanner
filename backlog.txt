@@ -1,20 +1,9 @@
 TIER-1
-Aggiornamento guida utente secondo l'ultima feature della previsione piano turni
-
 
 Controllare inserimento mansione riga, se mansione già presente, non aggiungerne una nuova con suffisso nelle professions
-Salvare stato ultimo utente selezionato e inserito (come la gestine dei filtri)
-Tasto invio piano turno completo a tutti i dipendenti (xlsx) rimuovendo idati sensibili (ferie, permessi etc.)
+Tasto invio piano turno completo a tutti i dipendenti (xlsx) rimuovendo i dati sensibili (ferie, permessi etc.)
 Colori righe turno come piano turni excel attuale
-
-
-
-Problema insert righe template, sminchiata la numerazione suffisso, non effettua controllo di professioni già presenti
-
-
 Prevedere inserimento riga vuota nel template PT
-
-
 
 TIER-2
 Refactoring di css/js su sorgenti dedicati:
