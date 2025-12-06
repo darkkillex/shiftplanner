@@ -8,15 +8,16 @@ Ultimo aggiornamento: 11/11/2025
 Apri l’indirizzo dell’app (es. `http://localhost:8000` o dominio aziendale).  
 Effettua il **login** con le credenziali assegnate.
 
-> Lo staff può creare/modificare piani, template, assegnazioni e visualizzare statistiche.
+> Lo staff può creare/modificare/inviare piani turno, gestire template piani turno e assegnazioni, visualizzare statistiche.
 
 ---
 
 ## 2. Area principale (Hub Funzioni)
 Dalla home vengono mostrate **card** per accedere alle funzioni principali:
-- Piani mensili
-- Template piani
+- Piani turno mensili
+- Template piani turno
 - Note calendario
+- Previsione turnazione annuale
 - Statistiche
 
 ### Card Statistiche
@@ -144,14 +145,66 @@ Include:
 
 ---
 
-## 7. Backup e sicurezza dati
+## 7. Previsione turnazione annuale
+Questa funzione consente di generare automaticamente una pianificazione futura completa per un dipendente, a partire da:
+- Turno iniziale (es. A, B, C, 12H-D, 12H-N, ecc.)
+- Pattern lavoro/riposo (es. 4/2, 5/2, 7/7)
+- Data di partenza
+- Anno finale da raggiungere
+- Esclusione festività calendario italiano
+
+| Campo                    | Descrizione                                            |
+| ------------------------ | ------------------------------------------------------ |
+| Dipendente               | Destinatario della pianificazione                      |
+| Turno                    | Tipo di turno di partenza                              |
+| Giorni lavorativi        | Durata del primo ciclo di attività                     |
+| Giorni riposo            | Numero di giorni consecutivi di riposo                 |
+| Data di partenza         | Dal primo giorno utile                                 |
+| Anno finale              | Il sistema crea turni fino al 31/12 dell’anno indicato |
+| Escludi festività (opz.) | Se attivo: le festività nazionali diventano riposo     |
+
+Logica dei pattern
+- I turni si susseguono automaticamente.
+
+Esempi:
+
+| Turno iniziale | Pattern | Turno successivo |
+| -------------- | ------: | ---------------- |
+| A              |     4/2 | C → B → A …      |
+| B              |     4/2 | A → C → B …      |
+| C              |     4/2 | B → A → C …      |
+| A              |     5/2 | B → A …          |
+| B              |     5/2 | A → B …          |
+| 12H-D          |     7/7 | 12H-N → 12H-D …  |
+| 12H-N          |     7/7 | 12H-D → 12H-N …  |
+Se il turno è diverso da quelli in elenco, non viene applicata una rotazione automatica.
+
+Cosa viene generato
+
+Per ogni mese nel periodo scelto:
+- Un PDF con calendario mensile completo
+- Una email automatica al dipendente
+- Riepilogo testo/HTML nel corpo della mail
+
+I PDF includono:
+- Turno previsto per ogni giorno
+- Riposi (inclusi quelli per festività se selezionato)
+- Intestazione mese e dati del dipendente
+
+N.B. La funzione è completamente indipendente dai piani turni attivi:
+- non modifica il sistema reale di turnazione.
+
+
+---
+
+## 8. Backup e sicurezza dati
 - I backup del database vengono creati **ogni notte alle 03:00**.
 - I file si trovano nella cartella `backups/` (solo accesso admin).
 - I backup vecchi di 1 giorno vengono rimossi.
 
 ---
 
-## 8. Suggerimenti d’uso
+## 9. Suggerimenti d’uso
 - Filtri statistici: aggiornamento automatico → non serve cliccare “Applica”.  
 - Usa browser desktop aggiornato (Chrome o Edge).  
 - Evita modifiche simultanee sullo stesso piano da più utenti.  
