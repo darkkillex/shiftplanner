@@ -1,10 +1,9 @@
 TIER-1
+Aggiornamento guida utente secondo l'ultima feature della previsione piano turni
+
 
 Controllare inserimento mansione riga, se mansione già presente, non aggiungerne una nuova con suffisso nelle professions
 Salvare stato ultimo utente selezionato e inserito (come la gestine dei filtri)
-Card «Simulazione Piano Turni Annuale»
-Lista lavoratori, lista turni (no mansione), associazione primo giorno utile, generazione PT su turno indicato (4/2 – 5/2 etc.)
-
 Tasto invio piano turno completo a tutti i dipendenti (xlsx) rimuovendo idati sensibili (ferie, permessi etc.)
 Colori righe turno come piano turni excel attuale
 
@@ -34,8 +33,3 @@ Copia incolla celle turno tramite ctrl+c ctrl+v
 Copia incolla celle turno tramite DnD
 Rimuovere la dicitura REV incrementale dalla notifica via email
 -----   Mutuo lavoro su stesso piano turni di due o più account connessi
-
-
-DA DISCUTERE
-Riportare l'intero calendario del mese nell'email di notifica. Quindi se in alcuni giorni il nome del dipendente non compare,
-    riportare la riga del giorno vuota

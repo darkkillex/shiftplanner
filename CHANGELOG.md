@@ -1,3 +1,18 @@
+# v0.9.1
+### 🛠️ Miglioramenti Previsione turnazione
+* Rotazione automatica dei turni nei pattern forecast:
+  - Turni A/B/C: rotazione ciclica su pattern 4/2 in base al turno iniziale
+  - Turni 12H-D / 12H-N: switch automatico 7/7
+  - Comportamento invariato per gli altri turni non mappati nel sistema di rotazione
+  
+ 
+* Aggiunto punto "7. Previsione turnazione annuale" nella documentazione utente(staff)
+
+### 🐞 Bugfix
+* Turnazione previsionale: corretto comportamento del pattern in presenza di festività italiane
+  - Ora la selezione “Salta festività” mantiene invariato il conteggio dei blocchi lavoro/riposo,
+  - evitando slittamenti del pattern (es. 5/2) dopo Capodanno, Epifania o Pasquetta.
+
 # v0.9.0
 ### ✨ Nuove funzionalità
 * Funzionalità di previsione turnazione:
