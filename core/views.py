@@ -37,6 +37,7 @@ from .serializers import *
 
 from weasyprint import HTML
 
+from .utility import generate_forecast_zip
 
 _SLOT_RE = re.compile(r'^(.*?)(?:\.(\d+))?$')
 
@@ -1789,18 +1790,33 @@ def turn_pattern_forecast(request):
 
             try:
                 sent = msg.send(fail_silently=False)
-                if sent:
-                    messages.success(
-                        request,
-                        f"Previsione generata e inviata a {employee.full_name()} "
-                        f"({len(attachments)} PDF allegati)."
-                    )
-                else:
+                if not sent:
                     messages.error(request, "Invio email fallito (send() ha restituito 0).")
+                    return render(request, "turn_pattern_forecast.html", {"form": form})
+
             except Exception as e:
                 messages.error(request, f"Errore durante l'invio email: {e}")
+                return render(request, "turn_pattern_forecast.html", {"form": form})
 
-            return render(request, "turn_pattern_forecast.html", {"form": form})
+            # Se siamo qui, l'email è stata inviata correttamente → genera ZIP e scaricalo
+            zip_buffer = generate_forecast_zip(
+                employee=employee,
+                shift_type=shift_type,
+                start_date=start_date,
+                end_year=end_year,
+                work_days=work_days,
+                rest_days=rest_days,
+                skip_holidays=skip_holidays,
+                attachments=attachments,
+            )
+
+            safe_last = (employee.last_name or "Cognome").replace(" ", "_")
+            safe_first = (employee.first_name or "Nome").replace(" ", "_")
+            zip_filename = f"Previsione_turni_{safe_last}_{safe_first}_{end_year}.zip"
+
+            response = HttpResponse(zip_buffer.getvalue(), content_type="application/zip")
+            response["Content-Disposition"] = f'attachment; filename="{zip_filename}"'
+            return response
 
         # form non valido
         return render(request, "turn_pattern_forecast.html", {"form": form})
