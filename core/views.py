@@ -71,13 +71,77 @@ def _next_suffix_for_base(base: str) -> int:
         if k > mx: mx = k
     return mx + 1
 
+def _allocate_slot_for_base(base: str) -> Profession:
+    """
+    Per una base (es. 'Ufficio'):
+
+    1. Recupera tutte le Profession con nome = 'Ufficio' o 'Ufficio.N'
+    2. Guarda quali nomi sono già usati in QUALSIASI TemplateRow.duty
+       e in QUALSIASI PlanRow.duty
+    3. Se esiste una Profession NON usata in nessuna riga, la riusa
+    4. Altrimenti crea una nuova Profession 'Ufficio.N+1' e la ritorna
+    """
+    base = (base or "").strip()
+    if not base:
+        raise ValueError("Base vuota in _allocate_slot_for_base")
+
+    pattern = rf'^{re.escape(base)}(?:\.(\d+))?$'
+
+    # 1) tutte le Profession esistenti per quella base
+    profs = list(
+        Profession.objects
+        .filter(name__regex=pattern)
+        .order_by("name")
+    )
+
+    # Nessuna Profession ancora esistente: crea la base “liscia”
+    if not profs:
+        return Profession.objects.create(name=base)
+
+    names = [p.name for p in profs]
+
+    # 2) nomi già usati in TemplateRow e PlanRow
+    used_in_tpl = set(
+        TemplateRow.objects
+        .filter(duty__in=names)
+        .values_list("duty", flat=True)
+    )
+    used_in_plan = set(
+        PlanRow.objects
+        .filter(duty__in=names)
+        .values_list("duty", flat=True)
+    )
+    used_names = used_in_tpl | used_in_plan
+
+    def _suffix_num(name: str) -> int:
+        b, num = _split_slot(name)
+        return num
+
+    # 3) prova a riusare una Profession esistente non usata da nessuna riga
+    for p in sorted(profs, key=lambda x: _suffix_num(x.name)):
+        if p.name not in used_names:
+            return p
+
+    # 4) tutti gli slot esistenti sono già usati → crea nuovo suffisso
+    max_suffix = max(_suffix_num(p.name) for p in profs)
+    new_name = f"{base}.{max_suffix + 1}"
+    return Profession.objects.create(name=new_name)
+
+
 def _ensure_profession_for(base: str, explicit_num: int | None) -> Profession:
+    base = (base or "").strip()
+    if not base:
+        raise ValueError("Base vuota in _ensure_profession_for")
+
+    # Caso con suffisso esplicito: rispetta esattamente base.N
     if explicit_num and explicit_num > 0:
         name = f"{base}.{explicit_num}"
-    else:
-        name = f"{base}.{_next_suffix_for_base(base)}"
-    prof, _ = Profession.objects.get_or_create(name=name)
-    return prof
+        prof, _ = Profession.objects.get_or_create(name=name)
+        return prof
+
+    # Caso senza suffisso: prova a riusare uno slot libero per quella base,
+    # altrimenti crea il nuovo base.N+1
+    return _allocate_slot_for_base(base)
 
 def _propagate_insert_to_plans(template: Template, insert_order: int, duty: str):
     BUMP = 1000
