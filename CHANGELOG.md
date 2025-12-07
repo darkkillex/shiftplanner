@@ -1,3 +1,25 @@
+# v0.9.4
+### Added
+- Possibilità di inserire righe vuote nei template tramite checkbox “Riga vuota (spacer)”
+- Propagazione automatica delle righe vuote nei piani già generati
+
+### Improved
+- Robustezza della view `template_insert_row` per distinguere correttamente righe mansione vs righe spacer
+
+### Fixed
+- Evitati casi in cui una mansione “[spazio]” veniva creata come vera Profession nel database
+
+### 🐞 Bugfix
+* Corretto il riuso degli slot mansioni: l’algoritmo ora verifica l’utilizzo di ogni Profession 
+  sia nelle TemplateRow sia nelle PlanRow, riutilizzando solo gli slot davvero liberi e creando 
+  un nuovo suffisso solo quando necessario.
+
+* Risolto un bug per cui l’aggiunta di una nuova riga (Es.“Ufficio”) in un template poteva 
+  condividere la stessa Profession con un’altra riga del piano, causando assegnazioni 
+  visualizzate su più righe contemporaneamente.
+
+---
+
 # v0.9.3
 ### ✨ Nuove funzionalità
 * Piano turno mensile:
@@ -5,6 +27,8 @@
   - ora l’ultimo dipendente selezionato rimane impostato dopo ogni salvataggio/refresh
   - mantenuta la persistenza dei filtri mansione/dipendente
   - re-inizializzata correttamente la select in caso di Materialize UI
+
+---
 
 # v0.9.2
 ### ✨ Nuove funzionalità
