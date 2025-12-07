@@ -135,6 +135,16 @@
           <label for="base">Base (usata se duty è vuoto)</label>
         </div>
 
+        <div class="input-field">
+          <label>
+            <input type="checkbox" id="is-spacer" />
+            <span>Inserisci come riga di separazione [spazio]</span>
+          </label>
+          <span class="helper-text grey-text">
+            Se attivo, questa riga sarà vuota (spacer). I campi Duty/Base verranno ignorati.
+          </span>
+        </div>
+
       </div>
       <div class="card-action right-align">
         <a class="btn grey lighten-3 black-text" href="{% url 'templates_area' %}">

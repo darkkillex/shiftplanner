@@ -31,7 +31,7 @@ from openpyxl.utils import get_column_letter
 
 from .forms import PlanCreateForm, TurnPatternForecastForm
 from .forms import TemplateCreateForm
-from .models import Template, TemplateRow, Profession, AssignmentSnapshot, PlanRow, Employee, Company, Assignment
+from .models import Template, TemplateRow, Plan, Profession, AssignmentSnapshot, PlanRow, Employee, Company, Assignment
 
 from .serializers import *
 
@@ -143,16 +143,23 @@ def _ensure_profession_for(base: str, explicit_num: int | None) -> Profession:
     # altrimenti crea il nuovo base.N+1
     return _allocate_slot_for_base(base)
 
-def _propagate_insert_to_plans(template: Template, insert_order: int, duty: str):
+def _propagate_insert_to_plans(template: Template, insert_order: int, duty: str, is_spacer: bool):
     BUMP = 1000
     plans = Plan.objects.filter(template=template).prefetch_related('rows')
     for plan in plans:
-        # se già esiste una riga con quel duty, salta
-        if plan.rows.filter(duty=duty).exists():
-            continue
+        # per le righe mansione evitiamo duplicati duty, per gli spacer no
+        if not is_spacer:
+            # se già esiste una riga con quel duty, salta
+            if plan.rows.filter(duty=duty).exists():
+                continue
         # bump per evitare collisione su uniq_plan_order
         PlanRow.objects.filter(plan=plan, order__gte=insert_order).update(order=F('order') + BUMP)
-        PlanRow.objects.create(plan=plan, order=insert_order, duty=duty, is_spacer=False)
+        PlanRow.objects.create(
+            plan=plan,
+            order=insert_order,
+            duty=duty,
+            is_spacer=is_spacer
+        )
         _normalize_plan_orders(plan)
 
 def _normalize_template_orders(template: Template):
@@ -1464,6 +1471,7 @@ def template_insert_row(request, pk: int):
     tr_id = data.get('template_row_id')
     duty = (data.get('duty') or '').strip() or None
     base = (data.get('base') or '').strip()
+    is_spacer = bool(data.get("is_spacer", False))
 
     if pos not in ('after', 'before'):
         return JsonResponse({"detail": "position deve essere 'after' o 'before'."}, status=400)
@@ -1484,6 +1492,54 @@ def template_insert_row(request, pk: int):
     if pos == 'before':
         insert_order = max(1, ref.order)
 
+    # --- Caso riga [spazio] ---
+    if is_spacer:
+        # BUMP su tutte le righe del template
+        BUMP = 1000
+        TemplateRow.objects.filter(
+            template=template,
+            order__gte=insert_order
+        ).update(order=F('order') + BUMP)
+
+        # Crea la nuova riga spacer
+        new_tr = TemplateRow.objects.create(
+            template=template,
+            order=insert_order,
+            duty="",
+            is_spacer=True,
+            shift_type=None,
+        )
+        _normalize_template_orders(template)
+
+        # Propaga ai Plan: inserisci PlanRow spacer allo stesso order
+        from .models import Plan, PlanRow  # se non sono già importati in testa
+
+        plan_ids = []
+        for plan in Plan.objects.filter(template=template).prefetch_related("rows"):
+            plan_ids.append(plan.id)
+            PlanRow.objects.filter(plan=plan, order__gte=insert_order).update(order=F('order') + BUMP)
+            PlanRow.objects.create(
+                plan=plan,
+                order=insert_order,
+                duty="",
+                is_spacer=True,
+                notes="",
+                shift_type=None,
+            )
+            _normalize_plan_orders(plan)
+
+        return JsonResponse({
+            "ok": True,
+            "template_id": template.id,
+            "template_row_id": new_tr.id,
+            "insert_order": insert_order,
+            "duty": "",
+            "is_spacer": True,
+            "profession_id": None,
+            "propagated_plans": plan_ids,
+        }, status=201)
+
+    # --- Caso riga normale (mansione) ---
     # normalizza/risolve duty -> Profession
     if not duty:
         if not base:
@@ -1499,23 +1555,35 @@ def template_insert_row(request, pk: int):
 
     # --- BUMP -> INSERT -> NORMALIZE sul Template ---
     BUMP = 1000
-    TemplateRow.objects.filter(template=template, order__gte=insert_order).update(order=F('order') + BUMP)
-    new_tr = TemplateRow.objects.create(template=template, order=insert_order, duty=duty, is_spacer=False)
+    TemplateRow.objects.filter(
+        template=template,
+        order__gte=insert_order
+    ).update(order=F('order') + BUMP)
+
+    new_tr = TemplateRow.objects.create(
+        template=template,
+        order=insert_order,
+        duty=duty,
+        is_spacer=False
+    )
     _normalize_template_orders(template)
 
-    # Propaga ai Plan con lo stesso schema
+    # Propaga ai Plan con lo stesso schema (mansione, non spacer)
     _propagate_insert_to_plans(template, insert_order, duty)
 
     plan_ids = list(Plan.objects.filter(template=template).values_list('id', flat=True))
+
     return JsonResponse({
         "ok": True,
         "template_id": template.id,
         "template_row_id": new_tr.id,
         "insert_order": insert_order,
         "duty": duty,
+        "is_spacer": False,
         "profession_id": prof.id,
-        "propagated_plans": plan_ids
+        "propagated_plans": plan_ids,
     }, status=201)
+
 
 @login_required
 @user_passes_test(_is_staff_or_superuser)
