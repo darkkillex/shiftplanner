@@ -445,6 +445,109 @@ def get_shift_cycle(initial_shift, work_days, rest_days):
     return cycle or [initial_shift]
 
 
+def _build_plan_xlsx_bytes(plan) -> bytes:
+    """
+    Genera il file XLSX del piano turni e ritorna i bytes.
+    Logica identica all'export_xlsx attuale.
+    """
+    days = calendar.monthrange(plan.year, plan.month)[1]
+    # Prepara workbook/worksheet
+    wb = Workbook()
+    ws = wb.active
+    ws.title = f"{plan.month:02d}-{plan.year}"
+    # Stili base
+    bold = Font(bold=True)
+    center = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    wrap = Alignment(wrap_text=True)
+    header_fill = PatternFill("solid", fgColor="E3F2FD")
+    red_font = Font(bold=True, color="FFD32F2F")
+    # Header: A1 "Professione", poi 1..N con giorno + abbreviazione
+    ws.cell(row=1, column=1, value="Professione").font = bold
+    ws.cell(row=1, column=1).alignment = center
+    ws.cell(row=1, column=1).fill = header_fill
+
+    it_hdays = italy_holidays(plan.year)
+    it_weekdays = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
+    col_for_day = {}
+    # Celle giorno per giorno
+    for d in range(1, days + 1):
+        col = d + 1
+        the_date = dt.date(plan.year, plan.month, d)
+        wd = it_weekdays[the_date.weekday()]
+
+        c = ws.cell(row=1, column=col, value=f"{d}\n{wd}")
+        c.alignment = center
+        c.fill = header_fill
+
+        if the_date.weekday() in (5, 6) or the_date in it_hdays:
+            c.font = red_font
+        else:
+            c.font = bold
+
+        col_for_day[col] = the_date
+    # -------- Layout righe: usa PlanRow se presenti, altrimenti Profession --------
+    prof_by_name = {p.name.strip().casefold(): p for p in Profession.objects.all()}
+    use_plan_rows = plan.rows.exists()
+    if use_plan_rows:
+        layout = []
+        for r in plan.rows.all().order_by('order'):
+            if r.is_spacer:
+                layout.append({'label': '', 'profession': None, 'spacer': True})
+            else:
+                layout.append({
+                    'label': r.duty,
+                    'profession': prof_by_name.get((r.duty or '').strip().casefold()),
+                    'spacer': False
+                })
+    else:
+        layout = [{'label': p.name, 'profession': p, 'spacer': False}
+                  for p in Profession.objects.order_by('name')]
+    # -------- Precarica assignments --------
+    ass = (Assignment.objects
+           .filter(plan=plan)
+           .select_related('employee', 'shift_type', 'profession'))
+    idx = {(a.profession_id, a.date): a for a in ass}
+
+    row = 2
+    for item in layout:
+        label_full = item.get('label') or ''
+        base_label, _ = _split_slot(label_full)
+        ws.cell(row=row, column=1, value=base_label if not item.get('spacer') else '')
+
+        for d in range(1, days + 1):
+            col = d + 1
+            day = col_for_day[col]
+
+            if item['spacer'] or not item['profession']:
+                continue
+
+            p = item['profession']
+            a = idx.get((p.id, day))
+            if not a:
+                continue
+
+            name = a.employee.full_name()
+            shift = f" ({a.shift_type.label})" if a.shift_type else ""
+            cell = ws.cell(row=row, column=col, value=f"{name}{shift}")
+            cell.alignment = wrap
+            if a.notes:
+                try:
+                    cell.comment = Comment(a.notes, "ShiftPlanner")
+                except Exception:
+                    pass
+        row += 1
+    # layout
+    ws.freeze_panes = "B2"
+    ws.column_dimensions["A"].width = 40
+    for col in range(2, days + 2):
+        ws.column_dimensions[get_column_letter(col)].width = 22
+    # Output
+    buf = BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return buf.getvalue()
+
+
 
 class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = Employee.objects.all().order_by('last_name','first_name')
@@ -975,123 +1078,121 @@ class PlanViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def export_xlsx(self, request, pk=None):
         plan = self.get_object()
-        days = calendar.monthrange(plan.year, plan.month)[1]
-
-        # Prepara workbook/worksheet
-        wb = Workbook()
-        ws = wb.active
-        ws.title = f"{plan.month:02d}-{plan.year}"
-
-        # Stili base
-        bold = Font(bold=True)
-        center = Alignment(horizontal="center", vertical="center", wrap_text=True)
-        wrap = Alignment(wrap_text=True)
-        header_fill = PatternFill("solid", fgColor="E3F2FD")     # azzurrino header
-        red_font = Font(bold=True, color="FFD32F2F")
-
-        # Header: A1 "Professione", poi 1..N con giorno + abbreviazione
-        ws.cell(row=1, column=1, value="Professione").font = bold
-        ws.cell(row=1, column=1).alignment = center
-        ws.cell(row=1, column=1).fill = header_fill
-
-        it_hdays = italy_holidays(plan.year)
-        it_weekdays = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
-        # mappa indice colonna -> (giorno, data)
-        col_for_day = {}
-        for d in range(1, days + 1):
-            col = d + 1
-            the_date = dt.date(plan.year, plan.month, d)
-            wd = it_weekdays[the_date.weekday()]
-
-            c = ws.cell(row=1, column=col, value=f"{d}\n{wd}")
-            c.alignment = center
-            c.fill = header_fill
-
-            # sabato/dom/holiday -> numeri rossi
-            if the_date.weekday() in (5, 6) or the_date in it_hdays:
-                c.font = red_font
-            else:
-                c.font = bold
-
-            col_for_day[col] = the_date
-
-        # -------- Layout righe: usa PlanRow se presenti, altrimenti Profession --------
-        prof_by_name = {p.name.strip().casefold(): p for p in Profession.objects.all()}
-        use_plan_rows = plan.rows.exists()
-        if use_plan_rows:
-            layout = []
-            for r in plan.rows.all().order_by('order'):
-                if r.is_spacer:
-                    layout.append({'label': '', 'profession': None, 'spacer': True})
-                else:
-                    layout.append({
-                        'label': r.duty,
-                        'profession': prof_by_name.get((r.duty or '').strip().casefold()),
-                        'spacer': False
-                    })
-        else:
-            layout = [{'label': p.name, 'profession': p, 'spacer': False}
-                      for p in Profession.objects.order_by('name')]
-
-        # -------- Precarica assignments --------
-        ass = (Assignment.objects
-               .filter(plan=plan)
-               .select_related('employee', 'shift_type', 'profession'))
-        idx = {(a.profession_id, a.date): a for a in ass}
-
-        # -------- Scrittura righe --------
-        row = 2
-        for item in layout:
-            # Colonna A: etichetta del template (senza suffisso .N; vuota per spacer)
-            label_full = item.get('label') or ''
-            base_label, _ = _split_slot(label_full)  # <- usa helper già definito
-            ws.cell(row=row, column=1, value=base_label if not item.get('spacer') else '')
-
-            # Celle giorno per giorno
-            for d in range(1, days+1):
-                col = d + 1
-                day = col_for_day[col]
-
-                # Spacer o mansione non mappata a Profession -> lascia vuoto
-                if item['spacer'] or not item['profession']:
-                    continue
-
-                p = item['profession']
-                a = idx.get((p.id, day))
-                if not a:
-                    continue
-
-                name = a.employee.full_name()
-                shift = f" ({a.shift_type.label})" if a.shift_type else ""
-                cell = ws.cell(row=row, column=col, value=f"{name}{shift}")
-                cell.alignment = wrap
-                if a.notes:
-                    try:
-                        cell.comment = Comment(a.notes, "ShiftPlanner")
-                    except Exception:
-                        pass
-            row += 1
-
-
-        # layout
-        ws.freeze_panes = "B2"
-        ws.column_dimensions["A"].width = 40
-        # larghezza base per giorni
-        for col in range(2, days+2):
-            ws.column_dimensions[get_column_letter(col)].width = 22
-
-        # Output
-        buf = BytesIO()
-        wb.save(buf)
-        buf.seek(0)
+        xlsx_bytes = _build_plan_xlsx_bytes(plan)
 
         fname = f"plan_{plan.year}_{plan.month:02d}.xlsx"
         resp = HttpResponse(
-            buf.getvalue(),
+            xlsx_bytes,
             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
         resp['Content-Disposition'] = f'attachment; filename="{fname}"'
         return resp
+
+    @action(detail=True, methods=['post'])
+    def broadcast_xlsx(self, request, pk=None):
+        """
+        Invia il piano turni completo in XLSX a TUTTI i dipendenti
+        presenti nel piano (con email valida), senza snapshot.
+        """
+        plan = self.get_object()
+
+        xlsx_bytes = _build_plan_xlsx_bytes(plan)
+        fname = f"plan_{plan.year}_{plan.month:02d}.xlsx"
+
+        employees_qs = (
+            Assignment.objects
+            .filter(plan=plan, employee__email__isnull=False)
+            .exclude(employee__email='')
+            .values('employee_id', 'employee__first_name', 'employee__last_name', 'employee__email')
+            .distinct()
+        )
+
+        recipients = list(employees_qs)
+        total = len(recipients)
+        if total == 0:
+            return Response(
+                {
+                    "detail": "Nessun dipendente con email valido nel piano corrente.",
+                    "plan_id": plan.id,
+                    "recipients_total": 0,
+                    "sent": 0,
+                    "errors": 0,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        ITALIAN_MONTHS = [
+            "", "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
+            "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"
+        ]
+        month_name = ITALIAN_MONTHS[plan.month]
+
+        subject = f"Piano turni {month_name} {plan.year} - versione completa"
+        sender_name = request.user.get_full_name() or request.user.username
+        from_email = settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER
+        reply_to = [settings.REPLY_TO_EMAIL] if getattr(settings, 'REPLY_TO_EMAIL', None) else None
+
+        text_body = (
+            f"Salve,\n\n"
+            f"in allegato trova il piano turni completo per {month_name} {plan.year}.\n\n"
+            f"Cordialmente,\n{sender_name}"
+        )
+
+        sent = 0
+        errors = 0
+        results = []
+
+        for rec in recipients:
+            full_name = f"{rec['employee__first_name']} {rec['employee__last_name']}".strip()
+            email = rec['employee__email']
+
+            msg = EmailMultiAlternatives(
+                subject=subject,
+                body=text_body,
+                from_email=from_email,
+                to=[formataddr((full_name, email))],
+                reply_to=reply_to,
+            )
+            msg.attach(
+                fname,
+                xlsx_bytes,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+
+            try:
+                n = msg.send(fail_silently=False)
+                if n:
+                    sent += 1
+                    results.append({"email": email, "full_name": full_name, "status": "sent", "error": ""})
+                else:
+                    errors += 1
+                    results.append({
+                        "email": email,
+                        "full_name": full_name,
+                        "status": "error",
+                        "error": "send() ha restituito 0",
+                    })
+            except Exception as e:
+                errors += 1
+                results.append({
+                    "email": email,
+                    "full_name": full_name,
+                    "status": "error",
+                    "error": str(e)[:500],
+                })
+
+        return Response(
+            {
+                "plan_id": plan.id,
+                "plan_month": plan.month,
+                "plan_year": plan.year,
+                "recipients_total": total,
+                "sent": sent,
+                "errors": errors,
+                "recipients": results,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 @login_required

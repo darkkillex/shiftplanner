@@ -270,6 +270,7 @@
         initApply(state);
         initClear(state);
         initNotify(state);
+        initBroadcastXlsx(state);
         initNoteEditing(state);
         // 3) Forza l'applicazione dei filtri ripristinati
         const fp = document.getElementById("filter-prof");
@@ -974,6 +975,65 @@
       });
     }
   }
+
+  // -------------------------------
+  // INVIO XLSX COMPLETO A TUTTI I DIPENDENTI
+  // -------------------------------
+  function initBroadcastXlsx(state) {
+    const btn = document.getElementById("btn-broadcast-xlsx");
+    if (!btn) return;
+
+    const { csrftoken, planId } = state;
+
+    btn.addEventListener("click", async () => {
+      const ok = confirm(
+        "Stai per inviare via email il file Excel completo del piano turni " +
+        "a TUTTI i dipendenti con indirizzo email valido presenti nel piano.\n\n" +
+        "Vuoi procedere?"
+      );
+      if (!ok) return;
+
+      const resp = await fetch(`/api/plans/${planId}/broadcast_xlsx/`, {
+        method: "POST",
+        headers: csrftoken ? { "X-CSRFToken": csrftoken } : {},
+        credentials: "same-origin",
+      });
+
+      if (!resp.ok) {
+        if (window.M?.toast) {
+          M.toast({ html: "Errore invio XLSX a tutti i dipendenti.", classes: "red" });
+        } else {
+          alert("Errore invio XLSX a tutti i dipendenti.");
+        }
+        return;
+      }
+
+      const js = await resp.json().catch(() => ({}));
+
+      const total = js.total_recipients ?? js.total_with_email ?? 0;
+      const sent  = js.sent ?? 0;
+      const errors= js.errors ?? 0;
+
+      const html = `
+        Invio XLSX completato.<br>
+        Destinatari con email valida: ${total}<br>
+        Email inviate (send OK): ${sent}<br>
+        Errori invio: ${errors}
+      `;
+
+      if (window.M?.toast) {
+        M.toast({ html, displayLength: 8000 });
+      } else {
+        alert(
+          `Invio XLSX completato.\n` +
+          `Destinatari con email valida: ${total}\n` +
+          `Email inviate (send OK): ${sent}\n` +
+          `Errori invio: ${errors}`
+        );
+      }
+    });
+  }
+
 
 
   // -------------------------------

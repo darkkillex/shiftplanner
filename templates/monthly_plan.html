@@ -130,12 +130,15 @@
 
   <!-- Barra azioni fondo griglia -->
   <div class="grid-actions">
-    <a href="/api/plans/{{ plan.id }}/export_xlsx/" class="btn teal waves-effect">
-      <i class="material-icons left">file_download</i>Esporta XLSX
-    </a>
+      <!-- Invio massivo XLSX completo -->
+    <button id="btn-broadcast-xlsx" class="btn light-green darken-2 waves-effect waves-light">
+      <i class="material-icons left">file_send</i>
+      Invia piano turni completo (esportazione XLSX) a tutti i lavoratori assegnati
+    </button>
 
+    <!-- Invio individuale (snapshot-aware) -->
     <a id="notify" class="btn orange darken-1 waves-effect waves-light">
-      <i class="material-icons left">send</i>Invia notifiche
+      <i class="material-icons left">send</i>Invia piano turni personalizzato ai lavoratori assegnati
     </a>
   </div>
 
