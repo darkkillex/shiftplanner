@@ -447,31 +447,45 @@ def get_shift_cycle(initial_shift, work_days, rest_days):
 
 def _build_plan_xlsx_bytes(plan) -> bytes:
     """
-    Genera il file XLSX del piano turni e ritorna i bytes.
-    Logica identica all'export_xlsx attuale.
+    Genera un XLSX coerente con la griglia web:
+
+    - Colonna A: codice turno strutturale della riga (PlanRow.shift_type.code)
+    - Colonna B: mansione (base senza suffisso, es. 'Ufficio' da 'Ufficio.3')
+    - Colonne successive: giorni del mese
+    - Cella = solo nome dipendente (senza turno tra parentesi)
+    - Note in commento cella
+    - Weekend e festività italiane evidenziati nell'header
+
+    RITORNO: bytes dell'XLSX.
     """
     days = calendar.monthrange(plan.year, plan.month)[1]
-    # Prepara workbook/worksheet
+
     wb = Workbook()
     ws = wb.active
     ws.title = f"{plan.month:02d}-{plan.year}"
+
     # Stili base
     bold = Font(bold=True)
     center = Alignment(horizontal="center", vertical="center", wrap_text=True)
     wrap = Alignment(wrap_text=True)
     header_fill = PatternFill("solid", fgColor="E3F2FD")
     red_font = Font(bold=True, color="FFD32F2F")
-    # Header: A1 "Professione", poi 1..N con giorno + abbreviazione
-    ws.cell(row=1, column=1, value="Professione").font = bold
+
+    # Header: A1 "Turno", B1 "Mansione", poi giorni
+    ws.cell(row=1, column=1, value="Turno").font = bold
     ws.cell(row=1, column=1).alignment = center
     ws.cell(row=1, column=1).fill = header_fill
 
+    ws.cell(row=1, column=2, value="Mansione").font = bold
+    ws.cell(row=1, column=2).alignment = center
+    ws.cell(row=1, column=2).fill = header_fill
+
     it_hdays = italy_holidays(plan.year)
     it_weekdays = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
+
     col_for_day = {}
-    # Celle giorno per giorno
     for d in range(1, days + 1):
-        col = d + 1
+        col = d + 2  # C in poi
         the_date = dt.date(plan.year, plan.month, d)
         wd = it_weekdays[the_date.weekday()]
 
@@ -485,67 +499,105 @@ def _build_plan_xlsx_bytes(plan) -> bytes:
             c.font = bold
 
         col_for_day[col] = the_date
-    # -------- Layout righe: usa PlanRow se presenti, altrimenti Profession --------
+
+    # Layout righe: PlanRow se presenti, altrimenti Profession
     prof_by_name = {p.name.strip().casefold(): p for p in Profession.objects.all()}
     use_plan_rows = plan.rows.exists()
+
     if use_plan_rows:
         layout = []
-        for r in plan.rows.all().order_by('order'):
+        for r in plan.rows.all().order_by("order"):
             if r.is_spacer:
-                layout.append({'label': '', 'profession': None, 'spacer': True})
-            else:
                 layout.append({
-                    'label': r.duty,
-                    'profession': prof_by_name.get((r.duty or '').strip().casefold()),
-                    'spacer': False
+                    "spacer": True,
+                    "shift_code": "",
+                    "label_full": "",
+                    "base_label": "",
+                    "profession": None,
                 })
-    else:
-        layout = [{'label': p.name, 'profession': p, 'spacer': False}
-                  for p in Profession.objects.order_by('name')]
-    # -------- Precarica assignments --------
-    ass = (Assignment.objects
-           .filter(plan=plan)
-           .select_related('employee', 'shift_type', 'profession'))
-    idx = {(a.profession_id, a.date): a for a in ass}
-
-    row = 2
-    for item in layout:
-        label_full = item.get('label') or ''
-        base_label, _ = _split_slot(label_full)
-        ws.cell(row=row, column=1, value=base_label if not item.get('spacer') else '')
-
-        for d in range(1, days + 1):
-            col = d + 1
-            day = col_for_day[col]
-
-            if item['spacer'] or not item['profession']:
                 continue
 
-            p = item['profession']
-            a = idx.get((p.id, day))
+            duty_full = (r.duty or "").strip()  # es. "Magazzino.4"
+            base_label, _ = _split_slot(duty_full)
+            shift_code = r.shift_type.code if r.shift_type else ""
+            prof_obj = prof_by_name.get(duty_full.strip().casefold())
+
+            layout.append({
+                "spacer": False,
+                "shift_code": shift_code,
+                "label_full": duty_full,
+                "base_label": base_label,
+                "profession": prof_obj,
+            })
+    else:
+        layout = []
+        for p in Profession.objects.order_by("name"):
+            base_label, _ = _split_slot(p.name or "")
+            layout.append({
+                "spacer": False,
+                "shift_code": "",
+                "label_full": p.name or "",
+                "base_label": base_label,
+                "profession": p,
+            })
+
+    # Precarica assignments
+    ass = (
+        Assignment.objects
+        .filter(plan=plan)
+        .select_related("employee", "shift_type", "profession")
+    )
+    idx = {(a.profession_id, a.date): a for a in ass}
+
+    # Scrittura righe
+    row_idx = 2
+    for item in layout:
+        spacer = item["spacer"]
+
+        # Col A: turno
+        ws.cell(row=row_idx, column=1, value="" if spacer else (item.get("shift_code") or ""))
+        # Col B: mansione (base)
+        ws.cell(row=row_idx, column=2, value="" if spacer else (item.get("base_label") or ""))
+
+        for d in range(1, days + 1):
+            col = d + 2
+            the_date = col_for_day[col]
+
+            if spacer or not item["profession"]:
+                continue
+
+            p = item["profession"]
+            a = idx.get((p.id, the_date))
             if not a:
                 continue
 
-            name = a.employee.full_name()
-            shift = f" ({a.shift_type.label})" if a.shift_type else ""
-            cell = ws.cell(row=row, column=col, value=f"{name}{shift}")
+            emp_name = a.employee.full_name() if a.employee_id else ""
+            if not emp_name:
+                continue
+
+            cell = ws.cell(row=row_idx, column=col, value=emp_name)
             cell.alignment = wrap
+
             if a.notes:
                 try:
                     cell.comment = Comment(a.notes, "ShiftPlanner")
                 except Exception:
                     pass
-        row += 1
-    # layout
-    ws.freeze_panes = "B2"
-    ws.column_dimensions["A"].width = 40
-    for col in range(2, days + 2):
+
+        row_idx += 1
+
+    # Layout colonne
+    ws.freeze_panes = "C2"
+    ws.column_dimensions["A"].width = 14
+    ws.column_dimensions["B"].width = 40
+    for col in range(3, days + 3):
         ws.column_dimensions[get_column_letter(col)].width = 22
-    # Output
+
     buf = BytesIO()
     wb.save(buf)
-    buf.seek(0)
     return buf.getvalue()
+
+
 
 
 
