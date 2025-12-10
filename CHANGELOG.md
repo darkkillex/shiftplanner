@@ -1,5 +1,10 @@
-# v0.9.5
+# v0.9.6
+### 🐞 Bugfix
+* Corretto bug che non permetteva l'inserimento di nuove mansioni o spazi durante la modifica di un template esistente
 
+---
+
+# v0.9.5
 ### 🛠️ Miglioramenti
 * Adeguata l’esportazione Excel alla nuova gestione dei turni per mansione: 
   ora ciò che si vede nel piano turni è esattamente ciò che viene esportato.
