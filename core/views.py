@@ -2049,8 +2049,11 @@ def turn_pattern_forecast(request):
                 "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"
             ]
             first_month_name = ITALIAN_MONTHS[start_date.month]
+            # mese di fine previsione: sempre dicembre dell'anno finale
+            end_date = dt.date(end_year, 12, 31)
+            last_month_name = ITALIAN_MONTHS[end_date.month]
             subject = (
-                f"Previsione turnazione {first_month_name} {start_date.year} - "
+                f"Previsione turnazione fino a {last_month_name} {end_date.year} - "
                 f"{employee.last_name} {employee.first_name}"
             )
 
