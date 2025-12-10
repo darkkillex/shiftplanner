@@ -1,8 +1,10 @@
 TIER-1
-Tasto invio piano turno completo a tutti i dipendenti (xlsx) rimuovendo i dati sensibili (ferie, permessi etc.)
-Colori righe turno come piano turni excel attuale
+Filtro colonna Turni nel piano turni mensile
+Bugfix su errore inserimento mansione su modifica template
+
 
 TIER-2
+Colori righe turno come piano turni excel attuale
 Refactoring di css/js su sorgenti dedicati:
 -emails/plan_personal.html
 -layout.html

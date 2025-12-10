@@ -1,13 +1,31 @@
+# v0.9.5
+
+### 🛠️ Miglioramenti
+* Adeguata l’esportazione Excel alla nuova gestione dei turni per mansione: 
+  ora ciò che si vede nel piano turni è esattamente ciò che viene esportato.
+  Nessun cambiamento per l’utente finale: tutto funziona come prima, ma in modo corretto e aggiornato.
+
+* Aggiunto nuovo pulsante nella pagine del Piano turni per l’invio del file Excel  
+  cumulativo via email ai lavoratori assegnati. Il file, per motivi di privacy non contiene le categorie
+  associate ai seguenti codici turno:"F", "P", "M", "CON", "CIG", "SCI", "PNR", "MAT", "PS", "104", "PL", "CONM"
+
+* Migliorate le informazioni contenute nella email relativa alla previsione turnazione.
+
+### ✨ Nuove funzionalità
+* Invio Piano turni completo XLSX massivo
+  - Aggiunta una nuova funzione che consente allo staff di inviare via email a tutti i dipendenti 
+  assegnati nel piano corrente il file Excel completo del turno.
+
+---
+
 # v0.9.4
-### Added
-- Possibilità di inserire righe vuote nei template tramite checkbox “Riga vuota (spacer)”
-- Propagazione automatica delle righe vuote nei piani già generati
+### ✨ Nuove funzionalità
+* Possibilità di inserire righe vuote nei template tramite checkbox “Riga vuota (spacer)”
+* Propagazione automatica delle righe vuote nei piani già generati
 
-### Improved
-- Robustezza della view `template_insert_row` per distinguere correttamente righe mansione vs righe spacer
-
-### Fixed
-- Evitati casi in cui una mansione “[spazio]” veniva creata come vera Profession nel database
+### 🛠️ Miglioramenti
+* Robustezza della view `template_insert_row` per distinguere correttamente righe mansione vs righe spacer
+* Evitati casi in cui una mansione “[spazio]” veniva creata come vera Profession nel database
 
 ### 🐞 Bugfix
 * Corretto il riuso degli slot mansioni: l’algoritmo ora verifica l’utilizzo di ogni Profession 
