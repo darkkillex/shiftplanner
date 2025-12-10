@@ -56,7 +56,6 @@ class PlanCreateForm(forms.ModelForm):
         month = int(cleaned.get("month") or 0)
         year = int(cleaned.get("year") or 0)
         if month and year:
-            from .models import Plan
             qs = Plan.objects.filter(month=month, year=year)
             if self.instance.pk:
                 qs = qs.exclude(pk=self.instance.pk)

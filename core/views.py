@@ -1,4 +1,4 @@
-import calendar, logging, re
+import calendar, logging, re, json
 from collections import defaultdict
 
 from io import BytesIO
@@ -32,8 +32,17 @@ from openpyxl.utils import get_column_letter
 
 from .forms import PlanCreateForm, TurnPatternForecastForm
 from .forms import TemplateCreateForm
-from .models import Template, TemplateRow, Profession, AssignmentSnapshot, PlanRow, Employee, Company, Assignment
-from .models import Plan
+from .models import (Template,
+                     TemplateRow,
+                     Profession,
+                     AssignmentSnapshot,
+                     PlanRow,
+                     Employee,
+                     Company,
+                     Assignment,
+                     Plan,
+                     ShiftType)
+
 
 from .serializers import *
 
@@ -1436,7 +1445,6 @@ def _parse_rows(text: str, post_data=None):
             shift_id = post_data.get(key)
             if shift_id:
                 try:
-                    from .models import ShiftType
                     tr.shift_type = ShiftType.objects.get(pk=int(shift_id))
                 except (ValueError, ShiftType.DoesNotExist):
                     pass
@@ -1628,7 +1636,6 @@ def template_detail(request, pk):
 @require_POST
 @transaction.atomic
 def template_insert_row(request, pk: int):
-    import json
     try:
         data = json.loads(request.body.decode('utf-8') or "{}")
     except Exception:
@@ -1679,8 +1686,6 @@ def template_insert_row(request, pk: int):
         _normalize_template_orders(template)
 
         # Propaga ai Plan: inserisci PlanRow spacer allo stesso order
-        from .models import Plan, PlanRow  # se non sono già importati in testa
-
         plan_ids = []
         for plan in Plan.objects.filter(template=template).prefetch_related("rows"):
             plan_ids.append(plan.id)
@@ -1736,7 +1741,7 @@ def template_insert_row(request, pk: int):
     _normalize_template_orders(template)
 
     # Propaga ai Plan con lo stesso schema (mansione, non spacer)
-    _propagate_insert_to_plans(template, insert_order, duty)
+    _propagate_insert_to_plans(template, insert_order, duty, is_spacer)
 
     plan_ids = list(Plan.objects.filter(template=template).values_list('id', flat=True))
 
@@ -1761,10 +1766,6 @@ def template_delete_row(request, pk: int):
     Elimina una riga del Template identificandola per 'order' su TUTTI i piani che usano quel template.
     Blocca se una delle righe mappate (stesso 'order' nel piano) ha assegnazioni.
     """
-    import json
-    from django.db.models import Count
-    from .models import Template, TemplateRow, Plan, PlanRow, Assignment, Profession
-
     try:
         data = json.loads(request.body.decode("utf-8") or "{}")
     except Exception:
