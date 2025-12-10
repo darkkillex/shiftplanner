@@ -29,9 +29,11 @@ from openpyxl.styles import Font, Alignment, PatternFill
 from openpyxl.comments import Comment
 from openpyxl.utils import get_column_letter
 
+
 from .forms import PlanCreateForm, TurnPatternForecastForm
 from .forms import TemplateCreateForm
-from .models import Template, TemplateRow, Plan, Profession, AssignmentSnapshot, PlanRow, Employee, Company, Assignment
+from .models import Template, TemplateRow, Profession, AssignmentSnapshot, PlanRow, Employee, Company, Assignment
+from .models import Plan
 
 from .serializers import *
 
@@ -445,7 +447,7 @@ def get_shift_cycle(initial_shift, work_days, rest_days):
     return cycle or [initial_shift]
 
 
-def _build_plan_xlsx_bytes(plan) -> bytes:
+def _build_plan_xlsx_bytes(plan: Plan, *, filter_sensitive: bool = False) -> bytes:
     """
     Genera un XLSX coerente con la griglia web:
 
@@ -456,7 +458,8 @@ def _build_plan_xlsx_bytes(plan) -> bytes:
     - Note in commento cella
     - Weekend e festività italiane evidenziati nell'header
 
-    RITORNO: bytes dell'XLSX.
+    Se filter_sensitive=True, vengono omesse le righe i cui turni hanno
+    codici in SENSITIVE_SHIFT_CODES (F, P, M, CON, CIG, SCI, PNR, MAT, PS, 104, PL, CONM).
     """
     days = calendar.monthrange(plan.year, plan.month)[1]
 
@@ -482,6 +485,7 @@ def _build_plan_xlsx_bytes(plan) -> bytes:
 
     it_hdays = italy_holidays(plan.year)
     it_weekdays = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
+    SENSITIVE_SHIFT_CODES = {"F", "P", "M", "CON", "CIG", "SCI", "PNR", "MAT", "PS", "104", "PL", "CONM"}
 
     col_for_day = {}
     for d in range(1, days + 1):
@@ -519,17 +523,26 @@ def _build_plan_xlsx_bytes(plan) -> bytes:
 
             duty_full = (r.duty or "").strip()  # es. "Magazzino.4"
             base_label, _ = _split_slot(duty_full)
-            shift_code = r.shift_type.code if r.shift_type else ""
+
+            # codice turno strutturale
+            raw_shift_code = r.shift_type.code if r.shift_type else ""
+            norm_code = (raw_shift_code or "").strip().upper()
+
+            # filtro privacy: se richiesto, salta la riga con turno "sensibile"
+            if filter_sensitive and norm_code in SENSITIVE_SHIFT_CODES:
+                continue
+
             prof_obj = prof_by_name.get(duty_full.strip().casefold())
 
             layout.append({
                 "spacer": False,
-                "shift_code": shift_code,
+                "shift_code": raw_shift_code,     # qui manteniamo il codice "come da DB"
                 "label_full": duty_full,
                 "base_label": base_label,
                 "profession": prof_obj,
             })
     else:
+        # ramo legacy: nessun PlanRow -> NON applichiamo filtro (non abbiamo il turno strutturale)
         layout = []
         for p in Profession.objects.order_by("name"):
             base_label, _ = _split_slot(p.name or "")
@@ -596,6 +609,7 @@ def _build_plan_xlsx_bytes(plan) -> bytes:
     buf = BytesIO()
     wb.save(buf)
     return buf.getvalue()
+
 
 
 
@@ -1130,7 +1144,7 @@ class PlanViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def export_xlsx(self, request, pk=None):
         plan = self.get_object()
-        xlsx_bytes = _build_plan_xlsx_bytes(plan)
+        xlsx_bytes = _build_plan_xlsx_bytes(plan, filter_sensitive=False)
 
         fname = f"plan_{plan.year}_{plan.month:02d}.xlsx"
         resp = HttpResponse(
@@ -1148,7 +1162,7 @@ class PlanViewSet(viewsets.ModelViewSet):
         """
         plan = self.get_object()
 
-        xlsx_bytes = _build_plan_xlsx_bytes(plan)
+        xlsx_bytes = _build_plan_xlsx_bytes(plan, filter_sensitive=True)
         fname = f"plan_{plan.year}_{plan.month:02d}.xlsx"
 
         employees_qs = (
@@ -1186,7 +1200,7 @@ class PlanViewSet(viewsets.ModelViewSet):
 
         text_body = (
             f"Salve,\n\n"
-            f"in allegato trova il piano turni completo per {month_name} {plan.year}.\n\n"
+            f"in allegato trova il piano turni aziendale completo per {month_name} {plan.year}.\n\n"
             f"Cordialmente,\n{sender_name}"
         )
 

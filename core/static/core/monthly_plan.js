@@ -252,9 +252,13 @@
       applyBtn: $("#apply"),
       clearBtn: $("#clear"),
       notifyBtn: $("#notify"),
+      broadcastBtn: $("#broadcast-xlsx"),
       // csrf
       csrftoken: getCookie("csrftoken"),
     };
+
+    console.log("monthly_plan init, broadcastBtn found?",
+            !!state.broadcastBtn);
 
     // bootstrap page
     initGrid(state)
@@ -977,21 +981,28 @@
   }
 
   // -------------------------------
-  // INVIO XLSX COMPLETO A TUTTI I DIPENDENTI
+  // BROADCAST XLSX (invio excel cumulativo)
   // -------------------------------
   function initBroadcastXlsx(state) {
-    const btn = document.getElementById("btn-broadcast-xlsx");
-    if (!btn) return;
+    const { broadcastBtn, csrftoken, planId } = state;
+    if (!broadcastBtn) {
+      console.warn("broadcast-xlsx button non trovato");
+      return;
+    }
 
-    const { csrftoken, planId } = state;
+    console.log("initBroadcastXlsx: listener registrato");
 
-    btn.addEventListener("click", async () => {
-      const ok = confirm(
-        "Stai per inviare via email il file Excel completo del piano turni " +
-        "a TUTTI i dipendenti con indirizzo email valido presenti nel piano.\n\n" +
+    broadcastBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      console.log("broadcast-xlsx CLICK");
+
+      if (!confirm(
+        "Stai per inviare il piano turni in formato Excel, completo, " +
+        "a tutti i dipendenti assegnati nel piano corrente.\n\n" +
         "Vuoi procedere?"
-      );
-      if (!ok) return;
+      )) {
+        return;
+      }
 
       const resp = await fetch(`/api/plans/${planId}/broadcast_xlsx/`, {
         method: "POST",
@@ -1000,41 +1011,35 @@
       });
 
       if (!resp.ok) {
+        let msg = "Errore durante l'invio dell'XLSX cumulativo.";
+        try {
+          const j = await resp.json();
+          if (j.detail) msg = j.detail;
+        } catch (_) {}
         if (window.M?.toast) {
-          M.toast({ html: "Errore invio XLSX a tutti i dipendenti.", classes: "red" });
+          M.toast({ html: msg, classes: "red", displayLength: 8000 });
         } else {
-          alert("Errore invio XLSX a tutti i dipendenti.");
+          alert(msg);
         }
         return;
       }
 
       const js = await resp.json().catch(() => ({}));
+      const sent = js.sent ?? 0;
+      const errors = js.errors ?? 0;
 
-      const total = js.total_recipients ?? js.total_with_email ?? 0;
-      const sent  = js.sent ?? 0;
-      const errors= js.errors ?? 0;
-
-      const html = `
-        Invio XLSX completato.<br>
-        Destinatari con email valida: ${total}<br>
-        Email inviate (send OK): ${sent}<br>
-        Errori invio: ${errors}
-      `;
-
+      const html = `Email con XLSX cumulativo inviate: ${sent}. Errori: ${errors}.`;
       if (window.M?.toast) {
-        M.toast({ html, displayLength: 8000 });
+        M.toast({
+          html,
+          classes: errors ? "orange" : "green",
+          displayLength: 8000,
+        });
       } else {
-        alert(
-          `Invio XLSX completato.\n` +
-          `Destinatari con email valida: ${total}\n` +
-          `Email inviate (send OK): ${sent}\n` +
-          `Errori invio: ${errors}`
-        );
+        alert(html);
       }
     });
   }
-
-
 
   // -------------------------------
   // NOTE editing (dblclick + modal + salvataggio)

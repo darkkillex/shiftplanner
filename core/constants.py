@@ -1,0 +1,1 @@
+SENSITIVE_SHIFT_CODES = {"F", "P", "M", "CON", "CIG", "SCI", "PNR", "MAT", "PS", "104", "PL", "CONM"}
