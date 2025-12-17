@@ -1052,7 +1052,7 @@ class PlanViewSet(viewsets.ModelViewSet):
                 "COMPANY_NAME": settings.COMPANY_NAME,
             }
 
-            subject = f"Piano turni {month_name} {plan.year} {rev_str}".strip()
+            subject = f"Piano turni {month_name} {plan.year} - {emp.full_name()} {rev_str}".strip()
             text_body = render_to_string("emails/plan_personal.txt", ctx)
             html_body = render_to_string("emails/plan_personal.html", ctx)
 
