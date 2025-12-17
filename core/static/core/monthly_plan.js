@@ -1053,8 +1053,7 @@
 
     function renderCell(td) {
       const name = td.dataset.name || "";
-      const shiftLabel = td.dataset.shiftLabel || "";
-      const text = name ? name + (shiftLabel ? ` (${shiftLabel})` : "") : "";
+      const text = name || "";
       const notes = td.dataset.notes || "";
 
       if (notes) {
