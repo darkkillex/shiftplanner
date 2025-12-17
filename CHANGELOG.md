@@ -6,8 +6,12 @@
   del lavoratore, mentre il turno resta legato esclusivamente alla mansione/riga.
 
 ### 🛠️ Miglioramenti
+* Introdotta la selezione avanzata nella griglia del piano turni: con Shift+click è ora possibile selezionare 
+  un intervallo continuo di celle come in Excel, mantenendo il supporto a Ctrl/Cmd+click per aggiunte/rimozioni 
+  e al drag per selezioni multiple additive. Migliorata l’ergonomia nelle operazioni di assegnazione massiva. 
+* Aggiunto nome del dipendente nell'oggetto della email del piano turni personale
 * Sostituite occorrenze hardcoded del nome dell'azienda così da garantire che il nome dell’azienda sia definito in un solo punto.
-* Aggiunto nome del dipendente nell'oggetto della email del piano turnii personale
+
 ---
 
 # v0.9.6
@@ -22,7 +26,7 @@
   ora ciò che si vede nel piano turni è esattamente ciò che viene esportato.
   Nessun cambiamento per l’utente finale: tutto funziona come prima, ma in modo corretto e aggiornato.
 
-* Aggiunto nuovo pulsante nella pagine del Piano turni per l’invio del file Excel  
+* Aggiunto nuovo pulsante nella pagina del Piano turni per l’invio del file Excel  
   cumulativo via email ai lavoratori assegnati. Il file, per motivi di privacy non contiene le categorie
   associate ai seguenti codici turno:"F", "P", "M", "CON", "CIG", "SCI", "PNR", "MAT", "PS", "104", "PL", "CONM"
 
