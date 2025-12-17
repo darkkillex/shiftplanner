@@ -17,8 +17,8 @@ router.register(r'api/plans', core_views.PlanViewSet, basename='plans')
 router.register(r'api/reminders', core_views.ReminderViewSet)
 
 class SuperuserOnlyAdmin(AdminSite):
-    site_header = "Shift Planner — Admin"
-    site_title = "Shift Planner — Admin"
+    site_header = "Kairos — Admin"
+    site_title = "Kairos — Admin"
     index_title = "Dashboard"
     def has_permission(self, request):
         return request.user.is_active and request.user.is_superuser
