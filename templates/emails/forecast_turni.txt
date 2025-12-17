@@ -10,5 +10,5 @@ Per ogni mese generato è presente un file PDF con il calendario completo.
 Cordialmente,
 {{ sender_name }}
 
-Nota: questa è una notifica automatica inviata da {{ sender_name }} tramite la piattaforma Kairos - ATI RINA/Sivam.
+Nota: questa è una notifica automatica inviata da {{ sender_name }} tramite la piattaforma Kairos - {{ COMPANY_NAME }}.
 Per dubbi o segnalazioni si prega di rispondere a {{ reply_to_email }} o telefonare al +39 340 324 7641.

@@ -1049,6 +1049,7 @@ class PlanViewSet(viewsets.ModelViewSet):
                 'reply_to_email': getattr(settings, 'REPLY_TO_EMAIL', from_email),
                 'revision_str': rev_str,
                 'sender_name': sender_name,
+                "COMPANY_NAME": settings.COMPANY_NAME,
             }
 
             subject = f"Piano turni {month_name} {plan.year} {rev_str}".strip()
@@ -2074,6 +2075,7 @@ def turn_pattern_forecast(request):
                 "reply_to_email": getattr(settings, "REPLY_TO_EMAIL", from_email),
                 "month_name": first_month_name,
                 "year": start_date.year,
+                "COMPANY_NAME": settings.COMPANY_NAME,
             }
 
             text_body = render_to_string("emails/forecast_turni.txt", ctx)

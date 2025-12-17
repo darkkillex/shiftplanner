@@ -3,6 +3,7 @@ import os, ssl, smtplib
 from pathlib import Path
 from datetime import timedelta
 from django.core.mail.backends.smtp import EmailBackend as DjangoSMTPBackend
+from core.constants import COMPANY_NAME
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -46,6 +47,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'core.context_processors.app_version',
+                'core.context_processors.company_context',
             ],
         },
     },
