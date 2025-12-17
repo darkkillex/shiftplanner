@@ -445,75 +445,130 @@
     });
   }
 
-   // -------------------------------
-   // Selezione celle (click & drag) + CTRL/CMD multi-select
-   // -------------------------------
-   function initSelection(state) {
-     const { selected } = state;
+  // -------------------------------
+  // Selezione celle (click, ctrl/cmd, shift, drag)
+  // -------------------------------
+  function initSelection(state) {
+    const { selected } = state;
 
-     document.addEventListener("mousedown", (e) => {
-       if (e.target.classList.contains("cell")) state.isMouseDown = true;
-     });
-     document.addEventListener("mouseup", () => {
-       state.isMouseDown = false;
-     });
+    const grid = document.getElementById("grid");
+    const tbody = grid ? grid.querySelector("tbody") : null;
+    if (!tbody) return;
 
-     function cellKey(td) {
-       const planRowId    = td.dataset.planRowId || "";
-       const professionId = td.dataset.professionId || "";
-       const day          = td.dataset.day;
-       return `${planRowId}:${professionId}#${day}`;
-     }
+    // assegna un indice stabile ad ogni riga (serve per shift+click)
+    const trs = Array.from(tbody.querySelectorAll("tr"));
+    trs.forEach((tr, idx) => { tr.dataset.ridx = String(idx); });
 
-     function clearSelection() {
-       selected.clear();
-       document.querySelectorAll("#grid td.cell.selected")
-         .forEach((x) => x.classList.remove("selected"));
-     }
+    let anchorTd = null; // “ancora” per shift+click
 
-     function addCell(td) {
-       const key = cellKey(td);
-       if (!selected.has(key)) {
-         selected.add(key);
-         td.classList.add("selected");
-       }
-     }
+    function cellKey(td) {
+      const planRowId    = td.dataset.planRowId || "";
+      const professionId = td.dataset.professionId || "";
+      const day          = td.dataset.day || "";
+      return `${planRowId}:${professionId}#${day}`;
+    }
 
-     function toggleCell(td) {
-       const key = cellKey(td);
-       if (selected.has(key)) {
-         selected.delete(key);
-         td.classList.remove("selected");
-       } else {
-         selected.add(key);
-         td.classList.add("selected");
-       }
-     }
+    function markSelected(td) {
+      const key = cellKey(td);
+      if (!key) return;
+      selected.add(key);
+      td.classList.add("selected");
+    }
 
-     $$("#grid td.cell").forEach((td) => {
-       td.addEventListener("mousedown", (e) => {
-         const multi = e.ctrlKey || e.metaKey; // CTRL (Win/Linux) o CMD (Mac)
+    function unmarkSelected(td) {
+      const key = cellKey(td);
+      if (!key) return;
+      selected.delete(key);
+      td.classList.remove("selected");
+    }
 
-         if (!multi) {
-           // click normale: reset + seleziona solo questa
-           clearSelection();
-           addCell(td);
-         } else {
-           // ctrl/cmd + click: toggle senza resettare
-           toggleCell(td);
-         }
+    function clearSelection() {
+      selected.clear();
+      $$("#grid td.cell.selected").forEach((x) => x.classList.remove("selected"));
+    }
 
-         e.preventDefault();
-       });
+    function isSelectable(td) {
+      // evita spacer o celle non mappabili
+      if (!td.classList.contains("cell")) return false;
+      if (td.classList.contains("spacer-cell")) return false;
+      // opzionale: se vuoi ignorare celle senza riferimenti
+      // if (!td.dataset.planRowId && !td.dataset.professionId) return false;
+      return true;
+    }
 
-       td.addEventListener("mouseenter", () => {
-         if (!state.isMouseDown) return;
+    function selectRangeRect(fromTd, toTd, { additive = false } = {}) {
+      if (!fromTd || !toTd) return;
+      if (!additive) clearSelection();
 
-         // drag: aggiungi e basta (non toggle) per evitare "sfarfallii"
-         addCell(td);
-       });
-     });
-   }
+      const r1 = Number(fromTd.closest("tr")?.dataset.ridx ?? -1);
+      const r2 = Number(toTd.closest("tr")?.dataset.ridx ?? -1);
+      const c1 = Number(fromTd.dataset.day ?? -1);
+      const c2 = Number(toTd.dataset.day ?? -1);
+      if (r1 < 0 || r2 < 0 || c1 < 0 || c2 < 0) return;
+
+      const rMin = Math.min(r1, r2), rMax = Math.max(r1, r2);
+      const cMin = Math.min(c1, c2), cMax = Math.max(c1, c2);
+
+      for (let r = rMin; r <= rMax; r++) {
+        const tr = trs[r];
+        if (!tr) continue;
+
+        for (let c = cMin; c <= cMax; c++) {
+          const td = tr.querySelector(`td.cell[data-day="${c}"]`);
+          if (!td || !isSelectable(td)) continue;
+          markSelected(td);
+        }
+      }
+    }
+
+    document.addEventListener("mousedown", (e) => {
+      if (e.target.classList.contains("cell")) state.isMouseDown = true;
+    });
+    document.addEventListener("mouseup", () => {
+      state.isMouseDown = false;
+    });
+
+    $$("#grid td.cell").forEach((td) => {
+      td.addEventListener("mousedown", (e) => {
+        if (!isSelectable(td)) return;
+
+        const isCtrl = e.ctrlKey || e.metaKey; // Windows/Linux ctrl, mac cmd
+        const isShift = e.shiftKey;
+
+        // SHIFT+CLICK: selezione intervallo (rettangolo)
+        if (isShift && anchorTd) {
+          // se tieni anche Ctrl/Cmd → additivo (non cancella la selezione esistente)
+          selectRangeRect(anchorTd, td, { additive: isCtrl });
+          e.preventDefault();
+          return;
+        }
+
+        // CTRL/CMD+CLICK: toggle singola cella
+        if (isCtrl) {
+          if (td.classList.contains("selected")) unmarkSelected(td);
+          else markSelected(td);
+          anchorTd = td; // aggiorna ancora
+          e.preventDefault();
+          return;
+        }
+
+        // CLICK semplice: reset + selezione singola
+        clearSelection();
+        markSelected(td);
+        anchorTd = td;
+        e.preventDefault();
+      });
+
+      // DRAG: aggiunge celle alla selezione corrente (non resetta)
+      td.addEventListener("mouseenter", () => {
+        if (!state.isMouseDown) return;
+        if (!isSelectable(td)) return;
+
+        // drag non fa toggle: aggiunge e basta
+        markSelected(td);
+      });
+    });
+  }
 
 
   // -------------------------------
