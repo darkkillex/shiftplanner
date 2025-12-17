@@ -601,13 +601,29 @@
 
     const EDGE = 40;
     const MAX_SPEED = 28;
+
+    const DRAG_THRESHOLD = 6; // px: evita auto-scroll al semplice click
+
     let rafId = null;
     let mouseX = 0, mouseY = 0;
     let active = false;
 
+    let armed = false;        // mousedown fatto su cella
+    let startX = 0, startY = 0;
+
     function onMouseMove(e) {
       mouseX = e.clientX;
       mouseY = e.clientY;
+
+      // Attiva solo dopo soglia (vero drag)
+      if (armed && !active) {
+        const dx = Math.abs(mouseX - startX);
+        const dy = Math.abs(mouseY - startY);
+        if (dx >= DRAG_THRESHOLD || dy >= DRAG_THRESHOLD) {
+          active = true;
+          if (!rafId) rafId = requestAnimationFrame(step);
+        }
+      }
     }
 
     function step() {
@@ -616,13 +632,12 @@
       const rect = wrapper.getBoundingClientRect();
       let dx = 0, dy = 0;
 
-      // Orizzontale
       if (mouseX < rect.left + EDGE) {
         dx = -Math.min(MAX_SPEED, (rect.left + EDGE - mouseX));
       } else if (mouseX > rect.right - EDGE) {
         dx =  Math.min(MAX_SPEED, (mouseX - (rect.right - EDGE)));
       }
-      // Verticale
+
       if (mouseY < rect.top + EDGE) {
         dy = -Math.min(MAX_SPEED, (rect.top + EDGE - mouseY));
       } else if (mouseY > rect.bottom - EDGE) {
@@ -633,7 +648,6 @@
         wrapper.scrollLeft += dx;
         wrapper.scrollTop  += dy;
 
-        // Se hai la scrollbar superiore sincronizzata, allineala
         const topScroll = document.getElementById('grid-scroll-top');
         if (topScroll) topScroll.scrollLeft = wrapper.scrollLeft;
       }
@@ -641,27 +655,30 @@
       rafId = requestAnimationFrame(step);
     }
 
-    // Attiva solo quando stai selezionando (mouse premuto)
     wrapper.addEventListener('mousedown', (e) => {
       if (e.target && e.target.classList.contains('cell')) {
-        active = true;
+        armed = true;
+        active = false; // reset
+        startX = e.clientX;
+        startY = e.clientY;
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+
         document.addEventListener('mousemove', onMouseMove);
-        if (!rafId) rafId = requestAnimationFrame(step);
       }
     });
 
-    // Ferma quando rilasci o esci dalla finestra
     function stop() {
+      armed = false;
       active = false;
       document.removeEventListener('mousemove', onMouseMove);
       if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
     }
+
     document.addEventListener('mouseup', stop);
     window.addEventListener('blur', stop);
-    wrapper.addEventListener('mouseleave', () => {
-      // non fermiamo subito: potresti voler uscire di poco mentre scorri
-    });
   }
+
 
   // -------------------------------
   // Filtro professioni (colonna 0)
