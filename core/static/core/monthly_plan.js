@@ -445,47 +445,75 @@
     });
   }
 
-  // -------------------------------
-  // Selezione celle (click & drag)
-  // -------------------------------
-  function initSelection(state) {
-    const { selected } = state;
+   // -------------------------------
+   // Selezione celle (click & drag) + CTRL/CMD multi-select
+   // -------------------------------
+   function initSelection(state) {
+     const { selected } = state;
 
-    document.addEventListener("mousedown", (e) => {
-      if (e.target.classList.contains("cell")) state.isMouseDown = true;
-    });
-    document.addEventListener("mouseup", () => {
-      state.isMouseDown = false;
-    });
+     document.addEventListener("mousedown", (e) => {
+       if (e.target.classList.contains("cell")) state.isMouseDown = true;
+     });
+     document.addEventListener("mouseup", () => {
+       state.isMouseDown = false;
+     });
 
-    $$("#grid td.cell").forEach((td) => {
-      td.addEventListener("mousedown", (e) => {
-        selected.clear();
-        $$("#grid td.cell.selected").forEach((x) => x.classList.remove("selected"));
+     function cellKey(td) {
+       const planRowId    = td.dataset.planRowId || "";
+       const professionId = td.dataset.professionId || "";
+       const day          = td.dataset.day;
+       return `${planRowId}:${professionId}#${day}`;
+     }
 
-        const planRowId    = td.dataset.planRowId || "";
-        const professionId = td.dataset.professionId || "";
-        const day          = td.dataset.day;
+     function clearSelection() {
+       selected.clear();
+       document.querySelectorAll("#grid td.cell.selected")
+         .forEach((x) => x.classList.remove("selected"));
+     }
 
-        const key = `${planRowId}:${professionId}#${day}`;
-        selected.add(key);
-        td.classList.add("selected");
-        e.preventDefault();
-      });
+     function addCell(td) {
+       const key = cellKey(td);
+       if (!selected.has(key)) {
+         selected.add(key);
+         td.classList.add("selected");
+       }
+     }
 
-      td.addEventListener("mouseenter", () => {
-        if (!state.isMouseDown) return;
+     function toggleCell(td) {
+       const key = cellKey(td);
+       if (selected.has(key)) {
+         selected.delete(key);
+         td.classList.remove("selected");
+       } else {
+         selected.add(key);
+         td.classList.add("selected");
+       }
+     }
 
-        const planRowId    = td.dataset.planRowId || "";
-        const professionId = td.dataset.professionId || "";
-        const day          = td.dataset.day;
+     $$("#grid td.cell").forEach((td) => {
+       td.addEventListener("mousedown", (e) => {
+         const multi = e.ctrlKey || e.metaKey; // CTRL (Win/Linux) o CMD (Mac)
 
-        const key = `${planRowId}:${professionId}#${day}`;
-        selected.add(key);
-        td.classList.add("selected");
-      });
-    });
-  }
+         if (!multi) {
+           // click normale: reset + seleziona solo questa
+           clearSelection();
+           addCell(td);
+         } else {
+           // ctrl/cmd + click: toggle senza resettare
+           toggleCell(td);
+         }
+
+         e.preventDefault();
+       });
+
+       td.addEventListener("mouseenter", () => {
+         if (!state.isMouseDown) return;
+
+         // drag: aggiungi e basta (non toggle) per evitare "sfarfallii"
+         addCell(td);
+       });
+     });
+   }
 
 
   // -------------------------------
