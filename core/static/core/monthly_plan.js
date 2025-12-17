@@ -31,6 +31,8 @@
   // --- Palette pastello per mansione con più varietà ---
   const PROF_COLORS = new Map();
 
+  const GRID_HINT_KEY = "grid_hints_seen_v1";
+
   function hash32(str){
     let h = 2166136261 >>> 0;
     for (let i=0;i<str.length;i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
@@ -65,6 +67,24 @@
       setTimeout(tick, 80);
     })();
   }
+
+  function showGridHintsOnce() {
+    try {
+      if (localStorage.getItem(GRID_HINT_KEY) === "1") return;
+
+      if (window.M?.toast) {
+        M.toast({
+          html: "Suggerimento: Ctrl/Cmd per selezioni multiple, Shift+Click per selezionare intervalli.",
+          displayLength: 6000
+        });
+      }
+
+      localStorage.setItem(GRID_HINT_KEY, "1");
+    } catch (e) {
+      // se localStorage è bloccato, non facciamo nulla
+    }
+  }
+
 
   // CSRF
   function getCookie(name) {
@@ -268,6 +288,7 @@
 
         initScrollSync(state);
         initSelection(state);
+        showGridHintsOnce();
         initAutoScroll(state);
         initFilter(state);
         initEmployeeFilterLive();
