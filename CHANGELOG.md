@@ -1,3 +1,15 @@
+# v0.9.7
+### 🐞 Bugfix
+* Risolto un refuso nella gestione delle note sul piano turni: dopo l’inserimento o la modifica di una nota, 
+  la cella mostrava nuovamente anche il turno accanto al nome del dipendente.
+  Ora il rendering è coerente con la nuova logica del sistema: nelle celle viene sempre visualizzato solo il nome 
+  del lavoratore, mentre il turno resta legato esclusivamente alla mansione/riga.
+
+### 🛠️ Miglioramenti
+* Sostituite occorrenze hardcoded del nome dell'azienda così da garantire che il nome dell’azienda sia definito in un solo punto.
+* Aggiunto nome del dipendente nell'oggetto della email del piano turnii personale
+---
+
 # v0.9.6
 ### 🐞 Bugfix
 * Corretto bug che non permetteva l'inserimento di nuove mansioni o spazi durante la modifica di un template esistente

@@ -1,6 +1,5 @@
 TIER-1
 Filtro colonna Turni nel piano turni mensile
-Bugfix su errore inserimento mansione su modifica template
 
 
 TIER-2
