@@ -1,3 +1,17 @@
+# v0.9.8
+### 🐞 Bugfix
+* Risolto il problema dello spostamento automatico della griglia durante il click sulle celle, 
+  soprattutto nelle colonne più a destra. L’auto-scroll ora si attiva solo in caso di reale trascinamento del mouse, 
+  introducendo una soglia minima di movimento che evita scroll involontari al semplice click.
+
+### ✨ Nuove funzionalità
+* Aggiunti suggerimenti d’uso per la selezione delle celle nella griglia.
+  È stata introdotta un’icona di aiuto con tooltip sempre disponibile e un messaggio informativo mostrato 
+  solo al primo accesso, per spiegare le operazioni tipo Excel (click, drag, Ctrl/Cmd e Shift).
+  La soluzione è non invasiva e può essere facilmente disattivata in futuro senza impatti funzionali.
+
+---
+
 # v0.9.7
 ### 🐞 Bugfix
 * Risolto un refuso nella gestione delle note sul piano turni: dopo l’inserimento o la modifica di una nota, 
