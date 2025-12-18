@@ -1,3 +1,9 @@
+# v0.9.9
+### ✨ Nuove funzionalità
+* Introdotto un nuovo pulsante “Genera e scarica” nella sezione Previsione turnazione.
+  La nuova azione consente allo staff di generare la previsione dei turni e scaricare 
+  localmente l’archivio ZIP con i PDF prodotti, senza inviare alcuna email ai dipendenti.
+
 # v0.9.8
 ### 🐞 Bugfix
 * Risolto il problema dello spostamento automatico della griglia durante il click sulle celle, 
