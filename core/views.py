@@ -2131,4 +2131,73 @@ def turn_pattern_forecast(request):
     return render(request, "turn_pattern_forecast.html", {"form": form})
 
 
+@login_required
+@user_passes_test(_is_staff_or_superuser)
+def turn_pattern_forecast_only_local_download(request):
+    if request.method == "POST":
+        form = TurnPatternForecastForm(request.POST)
+        if form.is_valid():
+            employee      = form.cleaned_data["employee"]
+            shift_type    = form.cleaned_data["shift_type"]
+            work_days     = form.cleaned_data["work_days"]
+            rest_days     = form.cleaned_data["rest_days"]
+            start_date    = form.cleaned_data["start_date"]
+            end_year      = form.cleaned_data["end_year"]
+            skip_holidays = form.cleaned_data.get("skip_holidays", False)
+
+            # 1) determina il ciclo dei turni in base a pattern e turno iniziale
+            shift_cycle = get_shift_cycle(shift_type, work_days, rest_days)
+
+            # 2) costruisci il pattern (data -> ShiftType | None)
+            pattern_map = build_pattern_map(
+                start_date,
+                end_year,
+                work_days,
+                rest_days,
+                shift_cycle,
+                skip_holidays=skip_holidays,
+            )
+
+            # 3) Genera PDF per ogni mese
+            attachments = []
+            start_year = start_date.year
+            for year in range(start_year, end_year + 1):
+                first_month = 1
+                last_month = 12
+                if year == start_year:
+                    first_month = start_date.month
+
+                for month in range(first_month, last_month + 1):
+                    rows = build_month_calendar_rows(pattern_map, employee, shift_type, year, month)
+                    pdf_bytes = render_forecast_pdf(employee, shift_type, year, month, rows)
+
+                    fname = f"turni_{employee.last_name}_{employee.first_name}_{year}_{month:02d}.pdf"
+                    attachments.append((fname, pdf_bytes, "application/pdf"))
+
+            # 4) Genera ZIP e scaricalo
+            zip_buffer = generate_forecast_zip(
+                employee=employee,
+                shift_type=shift_type,
+                start_date=start_date,
+                end_year=end_year,
+                work_days=work_days,
+                rest_days=rest_days,
+                skip_holidays=skip_holidays,
+                attachments=attachments,
+            )
+
+            safe_last = (employee.last_name or "Cognome").replace(" ", "_")
+            safe_first = (employee.first_name or "Nome").replace(" ", "_")
+            zip_filename = f"Previsione_turni_{safe_last}_{safe_first}_{end_year}.zip"
+
+            response = HttpResponse(zip_buffer.getvalue(), content_type="application/zip")
+            response["Content-Disposition"] = f'attachment; filename="{zip_filename}"'
+            return response
+
+        # form non valido
+        return render(request, "turn_pattern_forecast.html", {"form": form})
+
+    # GET
+    form = TurnPatternForecastForm()
+    return render(request, "turn_pattern_forecast.html", {"form": form})
 

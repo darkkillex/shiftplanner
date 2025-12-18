@@ -61,5 +61,7 @@ urlpatterns = [
     path("manuale-utente/", user_manual_view, name="user-manual"),
     path("employees/", views.employees_directory, name="employees-directory"),
     path("turni/previsione/", views.turn_pattern_forecast, name="turn_pattern_forecast"),
+    path("turni/previsione/download/", views.turn_pattern_forecast_only_local_download, name="turn_pattern_forecast_only_local_download",
+    ),
 
 ]

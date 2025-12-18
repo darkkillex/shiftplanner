@@ -99,9 +99,34 @@
 
     <div class="card-action right-align">
       <a href="{% url 'home' %}" class="btn-flat">Annulla</a>
-      <button type="submit" class="btn waves-effect waves-light teal">
-        <i class="material-icons left">send</i>Genera e invia
+
+        <!-- SOLO DOWNLOAD -->
+      <button
+        type="submit"
+        formaction="{% url 'turn_pattern_forecast_only_local_download' %}"
+        class="btn teal waves-effect waves-light"
+      >
+        <i class="material-icons left">download</i>
+        Genera e scarica
       </button>
+
+      <!-- INVIO + DOWNLOAD -->
+      <button
+        type="submit"
+        formaction="{% url 'turn_pattern_forecast' %}"
+        class="btn orange waves-effect waves-light"
+      >
+        <i class="material-icons left">send</i>
+        Genera, scarica e invia
+      </button>
+
+      <p class="grey-text" style="margin-top:10px;">
+        “Genera e scarica” crea i PDF e li salva localmente.
+        <br>
+        “Genera, scarica e invia” invia i PDF al dipendente e ne scarica una copia.
+      </p>
+
+
     </div>
   </form>
 </div>
@@ -114,6 +139,16 @@
     if (window.M && M.FormSelect) {
       M.FormSelect.init(selects);
     }
+
+    {% if messages %}
+      {% for message in messages %}
+        M.toast({
+          html: "{{ message|escapejs }}",
+          classes: "{{ message.tags }}"
+        });
+      {% endfor %}
+    {% endif %}
   });
 </script>
 {% endblock %}
+
