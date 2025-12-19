@@ -47,7 +47,6 @@
   <h1>Turnazione {{ month_name }} {{ year }}</h1>
   <div class="subtitle">
     Dipendente: <strong>{{ employee_name }}</strong><br>
-    Turno: <strong>{{ shift_code }}</strong> – {{ shift_label }}
   </div>
 
   <table>
@@ -67,9 +66,11 @@
             <div>{{ item.date }}</div>
           </td>
           <td>
-            {% if item.shift_code != "—" %}
-              {{ item.shift_code }}{% if item.shift_label %} – {{ item.shift_label }}{% endif %}
-            {% else %}—{% endif %}
+            {% if item.shift_label %}
+              {{ item.shift_label }}
+            {% else %}
+              —
+            {% endif %}
           </td>
           <td>{{ item.profession_name|default:"" }}</td>
           <td>{{ item.notes|default:"" }}</td>
