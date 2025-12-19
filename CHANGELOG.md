@@ -1,3 +1,11 @@
+# v0.9.10
+### 🛠️ Modifiche
+* Nei PDF generati dalla previsione turnazione è stata semplificata la visualizzazione del turno:
+  ora viene mostrata solo la descrizione del turno (es. “Turno C”), senza il prefisso del codice (es. “C –”).
+  La modifica riguarda esclusivamente il template HTML del PDF. La struttura dei dati e il contesto (shift_code incluso)
+  restano invariati, così da consentire un eventuale reintegro futuro senza interventi sul backend.
+
+
 # v0.9.9
 ### ✨ Nuove funzionalità
 * Introdotto un nuovo pulsante “Genera e scarica” nella sezione Previsione turnazione.
