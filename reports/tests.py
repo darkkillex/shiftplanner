@@ -177,3 +177,40 @@ class PermissionTests(TestCase):
         from core.serializers import EmployeeSerializer
         self.assertNotIn("medical_info", EmployeeSerializer.Meta.fields)
         self.assertNotIn("prescriptions", EmployeeSerializer.Meta.fields)
+
+
+class PrescriptionImportTests(TestCase):
+    def setUp(self):
+        self.staff = get_user_model().objects.create_user("staff2", password="x", is_staff=True)
+        self.rossi = Employee.objects.create(first_name="Mario", last_name="Rossi", matricola="10", email="r@x.it")
+        self.bianchi = Employee.objects.create(first_name="Anna", last_name="Bianchi", matricola="11", email="b@x.it")
+        EmployeeMedicalInfo.objects.create(employee=self.bianchi, prescriptions="Vecchia prescrizione")
+
+    def test_preview_then_apply(self):
+        from .presc_import import apply_plan, build_plan, read_file_prescriptions
+        rows = read_file_prescriptions(io.BytesIO(make_ati_workbook()))
+        plan = build_plan(rows)
+        self.assertEqual([i["nome"] for i in plan.create], ["Rossi Mario"])
+        self.assertEqual([i["nome"] for i in plan.kept], ["Bianchi Anna"])   # vuota nel file: mantenuta
+        self.assertFalse(EmployeeMedicalInfo.objects.filter(employee=self.rossi).exists())   # anteprima: nulla scritto
+        apply_plan(plan, self.staff)
+        self.assertEqual(self.rossi.medical_info.prescriptions, "No MMC > 10 kg")
+        self.assertEqual(EmployeeMedicalInfo.objects.get(employee=self.bianchi).prescriptions, "Vecchia prescrizione")
+        plan2 = build_plan(rows, clear_missing=True)
+        self.assertEqual((plan2.unchanged, len(plan2.clear)), (1, 1))
+        apply_plan(plan2)
+        self.assertFalse(EmployeeMedicalInfo.objects.filter(employee=self.bianchi).exists())
+
+    def test_endpoint(self):
+        url = reverse("reports:import_prescriptions")
+        self.client.force_login(self.staff)
+        r = self.client.post(url, {"file": SimpleUploadedFile("p.xlsx", make_ati_workbook()), "mode": "preview"})
+        self.assertEqual(json.loads(r.content)["changes"], 1)
+        self.assertFalse(EmployeeMedicalInfo.objects.filter(employee=self.rossi).exists())
+        r = self.client.post(url, {"file": SimpleUploadedFile("p.xlsx", make_ati_workbook()), "mode": "apply"})
+        self.assertEqual(json.loads(r.content)["applied"]["create"], 1)
+        self.assertEqual(EmployeeMedicalInfo.objects.get(employee=self.rossi).updated_by, self.staff)
+        user = get_user_model().objects.create_user("plain", password="x")
+        self.client.force_login(user)
+        r = self.client.post(url, {"file": SimpleUploadedFile("p.xlsx", make_ati_workbook()), "mode": "apply"})
+        self.assertEqual(r.status_code, 403)

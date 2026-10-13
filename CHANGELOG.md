@@ -11,6 +11,10 @@
 * Nuovo dato facoltativo **Prescrizioni mediche** del dipendente (modello `EmployeeMedicalInfo`, separato
   dall'anagrafica): si modifica dalla scheda dipendente del report o dall'admin; non compare nelle API,
   nell'elenco dipendenti né negli export CSV. Con il file esterno viene letto dal foglio "Dipendenti".
+* **Import delle prescrizioni** dal foglio "Dipendenti" del piano turni verso Kairos: dal report
+  (Dati & export, con fonte File esterno) con anteprima delle differenze e conferma, oppure da riga di comando
+  con `python manage.py import_prescrizioni <file> [--apply] [--clear-missing] [--user <username>]`.
+  Abbinamento per "Cognome Nome"; omonimi e persone non presenti in Kairos vengono segnalati e saltati.
 * Il report segnala le celle in cui il file Excel riporta "ERROR" (anomalie delle formule, es. persona su due
   posizioni) e le persone del file non presenti nell'anagrafica di Kairos.
 

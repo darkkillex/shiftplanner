@@ -245,6 +245,11 @@ Dato facoltativo. Con la fonte Kairos si aggiunge o modifica dalla scheda dipend
 *Modifica*; testo vuoto = rimozione). Con il file esterno viene mostrato quello del foglio "Dipendenti".
 Le prescrizioni sono visibili solo a staff e amministratori e **non sono incluse negli export CSV**.
 
+**Importarle dal piano turni**: carica il file come *File esterno*, apri *Dati & export* e premi
+*Confronta con Kairos*. Vedi le prescrizioni nuove, quelle diverse da Kairos e (se spunti l'opzione) quelle
+da rimuovere perché vuote nel file. Nulla viene scritto finché non premi *Applica* e confermi.
+L'abbinamento è per "Cognome Nome": omonimi e persone non presenti in Kairos vengono segnalati e saltati.
+
 ### Convenzioni di calcolo
 - Ore dei turni: dagli orari dei tipi turno di Kairos o dalla legenda del foglio MAIN del file.
 - Ferie e permessi (PAR) valgono convenzionalmente 8 ore; la formazione 8 ore.

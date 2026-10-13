@@ -217,6 +217,7 @@ reports/
 | GET | `api/kairos/?year=2026&from=1&to=12` | dataset dai piani Kairos |
 | POST | `api/excel/` (multipart `file`) | dataset dal file Excel; nessuna scrittura su DB |
 | POST | `api/prescrizioni/<employee_id>/` `{"text": "..."}` | salva/rimuove le prescrizioni |
+| POST | `api/prescrizioni/import/` (multipart `file`, `mode=preview\|apply`, `clear_missing`) | import dal foglio Dipendenti |
 
 Le API rispondono 401/403 in JSON a utenti non autenticati o non staff; le risposte dataset sono compresse (gzip).
 
@@ -235,6 +236,16 @@ registro preposti, diagnostica. Il front-end fa solo filtri, aggregazioni e graf
 ### Prescrizioni mediche
 Modello separato da `Employee` per tenerle fuori da `/api/employees/`, dall'elenco dipendenti e dagli export.
 Migrazione `reports/0001_initial` (dipende solo da `core/0001_initial`).
+
+### Import prescrizioni da riga di comando
+Logica in `reports/presc_import.py`, condivisa con il pulsante del report.
+```bash
+python manage.py import_prescrizioni /percorso/Piano_Turni_ATI_2026.xlsm                 # anteprima
+python manage.py import_prescrizioni /percorso/Piano_Turni_ATI_2026.xlsm --apply --user admin
+# --clear-missing: rimuove da Kairos le prescrizioni vuote nel file
+```
+In Docker: `docker cp Piano.xlsm shiftplanner_web:/tmp/piano.xlsm` e poi
+`docker compose exec web python manage.py import_prescrizioni /tmp/piano.xlsm`.
 
 ### Test
 ```bash

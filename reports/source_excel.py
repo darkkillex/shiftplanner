@@ -61,12 +61,15 @@ def _cell(row, j):
     return row[j] if j < len(row) else None
 
 
-def _read_anagrafica(book: XlsxBook, b: DatasetBuilder) -> dict:
-    """Foglio Dipendenti -> {chiave nome: info}. Colonne cercate per intestazione."""
+def read_dipendenti(book: XlsxBook) -> dict | None:
+    """
+    Foglio Dipendenti -> {chiave nome: info}; None se il foglio non c'è.
+    Colonne cercate per intestazione (Cognome, Nome, Nome su ROTA, Società,
+    Prescrizioni Mediche, Telefono, Email, Senior/Junior).
+    """
     sh = next((s for s in book.sheets if s.name.lower() == "dipendenti"), None)
     if not sh:
-        b.diag.append({"foglio": "Dipendenti", "esito": "foglio non trovato: società e prescrizioni non disponibili"})
-        return {}
+        return None
     rows = book.read(sh, max_col=30, with_comments=False).rows
     if not rows:
         return {}
@@ -89,6 +92,7 @@ def _read_anagrafica(book: XlsxBook, b: DatasetBuilder) -> dict:
         if not rota:
             continue
         out[norm_key(rota)] = {
+            "nome": rota,
             "soc": short_company(_cell(r, c_soc)) if c_soc is not None else "",
             "socFull": S(_cell(r, c_soc)) if c_soc is not None else "",
             "presc": S(_cell(r, c_pre)) if c_pre is not None else "",
@@ -97,6 +101,14 @@ def _read_anagrafica(book: XlsxBook, b: DatasetBuilder) -> dict:
             "liv": S(_cell(r, c_liv)) if c_liv is not None else "",
         }
     return out
+
+
+def _read_anagrafica(book: XlsxBook, b: DatasetBuilder) -> dict:
+    ana = read_dipendenti(book)
+    if ana is None:
+        b.diag.append({"foglio": "Dipendenti", "esito": "foglio non trovato: società e prescrizioni non disponibili"})
+        return {}
+    return {k: {kk: vv for kk, vv in v.items() if kk != "nome"} for k, v in ana.items()}
 
 
 def _read_legend_hours(book: XlsxBook, b: DatasetBuilder):

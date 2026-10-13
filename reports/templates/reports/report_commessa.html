@@ -168,6 +168,7 @@
             <button class="btn-flat waves-effect" data-export="notes">Solo note di cella</button>
           </div>
           <p class="rc-hint" style="margin-top:-4px">Gli export CSV non contengono le prescrizioni mediche.</p>
+          <div id="rcPrescImport"></div>
           <div id="rcDiag"></div>
         </div>
       </div>
@@ -179,7 +180,8 @@
   "urls": {
     "kairos": "{% url 'reports:kairos_dataset' %}",
     "excel": "{% url 'reports:excel_dataset' %}",
-    "presc": "{% url 'reports:save_prescriptions' 0 %}"
+    "presc": "{% url 'reports:save_prescriptions' 0 %}",
+    "prescImport": "{% url 'reports:import_prescriptions' %}"
   },
   "maxUploadMb": {{ max_upload_mb }}
 }</script>

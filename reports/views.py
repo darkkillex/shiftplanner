@@ -12,6 +12,7 @@ from django.views.decorators.http import require_GET, require_POST
 from core.models import Employee
 
 from .models import EmployeeMedicalInfo
+from .presc_import import apply_plan, build_plan, read_file_prescriptions
 from .source_excel import ExcelFormatError, build_from_excel
 from .source_kairos import available_years, build_from_kairos, kairos_people_index
 
@@ -76,14 +77,9 @@ def kairos_dataset(request):
 @gzip_page
 def excel_dataset(request):
     """POST multipart 'file' -> dataset normalizzato dal piano turni Excel (non salva nulla)."""
-    f = request.FILES.get("file")
-    if not f:
-        return _json({"detail": "Nessun file ricevuto."}, status=400)
-    name = os.path.basename(f.name or "piano.xlsx")
-    if not name.lower().endswith(ALLOWED_EXT):
-        return _json({"detail": "Formato non supportato: servono file .xlsx o .xlsm."}, status=400)
-    if f.size > MAX_UPLOAD_MB * 1024 * 1024:
-        return _json({"detail": f"File troppo grande (massimo {MAX_UPLOAD_MB} MB)."}, status=400)
+    f, name = _uploaded_excel(request)
+    if f is None:
+        return name
     try:
         data = build_from_excel(f, name, kairos_people_index())
     except ExcelFormatError as exc:
@@ -93,6 +89,42 @@ def excel_dataset(request):
         return _json({"detail": "Errore imprevisto nella lettura del file. Controlla che sia il piano turni ATI."},
                      status=500)
     return _json(data)
+
+
+def _uploaded_excel(request):
+    """Valida il file caricato; restituisce (file, nome) oppure (None, JsonResponse di errore)."""
+    f = request.FILES.get("file")
+    if not f:
+        return None, _json({"detail": "Nessun file ricevuto."}, status=400)
+    name = os.path.basename(f.name or "piano.xlsx")
+    if not name.lower().endswith(ALLOWED_EXT):
+        return None, _json({"detail": "Formato non supportato: servono file .xlsx o .xlsm."}, status=400)
+    if f.size > MAX_UPLOAD_MB * 1024 * 1024:
+        return None, _json({"detail": f"File troppo grande (massimo {MAX_UPLOAD_MB} MB)."}, status=400)
+    return f, name
+
+
+@require_POST
+@staff_api
+def import_prescriptions(request):
+    """
+    POST multipart: file, mode=preview|apply, clear_missing=0|1
+    Il piano viene sempre ricalcolato dal file: in 'apply' non ci si fida del client.
+    """
+    f, name = _uploaded_excel(request)
+    if f is None:
+        return name
+    mode = request.POST.get("mode", "preview")
+    clear_missing = request.POST.get("clear_missing") in ("1", "true", "on")
+    try:
+        plan = build_plan(read_file_prescriptions(f), clear_missing=clear_missing)
+    except ExcelFormatError as exc:
+        return _json({"detail": str(exc)}, status=400)
+    out = plan.as_dict()
+    if mode == "apply":
+        out["applied"] = apply_plan(plan, request.user)
+        logger.info("Prescrizioni importate da %s da %s: %s", name, request.user, out["applied"])
+    return _json(out)
 
 
 @require_POST

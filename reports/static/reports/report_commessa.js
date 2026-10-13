@@ -31,6 +31,8 @@
   let SCHEDA_MESE = "";     // filtro mese nella scheda
   let mansFilter = "", soloNote = false;
   let SRC = "kairos";
+  let LAST_FILE = null;     // ultimo file Excel caricato (serve per l'import prescrizioni)
+  let PI_CLEAR = false;
   const CHARTS = {};
 
   /* ------------------------------------------------------------------ util */
@@ -126,6 +128,7 @@
     try {
       const ds = await fetchJson(CFG.urls.excel, {method: "POST", body: fd, headers: {"X-CSRFToken": csrf()}});
       if (my !== REQ) return;
+      LAST_FILE = file;
       ingest(ds);
       $("rcFname").textContent = file.name;
     } catch (e) {
@@ -648,6 +651,57 @@
           : `<p class="rc-hint">Tutte le persone del file sono presenti in Kairos.</p>`);
     }
     $("rcDiag").innerHTML = h;
+    renderPrescImport();
+  }
+
+  /* ---- import prescrizioni dal file verso Kairos ---- */
+  function renderPrescImport(result) {
+    const box = $("rcPrescImport");
+    if (DS.source.kind !== "excel" || !LAST_FILE) { box.innerHTML = ""; return; }
+    let h = `<div class="rc-presc rc-noprint" style="margin:6px 0 18px">
+      <div class="t"><i class="material-icons">medical_information</i>Importa le prescrizioni mediche in Kairos</div>
+      <div class="v rc-hint" style="margin-top:6px;white-space:normal">Confronta le prescrizioni del foglio "Dipendenti" di <b>${esc(LAST_FILE.name)}</b>
+        con quelle salvate in Kairos. Prima vedi le differenze, poi decidi se applicarle. Abbinamento per "Cognome Nome".</div>
+      <div class="acts" style="flex-wrap:wrap">
+        <label style="margin-right:12px"><input type="checkbox" class="filled-in" id="rcPiClear" ${PI_CLEAR ? "checked" : ""}>
+          <span style="font-size:13px">Rimuovi da Kairos le prescrizioni vuote nel file</span></label>
+        <button class="btn btn-small waves-effect" style="background:#005B81" id="rcPiPreview"><i class="material-icons left">compare_arrows</i>Confronta con Kairos</button>
+      </div>`;
+    if (result) {
+      const r = result;
+      const tbl = (title, items, showOld) => items.length ? `<div class="rc-h4" style="margin-top:14px">${title} (${items.length})</div>
+        <table class="rc-table"><thead><tr><th style="width:220px">Dipendente</th>${showOld ? "<th>In Kairos</th>" : ""}<th>${showOld ? "Dal file" : "Prescrizione"}</th></tr></thead><tbody>` +
+        items.map(it => `<tr><td><b>${esc(it.nome)}</b></td>${showOld ? `<td class="rc-hint">${esc(it.old || "—")}</td>` : ""}<td>${esc(it.new || "(vuota)")}</td></tr>`).join("") +
+        `</tbody></table>` : "";
+      h += `<div style="margin-top:12px" class="rc-stats">Nel file: <b>${r.file_rows}</b> dipendenti, <b>${r.file_with_presc}</b> con prescrizione ·
+          nuove <b>${r.create.length}</b> · aggiornate <b>${r.update.length}</b> · da rimuovere <b>${r.clear.length}</b> · invariate <b>${r.unchanged}</b></div>` +
+        tbl("Nuove", r.create, false) + tbl("Aggiornate", r.update, true) + tbl("Da rimuovere", r.clear, true) +
+        (r.kept.length ? `<p class="rc-hint" style="margin-top:10px">Vuote nel file ma presenti in Kairos, mantenute: ${r.kept.map(i => esc(i.nome)).join(", ")}</p>` : "") +
+        (r.not_found.length ? `<p class="rc-hint rc-warn" style="margin-top:10px">Non trovati in Kairos (saltati): ${r.not_found.map(esc).join(", ")}</p>` : "") +
+        (r.ambiguous.length ? `<p class="rc-hint rc-warn">Omonimi in Kairos (saltati): ${r.ambiguous.map(esc).join(", ")}</p>` : "") +
+        (r.applied ? `<p style="margin-top:12px;color:#1F7A52;font-weight:500">Applicato: ${r.applied.create} nuove, ${r.applied.update} aggiornate, ${r.applied.clear} rimosse.</p>`
+          : r.changes ? `<div class="acts" style="margin-top:12px"><button class="btn waves-effect" style="background:#e65100" id="rcPiApply">
+              <i class="material-icons left">save</i>Applica ${r.changes} modifiche in Kairos</button></div>`
+          : `<p class="rc-hint" style="margin-top:10px">Nessuna modifica da applicare: Kairos è già allineato al file.</p>`);
+    }
+    box.innerHTML = h + `</div>`;
+    $("rcPiClear").addEventListener("change", e => { PI_CLEAR = e.target.checked; renderPrescImport(); });
+    $("rcPiPreview").addEventListener("click", () => prescImport("preview"));
+    const ap = $("rcPiApply");
+    if (ap) ap.addEventListener("click", () => {
+      if (confirm(`Confermi la scrittura di ${result.changes} modifiche alle prescrizioni mediche in Kairos?`)) prescImport("apply");
+    });
+  }
+  async function prescImport(mode) {
+    const fd = new FormData();
+    fd.append("file", LAST_FILE); fd.append("mode", mode); fd.append("clear_missing", PI_CLEAR ? "1" : "0");
+    busy(true);
+    try {
+      const r = await fetchJson(CFG.urls.prescImport, {method: "POST", body: fd, headers: {"X-CSRFToken": csrf()}});
+      renderPrescImport(r);
+      if (mode === "apply") toast("Prescrizioni importate in Kairos");
+    } catch (e) { toast(esc(e.message), "red"); }
+    finally { busy(false); }
   }
 
   /* ================================================================== EXPORT CSV */

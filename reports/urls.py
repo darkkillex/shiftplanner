@@ -8,5 +8,6 @@ urlpatterns = [
     path("", views.report_page, name="report_commessa"),
     path("api/kairos/", views.kairos_dataset, name="kairos_dataset"),
     path("api/excel/", views.excel_dataset, name="excel_dataset"),
+    path("api/prescrizioni/import/", views.import_prescriptions, name="import_prescriptions"),
     path("api/prescrizioni/<int:employee_id>/", views.save_prescriptions, name="save_prescriptions"),
 ]
