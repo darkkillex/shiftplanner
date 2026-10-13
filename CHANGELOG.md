@@ -1,3 +1,25 @@
+# v0.10.0
+### ✨ Nuove funzionalità
+* Nuovo modulo **Report commessa** (app `reports`), raggiungibile dalla Home con il pannello dedicato
+  e riservato a staff e amministratori. Comprende: scheda dipendente (indicatori, nastro turni, calendario
+  mensile, note di cella, mansioni svolte), report dipendente con grafici, ricerca per mansione, attribuzione
+  dei preposti, riepilogo ore della commessa per attività e società, dataset completo con export CSV.
+* Doppia fonte dati con un unico motore di analisi: per impostazione predefinita i **piani turni di Kairos**
+  (anno e intervallo di mesi); in alternativa il **file Excel esterno** del piano turni ATI (.xlsm/.xlsx),
+  che viene solo letto e non scrive nulla nel database. Lettore Excel dedicato: il piano annuale da 12 MB
+  si legge in circa 5-10 secondi.
+* Nuovo dato facoltativo **Prescrizioni mediche** del dipendente (modello `EmployeeMedicalInfo`, separato
+  dall'anagrafica): si modifica dalla scheda dipendente del report o dall'admin; non compare nelle API,
+  nell'elenco dipendenti né negli export CSV. Con il file esterno viene letto dal foglio "Dipendenti".
+* Il report segnala le celle in cui il file Excel riporta "ERROR" (anomalie delle formule, es. persona su due
+  posizioni) e le persone del file non presenti nell'anagrafica di Kairos.
+
+### 🛠️ Manutenzione
+* Aggiunto `shiftplanner/settings_test.py` per eseguire i test automatici
+  (`python manage.py test reports --settings=shiftplanner.settings_test`).
+
+---
+
 # v0.9.10
 ### 🛠️ Modifiche
 * Nei PDF generati dalla previsione turnazione è stata semplificata la visualizzazione del turno:

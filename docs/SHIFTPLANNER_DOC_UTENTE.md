@@ -215,14 +215,51 @@ Contestualmente, lo Staff riceve il download di un archivio che contiene:
 
 ---
 
-## 8. Backup e sicurezza dati
+## 8. Report commessa
+Riservato a **staff e amministratori**. Si apre dalla Home, pannello **Report commessa**.
+
+### Fonte dei dati
+- **Piani Kairos** (predefinita): scegli anno e intervallo di mesi e premi *Carica*. Vengono letti i piani
+  turni salvati in Kairos. Un giorno senza assegnazione vale come riposo; le righe Ferie, Malattia,
+  Formazione, Permessi ecc. vengono riconosciute come giustificativi.
+- **File esterno**: trascina o scegli il piano turni ATI (`.xlsm` o `.xlsx`, massimo 60 MB). Il file viene
+  solo letto: **nulla viene salvato in Kairos**. La lettura richiede circa 10-20 secondi.
+  Formato atteso: fogli mese con "Numero mese" in A1, date dalla colonna H, matrice posizioni × giorni,
+  blocco DIPENDENTE alla riga 813 e foglio "Dipendenti" (società, prescrizioni, contatti). I fogli nascosti
+  vengono ignorati.
+
+La barra sotto la fonte indica sempre da dove arrivano i dati che stai guardando.
+
+### Sezioni
+- **Scheda dipendente**: indicatori del periodo, nastro turni e calendario del mese (scegli il mese in alto),
+  note di cella, mansioni svolte. P = preposto quel giorno; bordo giallo = nota nella cella.
+- **Report dipendente**: ore lavorate, media, giorni da preposto, grafici per categoria, mese e mansione.
+- **Ricerca per mansione**: chi ha svolto una mansione e quando; cerca anche nel testo delle note.
+- **Preposti**: chi era preposto, in quale posizione e in che giorno, come scritto nel piano.
+- **Riepilogo commessa**: ore erogate, giornate-uomo e risorse per attività, con filtro per mese e società.
+- **Dati & export**: piani o fogli letti, anomalie del file, note su caselle senza nome, persone del file
+  non presenti in Kairos, export CSV.
+
+### Prescrizioni mediche
+Dato facoltativo. Con la fonte Kairos si aggiunge o modifica dalla scheda dipendente (*Aggiungi* /
+*Modifica*; testo vuoto = rimozione). Con il file esterno viene mostrato quello del foglio "Dipendenti".
+Le prescrizioni sono visibili solo a staff e amministratori e **non sono incluse negli export CSV**.
+
+### Convenzioni di calcolo
+- Ore dei turni: dagli orari dei tipi turno di Kairos o dalla legenda del foglio MAIN del file.
+- Ferie e permessi (PAR) valgono convenzionalmente 8 ore; la formazione 8 ore.
+- Le celle "ERROR" del file sono mostrate come *Anomalia* e non sono conteggiate nelle ore.
+
+---
+
+## 9. Backup e sicurezza dati
 - I backup del database vengono creati **ogni notte alle 03:00**.
 - I file si trovano nella cartella `backups/` (solo accesso admin).
 - I backup vecchi di 1 giorno vengono rimossi.
 
 ---
 
-## 9. Suggerimenti d’uso
+## 10. Suggerimenti d’uso
 - Filtri statistici: aggiornamento automatico → non serve cliccare “Applica”.  
 - Usa browser desktop aggiornato (Chrome o Edge).  
 - Evita modifiche simultanee sullo stesso piano da più utenti.  

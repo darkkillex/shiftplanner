@@ -63,5 +63,6 @@ urlpatterns = [
     path("turni/previsione/", views.turn_pattern_forecast, name="turn_pattern_forecast"),
     path("turni/previsione/download/", views.turn_pattern_forecast_only_local_download, name="turn_pattern_forecast_only_local_download",
     ),
+    path("report-commessa/", include("reports.urls")),
 
 ]

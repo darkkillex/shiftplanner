@@ -1,0 +1,191 @@
+{% extends "layout.html" %}
+{% load static %}
+{% block title %}Report commessa{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'reports/report_commessa.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="rc-wrap">
+  {% csrf_token %}
+
+  <div class="rc-head">
+    <div>
+      <h4 class="valign-wrapper" style="gap:8px">
+        <i class="material-icons">assessment</i> Report commessa
+      </h4>
+      <div class="rc-sub">Scheda e report per dipendente, mansioni, preposti e riepilogo ore della commessa.</div>
+    </div>
+  </div>
+
+  <!-- ===================== FONTE DATI ===================== -->
+  <div class="card rc-source">
+    <div class="card-content">
+      <div class="rc-source-switch" role="tablist">
+        <button type="button" class="on" data-src="kairos"><i class="material-icons">storage</i>Piani Kairos</button>
+        <button type="button" data-src="excel"><i class="material-icons">upload_file</i>File esterno</button>
+      </div>
+
+      <!-- sorgente Kairos -->
+      <div id="rcSrcKairos" class="rc-form">
+        <div>
+          <label class="rc-lbl" for="rcYear">Anno</label>
+          <select id="rcYear" class="browser-default">
+            {% for y in years %}<option value="{{ y }}" {% if y == default_year %}selected{% endif %}>{{ y }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="rc-lbl" for="rcFrom">Dal mese</label>
+          <select id="rcFrom" class="browser-default"></select>
+        </div>
+        <div>
+          <label class="rc-lbl" for="rcTo">Al mese</label>
+          <select id="rcTo" class="browser-default"></select>
+        </div>
+        <button type="button" id="rcLoadKairos" class="btn waves-effect" style="background:#005B81">
+          <i class="material-icons left">refresh</i>Carica
+        </button>
+        <span class="rc-hint">Legge i piani turni salvati in Kairos.</span>
+      </div>
+
+      <!-- sorgente file esterno -->
+      <div id="rcSrcExcel" class="rc-form rc-hide">
+        <div class="rc-drop" id="rcDrop">
+          <i class="material-icons">description</i>
+          <div style="flex:1">
+            <div class="rc-fname" id="rcFname">Trascina qui il piano turni (.xlsm / .xlsx)</div>
+            <div class="rc-hint">Formato del piano turni ATI: fogli mese con "Numero mese" in A1 e blocco DIPENDENTE alla riga 813.
+              Il file viene solo letto, nulla viene salvato in Kairos. Massimo {{ max_upload_mb }} MB.</div>
+          </div>
+          <button type="button" class="btn-flat waves-effect" onclick="document.getElementById('rcFile').click()">Scegli file</button>
+        </div>
+        <input type="file" id="rcFile" accept=".xlsm,.xlsx" style="display:none">
+      </div>
+
+      <div class="progress rc-progress rc-hide" id="rcProgress" style="background:#cfe6f0"><div class="indeterminate" style="background:#005B81"></div></div>
+      <div class="rc-status" id="rcStatus"><span class="rc-hint">Nessun dato caricato.</span></div>
+    </div>
+  </div>
+
+  <!-- ===================== APP ===================== -->
+  <div id="rcApp" class="rc-hide">
+    <div class="rc-tabs">
+      <button class="rc-tab on" data-tab="persona"><i class="material-icons">badge</i>Scheda dipendente</button>
+      <button class="rc-tab" data-tab="report"><i class="material-icons">bar_chart</i>Report dipendente</button>
+      <button class="rc-tab" data-tab="mansione"><i class="material-icons">manage_search</i>Ricerca per mansione</button>
+      <button class="rc-tab" data-tab="preposti"><i class="material-icons">verified_user</i>Preposti</button>
+      <button class="rc-tab" data-tab="commessa"><i class="material-icons">work</i>Riepilogo commessa</button>
+      <button class="rc-tab" data-tab="dati"><i class="material-icons">table_view</i>Dati &amp; export</button>
+    </div>
+
+    <!-- ---------- SCHEDA DIPENDENTE ---------- -->
+    <section id="tab-persona">
+      <div class="rc-grid">
+        <div class="rc-card" id="rcSide">
+          <div class="rc-ct">Dipendenti <span id="rcPCount" style="text-transform:none;letter-spacing:0;font-weight:400"></span></div>
+          <div class="rc-pad" style="padding-top:12px">
+            <div class="rc-toolbar" style="margin:0">
+              <input type="text" id="rcSearch" placeholder="Cognome o nome…" autocomplete="off">
+            </div>
+            <div id="rcPList"></div>
+          </div>
+        </div>
+        <div class="rc-card" id="rcScheda">
+          <div class="rc-empty"><i class="material-icons">person_search</i>Seleziona un dipendente dall'elenco.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- REPORT DIPENDENTE ---------- -->
+    <section id="tab-report" class="rc-hide">
+      <div class="rc-card">
+        <div class="rc-ct">Report dipendente</div>
+        <div class="rc-pad">
+          <div class="rc-toolbar rc-noprint">
+            <select id="rcRpSel" class="browser-default" style="flex:1;min-width:240px"></select>
+            <select id="rcRpMese" class="browser-default"></select>
+            <button class="btn-flat waves-effect" onclick="window.print()"><i class="material-icons left">print</i>Stampa</button>
+          </div>
+          <div id="rcRpBody"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- RICERCA PER MANSIONE ---------- -->
+    <section id="tab-mansione" class="rc-hide">
+      <div class="rc-card">
+        <div class="rc-ct">Chi ha svolto quale mansione</div>
+        <div class="rc-pad">
+          <div class="rc-toolbar rc-noprint">
+            <input type="text" id="rcMSearch" placeholder="Cerca mansione o testo della nota (es. preposto, ponteggi, permesso…)" autocomplete="off">
+            <select id="rcMMese" class="browser-default"></select>
+            <button class="btn-flat waves-effect" data-export="mansione"><i class="material-icons left">download</i>CSV</button>
+            <button class="btn-flat waves-effect" onclick="window.print()"><i class="material-icons left">print</i>Stampa</button>
+          </div>
+          <div class="rc-chips rc-noprint" id="rcMChips"></div>
+          <div id="rcMRes"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- PREPOSTI ---------- -->
+    <section id="tab-preposti" class="rc-hide">
+      <div class="rc-card">
+        <div class="rc-ct">Attribuzione del ruolo di preposto</div>
+        <div class="rc-pad">
+          <div class="rc-toolbar rc-noprint">
+            <select id="rcPMese" class="browser-default"></select>
+            <input type="text" id="rcPCerca" placeholder="Filtra per posizione o nome" autocomplete="off">
+            <button class="btn-flat waves-effect" data-export="preposti"><i class="material-icons left">download</i>CSV</button>
+            <button class="btn-flat waves-effect" onclick="window.print()"><i class="material-icons left">print</i>Stampa</button>
+          </div>
+          <div id="rcPKpi"></div>
+          <div id="rcPRes"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- RIEPILOGO COMMESSA ---------- -->
+    <section id="tab-commessa" class="rc-hide">
+      <div class="rc-toolbar rc-noprint">
+        <select id="rcCmMese" class="browser-default"></select>
+        <select id="rcCmSoc" class="browser-default"></select>
+        <button class="btn-flat waves-effect" data-export="commessa"><i class="material-icons left">download</i>CSV</button>
+        <button class="btn-flat waves-effect" onclick="window.print()"><i class="material-icons left">print</i>Stampa</button>
+      </div>
+      <div id="rcCmBody"></div>
+    </section>
+
+    <!-- ---------- DATI & EXPORT ---------- -->
+    <section id="tab-dati" class="rc-hide">
+      <div class="rc-card">
+        <div class="rc-ct">Dataset normalizzato</div>
+        <div class="rc-pad">
+          <div class="rc-toolbar rc-noprint">
+            <button class="btn waves-effect" style="background:#005B81" data-export="all"><i class="material-icons left">download</i>Esporta tutto (CSV)</button>
+            <button class="btn-flat waves-effect" data-export="worked">Solo giorni lavorati</button>
+            <button class="btn-flat waves-effect" data-export="notes">Solo note di cella</button>
+          </div>
+          <p class="rc-hint" style="margin-top:-4px">Gli export CSV non contengono le prescrizioni mediche.</p>
+          <div id="rcDiag"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script id="rc-config" type="application/json">{
+  "urls": {
+    "kairos": "{% url 'reports:kairos_dataset' %}",
+    "excel": "{% url 'reports:excel_dataset' %}",
+    "presc": "{% url 'reports:save_prescriptions' 0 %}"
+  },
+  "maxUploadMb": {{ max_upload_mb }}
+}</script>
+{% endblock %}
+
+{% block extra_body %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="{% static 'reports/report_commessa.js' %}"></script>
+{% endblock %}

@@ -193,4 +193,54 @@ docker compose exec web python manage.py shell_plus
 | `python manage.py audit_template_plan_integrity --output /app/staticfiles/integrity.csv` | Stessa verifica ma con percorso personalizzato per il report.                                                                               | Per archiviazione o audit automatizzati.            |
 
 
+## 10. Modulo Report commessa (app `reports`)
+
+### Struttura
+```
+reports/
+  models.py          EmployeeMedicalInfo (OneToOne su core.Employee): prescrizioni mediche
+  admin.py           admin dedicato + inline nella scheda Dipendente (aggiunto senza toccare core/admin.py)
+  engine.py          legenda codici, categorie, ore, DatasetBuilder (formato dati comune)
+  source_kairos.py   adattatore: Plan / PlanRow / Assignment  -> dataset
+  source_excel.py    adattatore: piano turni ATI .xlsm/.xlsx  -> dataset
+  xlsx_reader.py     lettore XLSX veloce (iterparse sull'XML, solo colonne utili + commenti)
+  views.py, urls.py  pagina + API JSON (solo staff/superuser)
+  templates/reports/report_commessa.html
+  static/reports/report_commessa.{js,css}
+  tests.py
+```
+
+### Endpoint (prefisso `/report-commessa/`)
+| Metodo | URL | Descrizione |
+|---|---|---|
+| GET | `/` | pagina del report |
+| GET | `api/kairos/?year=2026&from=1&to=12` | dataset dai piani Kairos |
+| POST | `api/excel/` (multipart `file`) | dataset dal file Excel; nessuna scrittura su DB |
+| POST | `api/prescrizioni/<employee_id>/` `{"text": "..."}` | salva/rimuove le prescrizioni |
+
+Le API rispondono 401/403 in JSON a utenti non autenticati o non staff; le risposte dataset sono compresse (gzip).
+
+### Dataset comune
+Entrambi gli adattatori producono lo stesso JSON (vedi docstring di `engine.py`): persone, tabella mansioni,
+record giornalieri `[persona, data, codice, categoria, ore, mansione, preposto, nota, autore, area, nota posizione]`,
+registro preposti, diagnostica. Il front-end fa solo filtri, aggregazioni e grafici (Chart.js 4.4.1).
+
+### Mappatura piani Kairos
+- `PlanRow.duty` senza suffisso `.N` = posizione/mansione; riga con "Preposto" = preposto del giorno.
+- Codice giornata: turno dell'assegnazione, altrimenti turno della riga; le righe Ferie/Malattia/Formazione/…
+  sono riconosciute anche dal nome (`ROW_KEYWORDS` in `engine.py`).
+- Più assegnazioni della stessa persona nello stesso giorno: prevale quella di lavoro; le ore si contano una volta.
+- Ore: durata del `ShiftType` (gestisce lo scavalco della mezzanotte); 00:00-00:00 = orario non definito.
+
+### Prescrizioni mediche
+Modello separato da `Employee` per tenerle fuori da `/api/employees/`, dall'elenco dipendenti e dagli export.
+Migrazione `reports/0001_initial` (dipende solo da `core/0001_initial`).
+
+### Test
+```bash
+python manage.py test reports --settings=shiftplanner.settings_test
+```
+`settings_test` crea lo schema dai modelli invece che dalle migrazioni, perché le migrazioni di `core`
+presenti nel repository non sono allineate ai modelli attuali.
+
 _Fine documento tecnico._
