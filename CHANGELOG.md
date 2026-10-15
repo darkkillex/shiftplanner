@@ -1,3 +1,19 @@
+# v0.10.1
+### ✨ Nuove funzionalità
+* Griglia del piano mensile: nei sabati, domeniche e festivi le celle **senza lavoratore assegnato** sono nere;
+  le celle assegnate mantengono il colore della riga. Le celle nere selezionate hanno il contorno giallo.
+
+### 🐞 Bugfix
+* Griglia del piano mensile: eliminato lo sfarfallio durante lo scorrimento orizzontale. La barra superiore aveva
+  una corsa più corta di quella della griglia (per via della barra verticale) e le due barre si riportavano
+  indietro a vicenda; ora hanno la stessa corsa e la sincronizzazione non rimbalza più (anche con zoom 125%/150%).
+* Griglia del piano mensile: Pasqua e Pasquetta venivano calcolate un giorno prima con il fuso orario italiano
+  (conversione in UTC); ora Pasquetta risulta festiva e il sabato precedente no.
+* `settings.py`: rimossa una seconda lettura di `DEBUG` (variabile `DEBUG`, predefinita a "true") che teneva la
+  modalità debug sempre attiva; ora dipende solo da `DJANGO_DEBUG`.
+
+---
+
 # v0.10.0
 ### ✨ Nuove funzionalità
 * Nuovo modulo **Report commessa** (app `reports`), raggiungibile dalla Home con il pannello dedicato
@@ -28,18 +44,10 @@
   esclusi dal selettore della griglia e dalla Previsione turnazione, rifiutati dall'assegnazione (API bulk_assign)
   ed esclusi dagli invii email dei piani; le loro assegnazioni passate restano visibili. `import_dipendenti`
   accetta `--non-attivi` per caricarli già disattivati.
-* Griglia del piano mensile: nei sabati, domeniche e festivi le celle **senza lavoratore assegnato** sono nere;
-  le celle assegnate mantengono il colore della riga.
 * Abbinamento dei nomi del piano turni ai dipendenti più tollerante: se il nome completo non corrisponde,
   vale stesso cognome + uno dei nomi (es. "Pascarelli Pietro" = "Pascarelli Pietro Antonio"), solo se univoco.
 * Il report segnala le celle in cui il file Excel riporta "ERROR" (anomalie delle formule, es. persona su due
   posizioni) e le persone del file non presenti nell'anagrafica di Kairos.
-
-### 🐞 Bugfix
-* Griglia del piano mensile: Pasqua e Pasquetta venivano calcolate un giorno prima con il fuso orario italiano
-  (conversione in UTC); ora Pasquetta risulta festiva e il sabato precedente no.
-* `settings.py`: rimossa una seconda lettura di `DEBUG` (variabile `DEBUG`, predefinita a "true") che teneva la
-  modalità debug sempre attiva; ora dipende solo da `DJANGO_DEBUG`.
 
 ### 🛠️ Manutenzione
 * Aggiunto `shiftplanner/settings_test.py` per eseguire i test automatici
