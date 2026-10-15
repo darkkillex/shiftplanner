@@ -8,6 +8,7 @@ comando `python manage.py import_prescrizioni <file>`.
 Regole:
   - abbinamento per "Cognome Nome" (colonna "Nome su ROTA", altrimenti
     Cognome + Nome), senza differenze di maiuscole, accenti o apostrofi;
+    se manca, stesso cognome + uno dei nomi (secondi nomi), solo se univoco;
   - prescrizione nel file e non in Kairos      -> nuova
   - prescrizione diversa da quella in Kairos   -> aggiornata
   - cella vuota nel file ma presente in Kairos -> lasciata com'è, salvo
@@ -18,14 +19,13 @@ Regole:
 from __future__ import annotations
 
 import re
-from collections import defaultdict
 from dataclasses import dataclass, field
 
 from django.db import transaction
 
 from core.models import Employee
 
-from .engine import norm_key
+from .engine import EmployeeNameIndex
 from .models import EmployeeMedicalInfo
 from .source_excel import ExcelFormatError, read_dipendenti
 from .xlsx_reader import XlsxBook
@@ -74,25 +74,18 @@ def read_file_prescriptions(fileobj) -> dict:
 
 def build_plan(file_rows: dict, clear_missing: bool = False) -> ImportPlan:
     plan = ImportPlan(file_rows=len(file_rows))
-    by_key = defaultdict(list)
-    for e in Employee.objects.all():
-        by_key[norm_key(e.full_name())].append(e)
-        # fallback "Nome Cognome", usato solo se non c'è già un "Cognome Nome" uguale
-        alt = norm_key(f"{e.first_name} {e.last_name}")
-        if alt not in by_key:
-            by_key.setdefault("~" + alt, []).append(e)
+    index = EmployeeNameIndex(Employee.objects.all())
     current = dict(EmployeeMedicalInfo.objects.values_list("employee_id", "prescriptions"))
 
     for key, row in sorted(file_rows.items(), key=lambda kv: kv[1]["nome"].lower()):
         new = (row["presc"] or "").strip()
         if new:
             plan.file_with_presc += 1
-        emps = by_key.get(key) or by_key.get("~" + key) or []
-        if len(emps) != 1:
-            if new or len(emps) > 1:
-                (plan.ambiguous if emps else plan.not_found).append(row["nome"])
+        e, status = index.find(row["nome"])
+        if e is None:
+            if new or status == "ambiguous":
+                (plan.ambiguous if status == "ambiguous" else plan.not_found).append(row["nome"])
             continue
-        e = emps[0]
         old = (current.get(e.id) or "").strip()
         item = {"eid": e.id, "nome": e.full_name(), "old": old, "new": new}
         if new and not old:

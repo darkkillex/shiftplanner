@@ -271,3 +271,34 @@ def shift_hours(start: dt.time | None, end: dt.time | None) -> float | None:
     if e < s:
         e += 24 * 60
     return round((e - s) / 60, 2)
+
+
+class EmployeeNameIndex:
+    """
+    Abbina un nome "Cognome Nome" (come scritto nel piano turni) ai dipendenti
+    di Kairos. Prima il nome completo; se non c'è, una forma tollerante:
+    stesso cognome + uno dei nomi ("Pascarelli Pietro" -> "Pascarelli Pietro
+    Antonio", "Saponara Michele" -> "Saponara Paolo Michele"), oppure
+    "Nome Cognome". La forma tollerante vale solo se il risultato è univoco.
+    """
+
+    def __init__(self, employees):
+        from collections import defaultdict
+        self.exact = defaultdict(list)
+        self.loose = defaultdict(list)
+        for e in employees:
+            last, first = S(e.last_name), S(e.first_name)
+            self.exact[norm_key(f"{last} {first}")].append(e)
+            self.loose[norm_key(f"{first} {last}")].append(e)
+            for tok in first.split():
+                self.loose[norm_key(f"{last} {tok}")].append(e)
+
+    def find(self, name: str):
+        """-> (dipendente | None, esito) con esito in 'ok', 'ambiguous', 'missing'."""
+        k = norm_key(name)
+        hits = self.exact.get(k, [])
+        if not hits:
+            hits = list({e.pk: e for e in self.loose.get(k, [])}.values())
+        if len(hits) == 1:
+            return hits[0], "ok"
+        return None, ("ambiguous" if hits else "missing")

@@ -247,6 +247,18 @@ python manage.py import_prescrizioni /percorso/Piano_Turni_ATI_2026.xlsm --apply
 In Docker: `docker cp Piano.xlsm shiftplanner_web:/tmp/piano.xlsm` e poi
 `docker compose exec web python manage.py import_prescrizioni /tmp/piano.xlsm`.
 
+### Import anagrafica dipendenti
+Logica in `core/employee_import.py`. Colonne riconosciute dall'intestazione: Cognome, Nome, Azienda/Società,
+Telefono, E-mail, Matricola (facoltativa; se manca, matricola = telefono). Abbinamento per email, poi
+matricola, poi "Cognome Nome". La matricola dei dipendenti esistenti non viene mai cambiata.
+```bash
+python manage.py import_dipendenti /percorso/Personale.xlsx                 # anteprima
+python manage.py import_dipendenti /percorso/Personale.xlsx --apply
+# --deactivate-missing: disattiva (is_active=False) chi è in Kairos ma non nel file
+```
+In Docker: `docker cp Personale.xlsx shiftplanner_web:/tmp/personale.xlsx` e poi
+`docker compose exec web python manage.py import_dipendenti /tmp/personale.xlsx --apply`.
+
 ### Test
 ```bash
 python manage.py test reports --settings=shiftplanner.settings_test

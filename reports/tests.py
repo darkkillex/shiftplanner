@@ -214,3 +214,76 @@ class PrescriptionImportTests(TestCase):
         self.client.force_login(user)
         r = self.client.post(url, {"file": SimpleUploadedFile("p.xlsx", make_ati_workbook()), "mode": "apply"})
         self.assertEqual(r.status_code, 403)
+
+
+class NameMatchingTests(TestCase):
+    def test_second_names(self):
+        from .engine import EmployeeNameIndex
+        a = Employee.objects.create(first_name="Pietro Antonio", last_name="Pascarelli", matricola="20", email="p@x.it")
+        b = Employee.objects.create(first_name="Paolo Michele", last_name="Saponara", matricola="21", email="s@x.it")
+        Employee.objects.create(first_name="Giovanni", last_name="Russo", matricola="22", email="r1@x.it")
+        Employee.objects.create(first_name="Giovanni Maria", last_name="Russo", matricola="23", email="r2@x.it")
+        idx = EmployeeNameIndex(Employee.objects.all())
+        self.assertEqual(idx.find("Pascarelli Pietro"), (a, "ok"))
+        self.assertEqual(idx.find("Saponara Michele"), (b, "ok"))
+        self.assertEqual(idx.find("pascarelli  PIETRO antonio"), (a, "ok"))
+        self.assertEqual(idx.find("Russo Giovanni")[1], "ok")          # nome completo esatto prevale
+        self.assertEqual(idx.find("Russo Maria")[1], "ok")
+        self.assertEqual(idx.find("Bianchi Luca"), (None, "missing"))
+
+
+def make_staff_workbook(rows) -> bytes:
+    from openpyxl import Workbook
+    wb = Workbook(); ws = wb.active; ws.title = "ATI RINA-SIVAM"
+    ws.append([None] * 5)
+    ws.append(["Cognome ", "Nome ", "Azienda ", "N° telefono personale", "E-mail aziendale"])
+    for r in rows:
+        ws.append(r)
+    buf = io.BytesIO(); wb.save(buf); buf.seek(0)
+    return buf
+
+
+class EmployeeImportTests(TestCase):
+    def setUp(self):
+        self.rina = Company.objects.create(name="RINA Consulting S.p.a.")
+        self.old = Employee.objects.create(first_name="Mario", last_name="Rossi", matricola="3330000001",
+                                           phone="3330000001", email="mario.rossi@rina.org", company=self.rina)
+        self.gone = Employee.objects.create(first_name="Ex", last_name="Dipendente", matricola="999", email="ex@x.it")
+
+    def test_preview_apply_idempotent(self):
+        from core.employee_import import apply_plan, build_plan, read_rows
+        f = make_staff_workbook([
+            ["Rossi ", "Mario", "RINA", 3339999999, "Mario.Rossi@rina.org"],          # telefono cambiato
+            ["Verdi", "Anna", "SIVAM", "347 1234567", "anna.verdi@sivam.com"],       # nuova + nuova azienda
+            ["Neri", "Luca", "RINA", 3330000001, "luca.neri@rina.org"],              # matricola già usata
+            ["Blu", "Ada", "RINA", 3401112222, "anna.verdi@sivam.com"],              # email ripetuta
+        ])
+        rows = read_rows(f, "personale.xlsx")
+        plan = build_plan(rows)
+        self.assertEqual([c["nome"] for c in plan.create], ["Verdi Anna"])
+        self.assertEqual(plan.create[0]["matricola"], "3471234567")              # matricola = telefono
+        self.assertEqual(plan.update[0]["changes"], {"phone": ["3330000001", "3339999999"]})
+        self.assertEqual(len(plan.skipped), 2)
+        self.assertEqual(plan.new_companies, ["SIVAM"])
+        self.assertEqual([m["nome"] for m in plan.missing], ["Dipendente Ex"])
+        self.assertEqual(plan.deactivate, [])
+        self.assertEqual(Employee.objects.count(), 2)                          # anteprima: nulla scritto
+        apply_plan(plan)
+        self.old.refresh_from_db()
+        self.assertEqual((self.old.phone, self.old.matricola), ("3339999999", "3330000001"))  # matricola invariata
+        verdi = Employee.objects.get(email="anna.verdi@sivam.com")
+        self.assertEqual(verdi.company.name, "SIVAM")
+        self.assertTrue(Employee.objects.get(pk=self.gone.pk).is_active)
+        plan2 = build_plan(read_rows(make_staff_workbook([
+            ["Rossi", "Mario", "RINA", 3339999999, "mario.rossi@rina.org"],
+            ["Verdi", "Anna", "SIVAM", "3471234567", "anna.verdi@sivam.com"]]), "p.xlsx"), deactivate_missing=True)
+        self.assertEqual((len(plan2.create), len(plan2.update), plan2.unchanged), (0, 0, 2))
+        apply_plan(plan2)
+        self.assertFalse(Employee.objects.get(pk=self.gone.pk).is_active)
+
+    def test_csv_and_missing_columns(self):
+        from core.employee_import import EmployeeFileError, read_rows
+        rows = read_rows(io.BytesIO("Cognome;Nome;Azienda;Telefono;Email\nRossi;Mario;RINA;333;m@x.it\n".encode()), "a.csv")
+        self.assertEqual(rows[0]["email"], "m@x.it")
+        with self.assertRaises(EmployeeFileError):
+            read_rows(io.BytesIO("Cognome;Nome\nRossi;Mario\n".encode()), "a.csv")

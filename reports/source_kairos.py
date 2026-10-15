@@ -16,25 +16,34 @@ from collections import defaultdict
 
 from core.models import Assignment, Employee, Plan, PlanRow, ShiftType
 
-from .engine import (DatasetBuilder, MESI_IT, S, code_from_row_name, norm_code, norm_key,
+from .engine import (DatasetBuilder, EmployeeNameIndex, MESI_IT, S, code_from_row_name, norm_code, norm_key,
                      shift_hours, short_company, split_slot)
 from .models import EmployeeMedicalInfo
 
 PRIORITA = {"lavoro": 0, "notte": 0, "formazione": 1, "spare": 2, "ferie": 3, "assenza": 3, "riposo": 9}
 
 
-def kairos_people_index() -> dict:
-    """{chiave nome: info} di tutti i dipendenti Kairos, per abbinare i nomi del file Excel."""
-    out = {}
-    for e in Employee.objects.select_related("company"):
-        out[norm_key(e.full_name())] = {
+class KairosPeople:
+    """Dipendenti Kairos per abbinare i nomi del file Excel: .get(nome) -> info | None."""
+
+    def __init__(self):
+        self.index = EmployeeNameIndex(Employee.objects.select_related("company"))
+
+    def get(self, name, default=None):
+        e, status = self.index.find(name)
+        if e is None:
+            return default
+        return {
             "eid": e.id,
             "soc": short_company(e.company.name if e.company else ""),
             "socFull": e.company.name if e.company else "",
             "mail": e.email or "",
             "tel": e.phone or "",
         }
-    return out
+
+
+def kairos_people_index() -> KairosPeople:
+    return KairosPeople()
 
 
 def available_years() -> list[int]:
