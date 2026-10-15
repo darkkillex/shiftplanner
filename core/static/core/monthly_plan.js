@@ -1227,6 +1227,7 @@
 
     $$("#grid td.cell").forEach((td) => {
       td.addEventListener("dblclick", () => {
+        if (document.body.classList.contains("ro-mode")) return;   // sola lettura
         if (!td.dataset.employeeId) {
           return M.toast({
             html: "Nessuna assegnazione in questa cella. Assegna un lavoratore prima di aggiungere una nota.",

@@ -17,7 +17,7 @@
     {% block extra_css %}{% endblock %}
 </head>
 
-<body class="grey lighten-4">
+<body class="grey lighten-4{% if IS_READONLY %} ro-mode{% endif %}">
 <!-- NAVBAR -->
 <div class="navbar-fixed">
     <nav class="teal">
@@ -45,6 +45,10 @@
             <!-- Menu DESTRO: profilo/logout (desktop) -->
             <ul class="right hide-on-med-and-down">
                 {% if request.user.is_authenticated %}
+                {% if IS_READONLY %}
+                <li><span class="ro-badge" title="Puoi consultare tutto e scaricare gli Excel, ma non modificare nulla né inviare email.">
+                    <i class="material-icons">visibility</i>Sola lettura</span></li>
+                {% endif %}
                 <li><a href="{% url 'profile' %}">
                     <i class="material-icons left">account_circle</i>
                     {{ request.user.get_full_name|default:request.user.username }}
@@ -67,6 +71,7 @@
     <li><a href="/"><i class="material-icons">home</i>Home Page</a></li>
     <li><a href="{% url 'functions' %}"><i class="material-icons">apps</i>Funzioni</a></li>
     {% if request.user.is_authenticated %}
+    {% if IS_READONLY %}<li><a class="ro-badge-side"><i class="material-icons">visibility</i>Sola lettura</a></li>{% endif %}
     <li><a href="{% url 'profile' %}"><i class="material-icons">account_circle</i>Profilo</a></li>
     <li><a href="/logout/"><i class="material-icons">exit_to_app</i>Logout</a></li>
     {% else %}

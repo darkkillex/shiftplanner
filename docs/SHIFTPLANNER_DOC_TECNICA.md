@@ -163,6 +163,20 @@ docker compose exec web python manage.py migrate
 docker compose exec web python manage.py createsuperuser
 ```
 
+### Utenti in sola lettura
+Profilo "Sola lettura": utente staff + gruppo `Sola lettura` (gruppo creato dalla migrazione
+`reports.0002_gruppo_sola_lettura`). Logica in `core/readonly.py`:
+`ReadOnlyMiddleware` rifiuta (403) ogni POST/PUT/PATCH/DELETE tranne `password_change`,
+`reports:excel_dataset` e `reports:import_prescriptions` con `mode=preview`; blocca anche le pagine
+`plan_create`, `template_create` e la previsione turnazione. Il context processor `readonly_context`
+espone `IS_READONLY` ai template (classe `ro-mode` sul body, elementi `.ro-hide` nascosti).
+I superuser non sono mai limitati, anche se nel gruppo.
+```bash
+docker compose exec web python manage.py utente_sola_lettura mario.rossi --nome Mario --cognome Rossi   # chiede la password
+docker compose exec web python manage.py utente_sola_lettura mario.rossi --rimuovi                        # torna staff normale
+docker compose exec web python manage.py utente_sola_lettura --elenco
+```
+
 ### Shell
 ```bash
 docker compose exec web python manage.py shell_plus
@@ -180,6 +194,7 @@ docker compose exec web python manage.py shell_plus
 - Uso di `select_related` in tutte le query aggregate.
 - Cache raccomandata per `/analytics/summary/`.
 - Accesso dashboard statistiche limitato a staff.
+- Profilo "Sola lettura" con blocco delle scritture lato server (vedi §7, Utenti in sola lettura).
 
 ---
 ## 9. Manutenzione e strumenti di verifica
@@ -274,7 +289,7 @@ In Docker: `docker cp Piano.xlsm shiftplanner_web:/tmp/piano.xlsm` e poi
 
 ### Test
 ```bash
-python manage.py test reports --settings=shiftplanner.settings_test
+python manage.py test core reports --settings=shiftplanner.settings_test
 ```
 `settings_test` crea lo schema dai modelli invece che dalle migrazioni, perché le migrazioni di `core`
 presenti nel repository non sono allineate ai modelli attuali.

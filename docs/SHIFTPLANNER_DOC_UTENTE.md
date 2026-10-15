@@ -10,6 +10,11 @@ Effettua il **login** con le credenziali assegnate.
 
 > Lo staff può creare/modificare/inviare piani turno, gestire template piani turno e assegnazioni, visualizzare statistiche.
 
+> Il profilo **Sola lettura** (badge "Sola lettura" in alto) può consultare tutti i moduli e scaricare gli Excel
+> dei piani turno e le statistiche del Report commessa, ma non può modificare, inserire, cancellare nulla né
+> inviare email. I pulsanti di modifica non vengono mostrati; un tentativo di modifica restituisce
+> "Profilo in sola lettura: questa operazione non è consentita."
+
 ---
 
 ## 2. Area principale (Hub Funzioni)

@@ -30,6 +30,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'core.readonly.ReadOnlyMiddleware',   # profilo "Sola lettura": blocca ogni modifica lato server
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -49,6 +50,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'core.context_processors.app_version',
                 'core.context_processors.company_context',
+                'core.readonly.readonly_context',
             ],
         },
     },

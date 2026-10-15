@@ -58,7 +58,7 @@
           </div>
           <div class="card-action">
             <a href="{% url 'plans_area' %}" class="waves-effect">Apri elenco</a>
-            <a href="{% url 'plan_create' %}" class="waves-effect">Crea piano</a>
+            <a href="{% url 'plan_create' %}" class="waves-effect ro-hide">Crea piano</a>
           </div>
         </div>
       </div>
@@ -74,7 +74,7 @@
           </div>
           <div class="card-action">
             <a href="{% url 'templates_area' %}" class="waves-effect">Apri elenco</a>
-            <a href="{% url 'template_create' %}" class="waves-effect">Crea template</a>
+            <a href="{% url 'template_create' %}" class="waves-effect ro-hide">Crea template</a>
           </div>
         </div>
       </div>
@@ -159,7 +159,7 @@
       {% endif %}
 
       <!-- Previsione Turnazione -->
-      <div class="col s12 m6 l4 hub-item" data-text="previsione turni">
+      <div class="col s12 m6 l4 hub-item ro-hide" data-text="previsione turni">
         <div class="card hoverable">
           <div class="card-content">
             <span class="card-title teal-text text-darken-1 valign-wrapper" style="gap:6px">

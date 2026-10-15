@@ -1,0 +1,20 @@
+{% extends "layout.html" %}
+{% block title %}Operazione non consentita{% endblock %}
+{% block content %}
+<div class="container" style="max-width:640px; margin-top:24px">
+  <div class="card">
+    <div class="card-content">
+      <span class="card-title valign-wrapper" style="gap:8px">
+        <i class="material-icons orange-text text-darken-2">visibility</i> Profilo in sola lettura
+      </span>
+      <p>{{ message }}</p>
+      <p class="grey-text" style="margin-top:8px">Puoi consultare piani, statistiche e report e scaricare gli Excel,
+        ma non modificare dati né inviare email. Se ti serve un'operazione di modifica, chiedi a un amministratore.</p>
+    </div>
+    <div class="card-action">
+      <a href="javascript:history.back()">Torna indietro</a>
+      <a href="{% url 'home' %}">Home</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

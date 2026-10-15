@@ -1,3 +1,22 @@
+# v0.10.2
+### ✨ Nuove funzionalità
+* Nuovo profilo utente **Sola lettura** (gruppo `Sola lettura`, creato dalla migrazione `reports.0002`):
+  l'utente vede tutti i moduli (piani, template, promemoria, dipendenti, statistiche, report commessa,
+  documentazione) ma non può modificare, inserire o cancellare nulla e **non può inviare email**.
+  Può scaricare gli **XLSX dei piani turno** e i **CSV/statistiche del Report commessa** (anche analizzando
+  un file Excel esterno, che non viene salvato) e cambiare la propria password.
+* Il blocco è lato server (`core.readonly.ReadOnlyMiddleware`): ogni richiesta POST/PUT/PATCH/DELETE viene
+  rifiutata con errore 403, salvo cambio password, analisi Excel del report e anteprima dell'import
+  prescrizioni. Le pagine "Crea piano", "Crea template" e "Previsione turnazione" non sono accessibili.
+* Interfaccia: badge "Sola lettura" nella barra in alto; nascosti pannello di assegnazione, pulsanti di invio
+  email, creazione piani/template, modifica template, nota con doppio clic, aggiunta/spunta promemoria,
+  modifica e applicazione delle prescrizioni.
+* Nuovo comando `utente_sola_lettura` per creare un utente in sola lettura, convertirne uno esistente,
+  togliere il profilo (`--rimuovi`) o elencarli (`--elenco`). In alternativa dall'Area Amministratore:
+  utente con "Staff" spuntato e gruppo "Sola lettura".
+
+---
+
 # v0.10.1
 ### ✨ Nuove funzionalità
 * Griglia del piano mensile: nei sabati, domeniche e festivi le celle **senza lavoratore assegnato** sono nere;

@@ -144,6 +144,7 @@
   function attachCheckboxHandler(li, r) {
     const cb = li.querySelector('input[type=checkbox]');
     if (!cb) return;
+    if (document.body.classList.contains('ro-mode')) { cb.disabled = true; return; }   // sola lettura
 
     cb.addEventListener('change', async (e) => {
       const checked = e.target.checked;
@@ -256,6 +257,7 @@
     headerToolbar: { left: 'prev,next today', center: 'title', right: '' },
 
     dateClick: async (info) => {
+      if (document.body.classList.contains('ro-mode')) return;   // sola lettura
       const title = prompt(`Nuovo appunto per ${info.dateStr}:`);
       if (!title) return;
       await fetch('/api/reminders/', {

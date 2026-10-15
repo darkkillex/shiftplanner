@@ -35,8 +35,8 @@
   <!-- PANNELLO DUE COLONNE -->
   <div class="planner-panel">
     <div class="row">
-      <!-- COLONNA SINISTRA -->
-      <div class="col s12 m6">
+      <!-- COLONNA SINISTRA (assegnazione: nascosta in sola lettura) -->
+      <div class="col s12 m6 ro-hide">
         <div class="input-field">
           <i class="material-icons prefix">person_add</i>
           <label class="active" for="employee">Lavoratore</label>
@@ -147,7 +147,7 @@
   </div>
 
   <!-- Barra azioni fondo griglia -->
-  <div class="grid-actions">
+  <div class="grid-actions ro-hide">
       <!-- Invio massivo XLSX completo -->
     <a id="broadcast-xlsx"
        href="#!"

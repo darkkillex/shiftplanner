@@ -316,7 +316,7 @@
 
   /* ---- prescrizioni mediche ---- */
   function prescBox(p) {
-    const editable = DS.source.kind === "kairos" && p.eid;
+    const editable = DS.source.kind === "kairos" && p.eid && !CFG.readonly;
     const origin = DS.source.kind === "excel" ? '<span class="rc-hint" style="text-transform:none;letter-spacing:0;font-weight:400">· dal foglio Dipendenti del file</span>' : "";
     if (!p.presc && !editable) return "";
     return `<div class="rc-presc ${p.presc ? "" : "empty"}" id="rcPresc">
@@ -680,6 +680,7 @@
         (r.not_found.length ? `<p class="rc-hint rc-warn" style="margin-top:10px">Non trovati in Kairos (saltati): ${r.not_found.map(esc).join(", ")}</p>` : "") +
         (r.ambiguous.length ? `<p class="rc-hint rc-warn">Omonimi in Kairos (saltati): ${r.ambiguous.map(esc).join(", ")}</p>` : "") +
         (r.applied ? `<p style="margin-top:12px;color:#1F7A52;font-weight:500">Applicato: ${r.applied.create} nuove, ${r.applied.update} aggiornate, ${r.applied.clear} rimosse.</p>`
+          : r.changes && CFG.readonly ? `<p class="rc-hint" style="margin-top:10px">Profilo in sola lettura: anteprima consultabile, le modifiche non possono essere applicate.</p>`
           : r.changes ? `<div class="acts" style="margin-top:12px"><button class="btn waves-effect" style="background:#e65100" id="rcPiApply">
               <i class="material-icons left">save</i>Applica ${r.changes} modifiche in Kairos</button></div>`
           : `<p class="rc-hint" style="margin-top:10px">Nessuna modifica da applicare: Kairos è già allineato al file.</p>`);

@@ -183,7 +183,8 @@
     "presc": "{% url 'reports:save_prescriptions' 0 %}",
     "prescImport": "{% url 'reports:import_prescriptions' %}"
   },
-  "maxUploadMb": {{ max_upload_mb }}
+  "maxUploadMb": {{ max_upload_mb }},
+  "readonly": {% if IS_READONLY %}true{% else %}false{% endif %}
 }</script>
 {% endblock %}
 

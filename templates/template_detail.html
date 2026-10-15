@@ -74,7 +74,7 @@
             <!-- pulsante elimina (JS) -->
             <div class="right" style="flex:0 0 auto;">
               <button type="button"
-                      class="btn-flat red-text js-row-delete"
+                      class="btn-flat red-text js-row-delete ro-hide"
                       data-template-id="{{ template.id }}"
                       data-row-id="{{ r.id }}"
                       title="Elimina riga">
@@ -87,7 +87,7 @@
         {% endfor %}
       </ul>
 
-      <div class="right-align" style="margin-top:10px;">
+      <div class="right-align ro-hide" style="margin-top:10px;">
         <button type="submit" class="btn waves-effect teal">
           <i class="material-icons left">save</i>Salva turni
         </button>
@@ -96,7 +96,7 @@
   </div>
 
   <!-- Form inserimento riga (resta invariato, usa ancora template_detail.js) -->
-  <div class="col s12 m5">
+  <div class="col s12 m5 ro-hide">
     <div class="card">
       <div class="card-content">
         <span class="card-title">Inserisci nuova riga</span>
