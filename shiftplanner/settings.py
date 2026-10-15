@@ -134,7 +134,6 @@ if EMAIL_SENDER_MATCH_HOST_USER and EMAIL_HOST_USER:
 EMAIL_TIMEOUT = EMAIL_TIMEOUT
 
 # --- Opzione (solo dev) per certificati TLS problematici ---
-DEBUG = os.getenv("DEBUG", "true").lower() == "true"  # se non lo hai già
 if DEBUG and EMAIL_SSL_SKIP_VERIFY and EMAIL_BACKEND.endswith("smtp.EmailBackend"):
     class UnsafeTLSBackend(DjangoSMTPBackend):
         """
