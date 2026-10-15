@@ -333,3 +333,42 @@ class PlanImportTests(TestCase):
         from .source_excel import ExcelFormatError
         with self.assertRaises(ExcelFormatError):
             build_import(io.BytesIO(make_ati_workbook()), [(2026, 4)])
+
+
+class InactiveEmployeeTests(TestCase):
+    def setUp(self):
+        self.staff = get_user_model().objects.create_user("st", password="x", is_staff=True)
+        self.active = Employee.objects.create(first_name="Mario", last_name="Attivo", matricola="41", email="a1@x.it")
+        self.gone = Employee.objects.create(first_name="Ex", last_name="Uscito", matricola="42", email="a2@x.it", is_active=False)
+        self.plan = Plan.objects.create(month=5, year=2026, name="Maggio", created_by=self.staff)
+        prof = Profession.objects.create(name="Ufficio.1")
+        self.row = PlanRow.objects.create(plan=self.plan, order=1, duty="Ufficio.1")
+        Assignment.objects.create(plan=self.plan, profession=prof, date=dt.date(2026, 5, 4), employee=self.gone)
+
+    def test_grid_and_assign(self):
+        self.client.force_login(self.staff)
+        html = self.client.get(reverse("monthly_plan", args=[self.plan.id])).content.decode()
+        self.assertIn(f'value="{self.active.id}"', html)
+        self.assertNotIn(f'value="{self.gone.id}"', html)                       # non selezionabile
+        grid = self.client.get(f"/api/plans/{self.plan.id}/grid/").json()
+        self.assertEqual(grid["rows"][0]["4"]["employee_name"], "Uscito Ex")     # storico visibile
+        url = f"/api/plans/{self.plan.id}/bulk_assign/"
+        body = {"employee_id": self.gone.id, "cells": [{"plan_row_id": self.row.id, "date": "2026-05-05"}]}
+        self.assertEqual(self.client.post(url, json.dumps(body), content_type="application/json").status_code, 400)
+        body["employee_id"] = self.active.id
+        self.assertEqual(self.client.post(url, json.dumps(body), content_type="application/json").status_code, 200)
+        directory = self.client.get(reverse("employees-directory")).content.decode()
+        self.assertEqual(directory.count('class="emp-inactive"'), 1)
+
+    def test_import_non_attivi(self):
+        from core.employee_import import apply_plan, build_plan, read_rows
+        csv_bytes = "Cognome;Nome;Azienda;Telefono;E-mail;Matricola\nUscito;Ex;;;a2@x.it;\nNuovo;Ex;RINA;;n@ex.invalid;EX-001\n".encode()
+        plan = build_plan(read_rows(io.BytesIO(csv_bytes), "ex.csv"), inactive=True)
+        self.assertEqual([c["matricola"] for c in plan.create], ["EX-001"])
+        self.assertEqual(plan.unchanged, 1)                                      # già non attivo: resta così
+        apply_plan(plan)
+        self.assertFalse(Employee.objects.get(matricola="EX-001").is_active)
+        self.assertFalse(Employee.objects.get(pk=self.gone.pk).is_active)
+        # l'import normale riattiva chi ricompare nel file
+        plan2 = build_plan(read_rows(io.BytesIO(csv_bytes), "ex.csv"))
+        self.assertEqual({u["nome"]: u["changes"] for u in plan2.update}["Uscito Ex"], {"is_active": ["no", "sì"]})

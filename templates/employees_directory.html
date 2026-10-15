@@ -3,6 +3,14 @@
 
 {% block title %}Elenco dipendenti{% endblock %}
 
+{% block extra_css %}
+<style>
+  tr.emp-inactive td, tr.emp-inactive td a { color:#9e9e9e !important; }
+  .emp-badge { display:inline-block; margin-left:6px; padding:0 8px; border-radius:10px; font-size:11px;
+               background:#eeeeee; color:#757575; vertical-align:1px; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container" style="max-width:1100px;">
 
@@ -70,10 +78,10 @@
             </thead>
             <tbody>
               {% for e in employees %}
-                <tr
+                <tr{% if not e.is_active %} class="emp-inactive" title="Non attivo: non assegnabile nei piani turni"{% endif %}
                   data-company-id="{{ e.company_id|default:'' }}"
                   data-search="{{ e.last_name }} {{ e.first_name }} {{ e.email|default_if_none:'' }} {{ e.phone|default_if_none:'' }}">
-                  <td>{{ e.last_name }}</td>
+                  <td>{{ e.last_name }}{% if not e.is_active %} <span class="emp-badge">Non attivo</span>{% endif %}</td>
                   <td>{{ e.first_name }}</td>
                   <td>
                     {% if e.company %}

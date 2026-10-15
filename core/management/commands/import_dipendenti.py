@@ -12,6 +12,8 @@ class Command(BaseCommand):
         parser.add_argument("--apply", action="store_true", help="Scrive davvero le modifiche nel database")
         parser.add_argument("--deactivate-missing", action="store_true",
                             help="Disattiva (is_active=False) i dipendenti di Kairos assenti dal file")
+        parser.add_argument("--non-attivi", action="store_true", dest="inactive",
+                            help="Ex dipendenti: li crea (o li porta) come NON attivi, non assegnabili nei piani")
 
     def handle(self, *args, **opts):
         try:
@@ -22,10 +24,12 @@ class Command(BaseCommand):
         except EmployeeFileError as exc:
             raise CommandError(str(exc))
 
-        plan = build_plan(rows, deactivate_missing=opts["deactivate_missing"])
+        if opts["inactive"] and opts["deactivate_missing"]:
+            raise CommandError("--non-attivi e --deactivate-missing non si usano insieme.")
+        plan = build_plan(rows, deactivate_missing=opts["deactivate_missing"], inactive=opts["inactive"])
         w = self.stdout.write
         w(f"Righe lette dal file: {plan.file_rows}")
-        w(f"\nNUOVI: {len(plan.create)}")
+        w(f"\nNUOVI: {len(plan.create)}" + ("  (creati NON attivi)" if plan.inactive else ""))
         for it in plan.create:
             w(f"  + {it['nome']} | {it['company'] or '—'} | {it['email']} | matricola {it['matricola']}")
         w(f"\nAGGIORNATI: {len(plan.update)}")
@@ -35,7 +39,7 @@ class Command(BaseCommand):
         w(f"\nInvariati: {plan.unchanged}")
         if plan.new_companies:
             w(f"Nuove aziende che verranno create: {', '.join(plan.new_companies)}")
-        if plan.missing:
+        if plan.missing and not plan.inactive:
             w(f"\nIn Kairos ma non nel file: {len(plan.missing)}"
               + ("" if opts["deactivate_missing"] else " (restano invariati; --deactivate-missing per disattivarli)"))
             for it in plan.missing:

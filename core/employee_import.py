@@ -133,6 +133,7 @@ class EmployeePlan:
     skipped: list = field(default_factory=list)      # {riga, nome, motivo}
     new_companies: list = field(default_factory=list)
     file_rows: int = 0
+    inactive: bool = False
 
     @property
     def changes(self):
@@ -162,8 +163,9 @@ def _company_resolver():
     return resolve
 
 
-def build_plan(rows: list[dict], deactivate_missing: bool = False) -> EmployeePlan:
-    plan = EmployeePlan(file_rows=len(rows))
+def build_plan(rows: list[dict], deactivate_missing: bool = False, inactive: bool = False) -> EmployeePlan:
+    """inactive=True: i nuovi vengono creati non attivi e nessuno viene riattivato (ex dipendenti)."""
+    plan = EmployeePlan(file_rows=len(rows), inactive=inactive)
     emps = list(Employee.objects.select_related("company"))
     by_email = {e.email.lower(): e for e in emps if e.email}
     by_matr = {e.matricola: e for e in emps if e.matricola}
@@ -231,8 +233,10 @@ def build_plan(rows: list[dict], deactivate_missing: bool = False) -> EmployeePl
                 plan.skipped.append({"riga": r["riga"], "nome": nome, "motivo": f"email {r['email']} già usata da {other.full_name()}"})
                 continue
             changes["email"] = [e.email, r["email"]]
-        if not e.is_active:
+        if not e.is_active and not inactive:
             changes["is_active"] = ["no", "sì"]
+        elif e.is_active and inactive:
+            changes["is_active"] = ["sì", "no"]
         if changes:
             plan.update.append({"eid": e.id, "nome": e.full_name(), "changes": changes})
         else:
@@ -263,14 +267,14 @@ def apply_plan(plan: EmployeePlan) -> dict:
         r = it["row"]
         Employee.objects.create(first_name=r["first_name"], last_name=r["last_name"], matricola=r["matricola"],
                                 phone=r["phone"] or None, email=r["email"], company=company(r["company_name"]),
-                                is_active=True)
+                                is_active=not plan.inactive)
     for it in plan.update:
         e = Employee.objects.get(pk=it["eid"])
         for f, (old, new) in it["changes"].items():
             if f == "company":
                 e.company = company(new)
             elif f == "is_active":
-                e.is_active = True
+                e.is_active = (new == "sì")
             else:
                 setattr(e, f, new)
         e.save()

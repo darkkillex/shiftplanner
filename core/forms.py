@@ -90,7 +90,7 @@ class TemplateCreateForm(forms.ModelForm):
 
 class TurnPatternForecastForm(forms.Form):
     employee = forms.ModelChoiceField(
-        queryset=Employee.objects.order_by("last_name", "first_name"),
+        queryset=Employee.objects.filter(is_active=True).order_by("last_name", "first_name"),
         label="Dipendente",
     )
     shift_type = forms.ModelChoiceField(

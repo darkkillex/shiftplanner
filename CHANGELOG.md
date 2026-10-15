@@ -24,6 +24,10 @@
   (turno di riga, area/POS nelle note, separatori dalle righe vuote), il piano dal template con la stessa
   numerazione degli slot di "Crea piano" e le assegnazioni (note dai commenti di cella). Nomi non
   riconosciuti, commenti su celle vuote e tipi turno mancanti vengono segnalati in anteprima.
+* **Dipendenti non attivi** (ex dipendenti): mostrati in grigio con l'etichetta "Non attivo" in Elenco dipendenti,
+  esclusi dal selettore della griglia e dalla Previsione turnazione, rifiutati dall'assegnazione (API bulk_assign)
+  ed esclusi dagli invii email dei piani; le loro assegnazioni passate restano visibili. `import_dipendenti`
+  accetta `--non-attivi` per caricarli già disattivati.
 * Abbinamento dei nomi del piano turni ai dipendenti più tollerante: se il nome completo non corrisponde,
   vale stesso cognome + uno dei nomi (es. "Pascarelli Pietro" = "Pascarelli Pietro Antonio"), solo se univoco.
 * Il report segnala le celle in cui il file Excel riporta "ERROR" (anomalie delle formule, es. persona su due

@@ -754,6 +754,8 @@ class PlanViewSet(viewsets.ModelViewSet):
 
         if not employee_id or not isinstance(cells, list) or not cells:
             return Response({'detail': 'employee_id e cells obbligatori'}, status=400)
+        if not Employee.objects.filter(pk=employee_id, is_active=True).exists():
+            return Response({'detail': 'Dipendente non attivo: non può essere assegnato al piano.'}, status=400)
 
         # mappa professioni per nome (tollerante)
         prof_by_name = {p.name.strip().casefold(): p for p in Profession.objects.all()}
@@ -942,7 +944,7 @@ class PlanViewSet(viewsets.ModelViewSet):
 
         # --- Assegnazioni correnti con email valida (per invii reali) ---
         cur_qs = (Assignment.objects
-                  .filter(plan=plan, employee__email__isnull=False)
+                  .filter(plan=plan, employee__email__isnull=False, employee__is_active=True)
                   .exclude(employee__email='')
                   .select_related('employee', 'shift_type', 'profession'))
 
@@ -1177,7 +1179,7 @@ class PlanViewSet(viewsets.ModelViewSet):
 
         employees_qs = (
             Assignment.objects
-            .filter(plan=plan, employee__email__isnull=False)
+            .filter(plan=plan, employee__email__isnull=False, employee__is_active=True)
             .exclude(employee__email='')
             .values('employee_id', 'employee__first_name', 'employee__last_name', 'employee__email')
             .distinct()
@@ -1294,7 +1296,9 @@ def profile(request):
 @login_required
 def monthly_plan(request, pk: int):
     plan = get_object_or_404(Plan, pk=pk)
-    employees = Employee.objects.order_by('last_name','first_name')
+    # solo dipendenti attivi nel selettore: i non attivi restano visibili nelle
+    # assegnazioni già fatte ma non si possono più assegnare
+    employees = Employee.objects.filter(is_active=True).order_by('last_name','first_name')
     shifts = ShiftType.objects.order_by('id')
     use_plan_rows = plan.rows.exists()
     return render(request, 'monthly_plan.html', {
