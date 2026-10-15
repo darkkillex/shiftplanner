@@ -218,9 +218,12 @@
       `${y}-12-25`, // Natale
       `${y}-12-26`  // Santo Stefano
     ]);
+    // data locale (toISOString convertirebbe in UTC: in Italia Pasqua/Pasquetta
+    // risultavano spostate al giorno prima)
+    const localISO = (dt) => `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
     const easter = easterDate(y);
-    const easterISO = easter.toISOString().slice(0,10);
-    const easterMonISO = addDays(easter,1).toISOString().slice(0,10);
+    const easterISO = localISO(easter);
+    const easterMonISO = localISO(addDays(easter,1));
     const iso = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     return fixed.has(iso) || iso === easterISO || iso === easterMonISO;
   }
@@ -431,6 +434,11 @@
           `;
         } else {
           td.textContent = text;
+        }
+
+        // Sabato, domenica e festivi: cella nera se nessun lavoratore è assegnato
+        if (!isSpacer && (f?.saturday || f?.sunday || f?.holiday) && !cellData.employee_id) {
+          td.classList.add("dayoff-empty");
         }
 
         tr.appendChild(td);

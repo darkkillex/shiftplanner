@@ -144,6 +144,11 @@ tr.spacer-row td.spacer-cell .material-icons { color:#fff !important; }
 /* Selezione */
 #grid td.cell.selected { outline:2px solid #000; outline-offset:-2px; }
 
+/* Sabato, domenica e festivi senza lavoratore assegnato: cella nera.
+   !important perché il colore della riga è impostato inline dal JS. */
+#grid td.cell.dayoff-empty { background-color:#000 !important; }
+#grid td.cell.dayoff-empty.selected { outline:2px solid #ffeb3b; outline-offset:-2px; }
+
 /* Zebra + hover */
 #grid tbody tr:nth-child(odd){ background-color:#fafafa; }
 #grid tbody tr:nth-child(even){ background-color:#ffffff; }
