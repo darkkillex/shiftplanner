@@ -19,6 +19,11 @@
   Azienda, Telefono, E-mail, Matricola facoltativa) con `python manage.py import_dipendenti <file> [--apply]
   [--deactivate-missing]`. Crea i nuovi (matricola = telefono se manca la colonna Matricola), aggiorna i
   dati cambiati senza toccare la matricola, segnala conflitti e dipendenti assenti dal file.
+* **Import piani turni dal file Excel ATI**: `python manage.py import_piano_turni <file> --mesi 2026-10,2026-11
+  [--apply] [--replace] [--user <username>]`. Per ogni mese crea il template dalla matrice posizioni x giorni
+  (turno di riga, area/POS nelle note, separatori dalle righe vuote), il piano dal template con la stessa
+  numerazione degli slot di "Crea piano" e le assegnazioni (note dai commenti di cella). Nomi non
+  riconosciuti, commenti su celle vuote e tipi turno mancanti vengono segnalati in anteprima.
 * Abbinamento dei nomi del piano turni ai dipendenti più tollerante: se il nome completo non corrisponde,
   vale stesso cognome + uno dei nomi (es. "Pascarelli Pietro" = "Pascarelli Pietro Antonio"), solo se univoco.
 * Il report segnala le celle in cui il file Excel riporta "ERROR" (anomalie delle formule, es. persona su due

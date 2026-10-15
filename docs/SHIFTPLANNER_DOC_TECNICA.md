@@ -259,6 +259,19 @@ python manage.py import_dipendenti /percorso/Personale.xlsx --apply
 In Docker: `docker cp Personale.xlsx shiftplanner_web:/tmp/personale.xlsx` e poi
 `docker compose exec web python manage.py import_dipendenti /tmp/personale.xlsx --apply`.
 
+### Import piani turni dal file Excel ATI
+Logica in `reports/plan_import.py`. Per ogni mese: Template «Template ATI <Mese Anno>» (posizioni col. E,
+turno col. D, area/POS col. B nelle note, righe vuote = separatori), Plan creato dal template come in
+`core.views.plan_create` (slot `Posizione.N`), Assignment con turno di riga e nota dal commento di cella.
+I dipendenti devono esistere già (vedi import anagrafica); nomi non trovati vengono saltati e segnalati.
+```bash
+python manage.py import_piano_turni /percorso/Piano_Turni_ATI_2026.xlsm --mesi 2026-10,2026-11,2026-12            # anteprima
+python manage.py import_piano_turni /percorso/Piano_Turni_ATI_2026.xlsm --mesi 2026-10,2026-11,2026-12 --apply
+# --replace: se il piano del mese esiste già lo cancella (con le assegnazioni) e lo ricrea
+```
+In Docker: `docker cp Piano.xlsm shiftplanner_web:/tmp/piano.xlsm` e poi
+`docker compose exec web python manage.py import_piano_turni /tmp/piano.xlsm --mesi ... --apply`.
+
 ### Test
 ```bash
 python manage.py test reports --settings=shiftplanner.settings_test

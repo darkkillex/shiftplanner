@@ -287,3 +287,49 @@ class EmployeeImportTests(TestCase):
         self.assertEqual(rows[0]["email"], "m@x.it")
         with self.assertRaises(EmployeeFileError):
             read_rows(io.BytesIO("Cognome;Nome\nRossi;Mario\n".encode()), "a.csv")
+
+
+class PlanImportTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user("imp", password="x", is_staff=True)
+        self.rossi = Employee.objects.create(first_name="Mario", last_name="Rossi", matricola="31", email="r@x.it")
+        self.bianchi = Employee.objects.create(first_name="Anna", last_name="Bianchi", matricola="32", email="b@x.it")
+
+    def test_template_plan_assignments(self):
+        from .plan_import import apply_import, build_import
+        plan = build_import(io.BytesIO(make_ati_workbook()), [(2026, 3)])
+        mp = plan.months[0]
+        self.assertEqual((mp.positions, mp.spacers, mp.assignments, mp.notes), (2, 0, 3, 1))
+        self.assertEqual(dict(mp.unmatched), {"Assenza": 1})
+        self.assertEqual(set(plan.new_shift_types), {"D", "F"})
+        self.assertFalse(Plan.objects.exists())                               # anteprima: nulla scritto
+        res = apply_import(plan, self.user)
+        self.assertEqual(res[0]["esito"], "creato")
+        p = Plan.objects.get(year=2026, month=3)
+        self.assertEqual(p.template.name, "Template ATI Marzo 2026")
+        self.assertEqual(list(p.template.rows.values_list("duty", flat=True)), ["Ufficio - Preposto", "Ferie"])
+        self.assertEqual(list(p.rows.values_list("duty", flat=True)), ["Ufficio - Preposto.1", "Ferie.1"])
+        st_d = ShiftType.objects.get(code="D")
+        self.assertEqual((st_d.start_time, st_d.end_time), (dt.time(8), dt.time(17)))   # orari dal foglio MAIN
+        a = Assignment.objects.get(plan=p, date=dt.date(2026, 3, 2))
+        self.assertEqual((a.employee, a.shift_type.code, a.notes), (self.rossi, "D", "Permesso dalle 15:00 alle 17:00"))
+        f = Assignment.objects.get(plan=p, employee=self.bianchi)
+        self.assertEqual(f.shift_type.code, "F")
+        # la sorgente Kairos del report legge il piano importato come il file
+        ds = build_from_kairos(2026, 3, 3)
+        rec = {(ds["people"][r[0]]["n"], r[1]): r for r in ds["rec"]}
+        self.assertEqual(rec[("Rossi Mario", "2026-03-01")][2:4], ["D", "lavoro"])
+        self.assertEqual(rec[("Bianchi Anna", "2026-03-01")][2:4], ["F", "ferie"])
+        # secondo import: rifiutato senza replace, ricreato con replace
+        plan2 = build_import(io.BytesIO(make_ati_workbook()), [(2026, 3)])
+        self.assertTrue(plan2.months[0].plan_exists)
+        self.assertIn("saltato", apply_import(plan2, self.user)[0]["esito"])
+        self.assertEqual(apply_import(plan2, self.user, replace=True)[0]["esito"], "creato")
+        self.assertEqual(Plan.objects.count(), 1)
+        self.assertEqual(Assignment.objects.count(), 3)
+
+    def test_missing_month(self):
+        from .plan_import import build_import
+        from .source_excel import ExcelFormatError
+        with self.assertRaises(ExcelFormatError):
+            build_import(io.BytesIO(make_ati_workbook()), [(2026, 4)])
