@@ -457,21 +457,46 @@
   function initScrollSync(state) {
     const { topScroll, topInner, grid } = state;
     if (!topScroll || !topInner || !grid) return;
+    const wrapper = grid.parentElement;
 
+    // 1) Stessa corsa massima per le due barre. Prima la barra superiore era
+    //    larga quanto la tabella, ma la griglia ha anche la barra verticale:
+    //    le corse differivano di ~15px e a fine corsa le due barre si
+    //    "riportavano indietro" a vicenda (sfarfallio).
     function syncTopWidth() {
       requestAnimationFrame(() => {
-        topInner.style.width = grid.scrollWidth + "px";
+        const maxScroll = Math.max(0, wrapper.scrollWidth - wrapper.clientWidth);
+        topInner.style.width = (topScroll.clientWidth + maxScroll) + "px";
       });
     }
     syncTopWidth();
     window.addEventListener("resize", syncTopWidth);
+    if (window.ResizeObserver) {
+      const ro = new ResizeObserver(syncTopWidth);
+      ro.observe(wrapper);
+      ro.observe(grid);
+    }
 
-    topScroll.addEventListener("scroll", () => {
-      grid.parentElement.scrollLeft = topScroll.scrollLeft;
-    });
-    grid.parentElement.addEventListener("scroll", () => {
-      topScroll.scrollLeft = grid.parentElement.scrollLeft;
-    });
+    // 2) Niente eco: quando una barra viene spostata dal codice, il suo evento
+    //    di scroll non deve rimbalzare sull'altra. Gli scarti sotto il pixel
+    //    (zoom di Windows al 125%/150%) vengono ignorati.
+    let driver = null;      // barra che sta guidando lo scorrimento in questo momento
+    let releaseId = 0;
+    function link(from, to) {
+      from.addEventListener("scroll", () => {
+        if (driver && driver !== from) return;          // eco dell'altra barra: ignora
+        driver = from;
+        if (Math.abs(to.scrollLeft - from.scrollLeft) >= 1) {
+          to.scrollLeft = from.scrollLeft;
+        }
+        cancelAnimationFrame(releaseId);
+        releaseId = requestAnimationFrame(() => {
+          releaseId = requestAnimationFrame(() => { driver = null; });
+        });
+      }, { passive: true });
+    }
+    link(topScroll, wrapper);
+    link(wrapper, topScroll);
   }
 
   // -------------------------------
